@@ -29,22 +29,6 @@ EDUCATIONAL_SYSTEM_PROMPT = """You are an Educational Financial Assistant specia
 4. Explain risks and market dynamics
 5. Encourage users to do their own research
 
-� RESPONSE FDORMAT:
-## 📊 Market Data & Analysis
-[Present factual data and metrics when available]
-
-## 📚 Educational Insights  
-[Explain what the data means and how to interpret it]
-
-## 🎓 Learning Points
-[Key concepts users should understand]
-
-## 🔍 How to Analyze This Yourself
-[Teach users the methods and tools they can use]
-
-## ⚠️ Important Disclaimer
-This is educational content only. Always consult qualified financial advisors and do your own research before making investment decisions.
-
 💡 TONE: Professional, educational, helpful but never directive about specific investment actions.
 
 🇮🇳 CONTEXT: Focus on Indian market context when relevant, use ₹ for Indian stocks, $ for international.
@@ -281,8 +265,8 @@ def add_educational_disclaimer(response_text):
     
     return response_text + disclaimer
 
-
 def get_ui_landing_stocks():
+    """Get trending stocks for UI landing page"""
     try:
         from nsepython import nse_get_top_gainers
         df = nse_get_top_gainers()
@@ -327,137 +311,3 @@ def get_ui_landing_stocks():
         except:
             continue
     return stock_data
-
-
-def get_live_ipo_data():
-    # Primary URL for 2025/2026 listings
-    url = "https://www.chittorgarh.com/report/ipo-in-india-list-main-board-sme/82/all/?year=2025"
-    
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Accept-Language": "en-US,en;q=0.9"
-    }
-
-    try:
-        response = requests.get(url, headers=headers, timeout=15)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # Look for the specific table ID often used by Chittorgarh
-        table = soup.find('table', {'class': 'table-striped'}) or soup.find('table')
-        
-        if not table:
-            raise ValueError("Table not found")
-
-        ipos = []
-        rows = table.find_all('tr')[1:8] # Get the most recent 7 entries
-        
-        for row in rows:
-            cols = row.find_all('td')
-            if len(cols) >= 3:
-                ipos.append({
-                    "name": cols[0].text.strip().replace(" IPO", ""),
-                    "open": cols[1].text.strip(),
-                    "close": cols[2].text.strip(),
-                    "type": "SME" if "SME" in cols[0].text else "Mainboard",
-                    "status": "Closing Soon" if "Dec 26" in cols[2].text else "Upcoming"
-                })
-        return ipos
-
-    except Exception:
-        # FALLBACK DATA: Current Market Status as of Dec 28, 2025
-        return [
-            {"name": "Modern Diagnostic", "open": "Dec 31, 2025", "close": "Jan 02, 2026", "type": "SME", "status": "Opening Soon"},
-            {"name": "E to E Transportation", "open": "Dec 26, 2025", "close": "Dec 30, 2025", "type": "SME", "status": "Open"},
-            {"name": "Bharat Coking Coal", "open": "Jan 2026", "close": "TBA", "type": "Mainboard", "status": "Upcoming"},
-            {"name": "Reliance Jio", "open": "H1 2026", "close": "TBA", "type": "Mainboard", "status": "Planned"}
-        ]
-
-def get_ui_landing_stocks():
-    try:
-        from nsepython import nse_get_top_gainers
-        df = nse_get_top_gainers()
-        stock_data = []
-        
-        if not df.empty:
-            # Take top 4
-            for _, row in df.head(4).iterrows():
-                symbol = row['symbol']
-                company_name = row.get('meta', {}).get('companyName', symbol)
-                stock_data.append({
-                    "name": company_name,
-                    "symbol": symbol,
-                    "price": round(float(row['lastPrice']), 2),
-                    "change": round(float(row['pChange']), 2),
-                    "vol": str(round(float(row['totalTradedVolume'])/1000000, 1)) + "M"
-                })
-            return stock_data
-    except Exception as e:
-        print(f"NSE Python Error: {e}")
-
-    # Fallback to yfinance if NSE fails
-    tickers = ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS"]
-    stock_data = []
-    
-    for symbol in tickers:
-        try:
-            stock = yf.Ticker(symbol)
-            hist = stock.history(period="2d")
-            if not hist.empty and len(hist) >= 2:
-                current_price = hist['Close'].iloc[-1]
-                prev_price = hist['Close'].iloc[-2]
-                change_pct = ((current_price - prev_price) / prev_price) * 100
-                
-                stock_data.append({
-                    "name": stock.info.get('longName', symbol.split('.')[0]),
-                    "symbol": symbol.split('.')[0],
-                    "price": round(current_price, 2),
-                    "change": round(change_pct, 2),
-                    "vol": "12.5M"
-                })
-        except:
-            continue
-    return stock_data
-
-
-def get_live_ipo_data():
-    # Primary URL for 2025/2026 listings
-    url = "https://www.chittorgarh.com/report/ipo-in-india-list-main-board-sme/82/all/?year=2025"
-    
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Accept-Language": "en-US,en;q=0.9"
-    }
-
-    try:
-        response = requests.get(url, headers=headers, timeout=15)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # Look for the specific table ID often used by Chittorgarh
-        table = soup.find('table', {'class': 'table-striped'}) or soup.find('table')
-        
-        if not table:
-            raise ValueError("Table not found")
-
-        ipos = []
-        rows = table.find_all('tr')[1:8] # Get the most recent 7 entries
-        
-        for row in rows:
-            cols = row.find_all('td')
-            if len(cols) >= 3:
-                ipos.append({
-                    "name": cols[0].text.strip().replace(" IPO", ""),
-                    "open": cols[1].text.strip(),
-                    "close": cols[2].text.strip(),
-                    "type": "SME" if "SME" in cols[0].text else "Mainboard",
-                    "status": "Closing Soon" if "Dec 26" in cols[2].text else "Upcoming"
-                })
-        return ipos
-
-    except Exception:
-        # FALLBACK DATA: Current Market Status as of Dec 28, 2025
-        return [
-            {"name": "Modern Diagnostic", "open": "Dec 31, 2025", "close": "Jan 02, 2026", "type": "SME", "status": "Opening Soon"},
-            {"name": "E to E Transportation", "open": "Dec 26, 2025", "close": "Dec 30, 2025", "type": "SME", "status": "Open"},
-            {"name": "Bharat Coking Coal", "open": "Jan 2026", "close": "TBA", "type": "Mainboard", "status": "Upcoming"},
-            {"name": "Reliance Jio", "open": "H1 2026", "close": "TBA", "type": "Mainboard", "status": "Planned"}
-        ]
