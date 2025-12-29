@@ -3,9 +3,9 @@
 ## 🏗️ Architecture Overview
 ```
 SmartStock/
-├── 🖥️  client/          # React Frontend
-├── 🔧  server/          # Node.js Backend  
-├── 🤖  ai-service/      # Python AI Service
+├── 🖥️  client/          # React Frontend (Clean & Optimized)
+├── 🔧  server/          # Node.js Backend (Streamlined)
+├── 🤖  ai-service/      # Python AI Service (Efficient)
 └── 📚  README.md        # Documentation
 ```
 
@@ -14,15 +14,16 @@ SmartStock/
 
 ### Key Files:
 - `src/App.tsx` - Main app component with routing
-- `src/pages/` - All page components
+- `src/pages/` - All page components (6 pages)
   - `Home.tsx` - Landing page with market data
   - `Compare.tsx` - Stock comparison tool
   - `ComprehensiveLearn.tsx` - Learning center
   - `AIAdvisor.tsx` - AI chat interface
   - `News.tsx` - Smart news with sentiment analysis
   - `IPOs.tsx` - IPO calendar with risk assessment
-- `src/components/` - Reusable UI components
+- `src/components/` - Reusable UI components (7 components)
 - `src/lib/api.ts` - API calls to backend
+- `src/lib/utils.ts` - Utility functions
 
 ### Features:
 - 📊 Real-time stock comparison
@@ -35,11 +36,12 @@ SmartStock/
 **Tech Stack:** Node.js + Express + MongoDB
 
 ### Key Files:
-- `server.js` - Main server file
-- `controllers/` - Request handlers
-- `routes/` - API endpoints
-- `services/` - Business logic
-- `models/` - Database schemas
+- `server.js` - Main server file (cleaned, uses shared DB config)
+- `config/db.js` - Database connection
+- `controllers/` - Request handlers (5 controllers)
+- `routes/` - API endpoints (6 route files)
+- `services/` - Business logic (9 services, all used)
+- `data/comprehensiveLessons.js` - Learning content
 
 ### API Endpoints:
 - `/api/compare` - Stock comparison data
@@ -47,19 +49,20 @@ SmartStock/
 - `/api/ipo/upcoming` - IPO data with risk factors
 - `/api/learning/list` - Educational content
 - `/api/market/landing-data` - Market highlights
+- `/api/chat` - AI advisor communication
 
 ## 🤖 AI Service (ai-service/)
 **Tech Stack:** Python + FastAPI + LangChain + Groq LLM
 
 ### Key Files:
-- `main.py` - FastAPI server
-- `engine.py` - AI processing logic
-- `ipo_service.py` - IPO risk assessment
-- `requirements.txt` - Python dependencies
+- `main.py` - FastAPI server (clean endpoints)
+- `engine.py` - AI processing logic (optimized)
+- `ipo_service.py` - IPO risk assessment (comprehensive)
+- `requirements.txt` - Python dependencies (minimal set)
 
 ### Features:
 - 🎓 Educational AI responses
-- 🎯 IPO risk analysis
+- 🎯 IPO risk analysis with 🟢🟡🔴 indicators
 - 📊 Stock data integration
 - ⚠️ Educational disclaimers
 
@@ -88,6 +91,28 @@ npm install
 npm run dev
 # Runs on http://localhost:3001
 ```
+
+## 🧹 Code Cleanup Completed
+
+### ✅ Removed:
+- Duplicate `connectDB` function in server.js
+- Unused variables in comprehensiveStockService.js
+- Unused `getFinancials` method
+- Unused react.svg asset
+- Unused FMP_API_KEY environment variable
+- All unused imports and variables
+
+### ✅ Optimized:
+- Server.js now uses shared DB config from config/db.js
+- All services are actively used and necessary
+- Clean import statements throughout
+- Proper error handling maintained
+- All components and pages are utilized
+
+### ✅ Dependencies:
+- **Server:** 7 production dependencies (all used)
+- **Client:** 10 production dependencies (all used)
+- **AI Service:** 9 Python packages (all required)
 
 ## 🎯 Key Features for Presentation
 
@@ -123,4 +148,12 @@ npm run dev
 - **IPO Data:** Custom database with 2026 IPOs
 - **AI:** Groq LLM with educational prompts
 
-This clean structure makes it easy to explain each component and demonstrate the full-stack capabilities of the platform!
+## 💡 Internship Presentation Points
+1. **Clean Architecture:** Clear separation of frontend, backend, and AI service
+2. **Modern Tech Stack:** React 18, Node.js, Python FastAPI
+3. **Educational Focus:** No investment advice, only educational content
+4. **Real-time Data:** Live market data and news integration
+5. **AI Integration:** Smart risk assessment and educational responses
+6. **Scalable Design:** Modular services, clean code structure
+
+This clean, optimized structure makes it easy to explain each component and demonstrate the full-stack capabilities of the platform!

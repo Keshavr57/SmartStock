@@ -11,11 +11,10 @@ class ComprehensiveStockService {
         try {
             console.log(`📊 Fetching comprehensive data for ${symbol}`);
             
-            const [priceData, fundamentals, statistics, financials] = await Promise.allSettled([
+            const [priceData, fundamentals, statistics] = await Promise.allSettled([
                 this.getPriceData(symbol),
                 this.getFundamentals(symbol),
-                this.getStatistics(symbol),
-                this.getFinancials(symbol)
+                this.getStatistics(symbol)
             ]);
 
             const result = {
@@ -197,9 +196,10 @@ class ComprehensiveStockService {
 
             const summaryDetail = quoteSummary.summaryDetail || {};
             const financialData = quoteSummary.financialData || {};
-            const keyStats = quoteSummary.defaultKeyStatistics || {};
             const incomeStatement = quoteSummary.incomeStatementHistory?.incomeStatementHistory?.[0] || {};
             const balanceSheet = quoteSummary.balanceSheetHistory?.balanceSheetStatements?.[0] || {};
+
+            const keyStats = result.defaultKeyStatistics || {};
 
             return {
                 marketCap: summaryDetail.marketCap?.raw,
@@ -243,12 +243,6 @@ class ComprehensiveStockService {
             console.error(`Error fetching statistics for ${symbol}:`, error.message);
             return null;
         }
-    }
-
-    async getFinancials(symbol) {
-        // This would fetch detailed financial statements
-        // For now, returning null as it requires more complex API calls
-        return null;
     }
 
     generateMockReturn() {

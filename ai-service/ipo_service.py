@@ -387,8 +387,3 @@ def get_ipo_risk_assessment(ipo_name):
         'assessment': assessment,
         'ipo_data': target_ipo
     }
-
-# Main function for backward compatibility
-def get_live_ipo_data():
-    """Main function to get current IPO data"""
-    return get_current_ipos()

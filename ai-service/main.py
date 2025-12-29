@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import Optional
 
@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi.middleware.cors import CORSMiddleware
 
 from engine import process_query
-from ipo_service import get_live_ipo_data
+from ipo_service import get_current_ipos
 from engine import get_ui_landing_stocks
 
 app = FastAPI()
@@ -28,7 +28,7 @@ async def chat_endpoint(request: ChatRequest):
     try:
         # BYPASS LOGIC: If the system asks for raw IPO data, return it directly
         if request.message == "FETCH_LIVE_IPOS_NOW":
-            raw_data = get_live_ipo_data()
+            raw_data = get_current_ipos()
             return {"status": "success", "answer": raw_data}
         
         if request.message == "FETCH_STOCKS_JSON":

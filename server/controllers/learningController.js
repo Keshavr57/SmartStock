@@ -1,4 +1,3 @@
-import learningService from '../services/learningService.js';
 import comprehensiveLearningService from '../services/comprehensiveLearningService.js';
 
 export const listLessons = (req, res) => {
