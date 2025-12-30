@@ -19,7 +19,6 @@ export default function Compare() {
     useEffect(() => {
         const fetchData = async () => {
             if (selectedAssets.length === 0) {
-                setComparisonData([])
                 setChartData([])
                 setComprehensiveData([])
                 return
@@ -38,7 +37,7 @@ export default function Compare() {
 
                 // Handle basic comparison data
                 if (basicRes.status === 'fulfilled' && basicRes.value.success) {
-                    setComparisonData(basicRes.value.comparison)
+                    // Basic comparison data can be used if needed
                 }
 
                 // Handle chart data
@@ -366,7 +365,7 @@ export default function Compare() {
                     </h3>
                     
                     <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-6 space-y-4">
-                        {selectedAssets.map((asset) => (
+                        {selectedAssets.map((asset, index) => (
                             <div key={asset} className="flex items-start justify-between py-3 border-b border-gray-100 dark:border-zinc-800 last:border-b-0">
                                 <div className="space-y-1">
                                     <div className="font-medium text-gray-900 dark:text-white text-sm">

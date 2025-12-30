@@ -3,6 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
+interface RowConfig {
+  label: string;
+  key: string;
+  format: (value: number | null, symbol?: string) => string;
+  showIcon?: boolean;
+}
+
 interface StockData {
   symbol: string;
   lastTradedPrice: number | null;
@@ -61,16 +68,16 @@ interface ComprehensiveComparisonTableProps {
 }
 
 export default function ComprehensiveComparisonTable({ data, loading }: ComprehensiveComparisonTableProps) {
-  const formatCurrency = (value: number | null, symbol: string) => {
+  const formatCurrency = (value: number | null, symbol?: string) => {
     if (value === null || value === undefined) return 'N/A';
-    const isIndian = symbol.includes('.NS') || symbol.includes('.BO');
+    const isIndian = symbol?.includes('.NS') || symbol?.includes('.BO');
     const prefix = isIndian ? '₹' : '$';
     return `${prefix}${value.toLocaleString()}`;
   };
 
-  const formatLargeCurrency = (value: number | null, symbol: string) => {
+  const formatLargeCurrency = (value: number | null, symbol?: string) => {
     if (value === null || value === undefined) return 'N/A';
-    const isIndian = symbol.includes('.NS') || symbol.includes('.BO');
+    const isIndian = symbol?.includes('.NS') || symbol?.includes('.BO');
     const prefix = isIndian ? '₹' : '$';
     
     if (value >= 1e12) return `${prefix}${(value / 1e12).toFixed(1)}T`;
@@ -85,7 +92,7 @@ export default function ComprehensiveComparisonTable({ data, loading }: Comprehe
     return `${value.toFixed(2)}%`;
   };
 
-  const formatNumber = (value: number | null, decimals: number = 2) => {
+  const formatNumber = (value: number | null, _symbol?: string, decimals: number = 2) => {
     if (value === null || value === undefined) return 'N/A';
     return value.toFixed(decimals);
   };
@@ -137,7 +144,7 @@ export default function ComprehensiveComparisonTable({ data, loading }: Comprehe
     );
   }
 
-  const sections = [
+  const sections: { title: string; rows: RowConfig[] }[] = [
     {
       title: 'Price Information',
       rows: [
