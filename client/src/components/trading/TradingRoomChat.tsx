@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, Send, Users, X, Minimize2, Maximize2 } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
+import { API_CONFIG } from '@/lib/config';
 
 interface ChatMessage {
     id: number;
@@ -41,7 +42,7 @@ const TradingRoomChat: React.FC<TradingRoomChatProps> = ({ symbol, userId }) => 
     }, [messages]);
 
     const connectToTradingRoom = () => {
-        const socketConnection = io('http://localhost:5050');
+        const socketConnection = io(API_CONFIG.WEBSOCKET_URL);
         setSocket(socketConnection);
 
         socketConnection.on('connect', () => {

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { RefreshCw, TrendingUp, TrendingDown } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
+import { API_CONFIG, ENDPOINTS } from '@/lib/config';
 
 interface TradingViewChartProps {
     symbol: string;
@@ -61,7 +62,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, height = 50
 
     const connectWebSocket = () => {
         try {
-            socketRef.current = io('http://localhost:5050');
+            socketRef.current = io(API_CONFIG.WEBSOCKET_URL);
 
             socketRef.current.on('connect', () => {
                 console.log('🔌 Connected to trading WebSocket');
@@ -143,7 +144,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, height = 50
             setLoading(true);
             setError(null);
 
-            const response = await fetch(`http://localhost:5050/api/virtual/chart/${symbol}?interval=${interval}`);
+            const response = await fetch(ENDPOINTS.CHART(symbol, interval));
             const result = await response.json();
 
             if (result.status === 'success' && result.data) {

@@ -28,7 +28,7 @@ const server = createServer(app);
 
 // ================= MIDDLEWARE =================
 app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:3000", "http://localhost:3001"],
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || ["http://localhost:5173", "http://localhost:3000", "http://localhost:3001"],
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
@@ -38,7 +38,7 @@ app.use(express.json());
 // ================= SOCKET.IO SETUP =================
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "http://localhost:3000", "http://localhost:3001"],
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || ["http://localhost:5173", "http://localhost:3000", "http://localhost:3001"],
     methods: ["GET", "POST"]
   }
 });
@@ -115,7 +115,7 @@ app.use('/api/ipo', ipoRoutes);
 app.use('/api/virtual', virtualTradingRoutes);
 
 // ================= SERVER START =================
-const PORT = 5050; // Hardcoded to avoid shifts
+const PORT = process.env.PORT || 5050;
 
 const startServer = async () => {
   await connectDB();

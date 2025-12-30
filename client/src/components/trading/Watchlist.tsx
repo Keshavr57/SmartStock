@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X, TrendingUp, TrendingDown, Eye } from 'lucide-react';
 import { authService } from '@/lib/auth';
+import { ENDPOINTS } from '@/lib/config';
 
 interface WatchlistItem {
     symbol: string;
@@ -37,7 +38,7 @@ const Watchlist: React.FC<WatchlistProps> = ({ onStockSelect }) => {
                 return;
             }
 
-            const response = await fetch(`http://localhost:5050/api/virtual/watchlist/${user.id}`, {
+            const response = await fetch(ENDPOINTS.WATCHLIST(user.id), {
                 headers: authService.getAuthHeaders()
             });
             const data = await response.json();
@@ -59,7 +60,7 @@ const Watchlist: React.FC<WatchlistProps> = ({ onStockSelect }) => {
         }
 
         try {
-            const response = await fetch(`http://localhost:5050/api/virtual/search/${query}`);
+            const response = await fetch(ENDPOINTS.SEARCH(query));
             const data = await response.json();
             if (data.status === 'success') {
                 setSearchResults(data.data);
@@ -77,7 +78,7 @@ const Watchlist: React.FC<WatchlistProps> = ({ onStockSelect }) => {
                 return;
             }
 
-            const response = await fetch(`http://localhost:5050/api/virtual/watchlist/${user.id}`, {
+            const response = await fetch(ENDPOINTS.WATCHLIST(user.id), {
                 method: 'POST',
                 headers: authService.getAuthHeaders(),
                 body: JSON.stringify({ symbol })
@@ -102,7 +103,7 @@ const Watchlist: React.FC<WatchlistProps> = ({ onStockSelect }) => {
                 return;
             }
 
-            const response = await fetch(`http://localhost:5050/api/virtual/watchlist/${user.id}/${symbol}`, {
+            const response = await fetch(ENDPOINTS.WATCHLIST_ITEM(user.id, symbol), {
                 method: 'DELETE',
                 headers: authService.getAuthHeaders()
             });

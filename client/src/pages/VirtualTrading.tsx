@@ -8,6 +8,7 @@ import Watchlist from '../components/trading/Watchlist';
 import TransactionHistory from '../components/trading/TransactionHistory';
 import RealTimePnL from '../components/trading/RealTimePnL';
 import { authService } from '@/lib/auth';
+import { ENDPOINTS } from '@/lib/config';
 
 const VirtualTrading: React.FC = () => {
     const [activeTab, setActiveTab] = useState('portfolio');
@@ -38,7 +39,7 @@ const VirtualTrading: React.FC = () => {
                 return;
             }
 
-            const response = await fetch(`http://localhost:5050/api/virtual/portfolio/${user.id}`, {
+            const response = await fetch(ENDPOINTS.PORTFOLIO(user.id), {
                 headers: authService.getAuthHeaders()
             });
             const data = await response.json();
@@ -52,7 +53,7 @@ const VirtualTrading: React.FC = () => {
 
     const fetchMarketStatus = async () => {
         try {
-            const response = await fetch('http://localhost:5050/api/virtual/market-status');
+            const response = await fetch(ENDPOINTS.MARKET_STATUS);
             const data = await response.json();
             if (data.status === 'success') {
                 setMarketStatus(data.data);
@@ -69,7 +70,7 @@ const VirtualTrading: React.FC = () => {
         }
 
         try {
-            const response = await fetch(`http://localhost:5050/api/virtual/search/${query}`);
+            const response = await fetch(ENDPOINTS.SEARCH(query));
             const data = await response.json();
             if (data.status === 'success') {
                 setSearchResults(data.data);

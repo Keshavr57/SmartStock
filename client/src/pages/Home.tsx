@@ -2,6 +2,7 @@ import { MarketTable } from "@/components/MarketTable"
 import { TrendingUp, DollarSign, Activity, BarChart3, ArrowUpRight, Eye, BookOpen, Brain, Newspaper, Clock, Star, Target, Zap, RefreshCw } from "lucide-react"
 import { useState, useEffect } from "react"
 import { authService } from "@/lib/auth"
+import { ENDPOINTS } from "@/lib/config"
 
 export default function Home() {
     const [portfolioData, setPortfolioData] = useState({
@@ -27,7 +28,7 @@ export default function Home() {
             if (!user) return;
 
             // Fetch portfolio data
-            const portfolioResponse = await fetch(`http://localhost:5050/api/virtual/portfolio/${user.id}`, {
+            const portfolioResponse = await fetch(ENDPOINTS.PORTFOLIO(user.id), {
                 headers: authService.getAuthHeaders()
             });
             const portfolioResult = await portfolioResponse.json();
@@ -37,7 +38,7 @@ export default function Home() {
             }
 
             // Fetch recent transactions
-            const transactionsResponse = await fetch(`http://localhost:5050/api/virtual/transactions/${user.id}?limit=3`, {
+            const transactionsResponse = await fetch(ENDPOINTS.TRANSACTIONS(user.id, 3), {
                 headers: authService.getAuthHeaders()
             });
             const transactionsResult = await transactionsResponse.json();

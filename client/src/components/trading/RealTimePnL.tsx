@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, Activity, RefreshCw } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { authService } from '@/lib/auth';
+import { ENDPOINTS, API_CONFIG } from '@/lib/config';
 
 interface Position {
     symbol: string;
@@ -51,7 +52,7 @@ const RealTimePnL: React.FC = () => {
             
             // Try to connect to WebSocket for real-time updates
             try {
-                const socketConnection = io('http://localhost:5050');
+                const socketConnection = io(API_CONFIG.WEBSOCKET_URL);
                 setSocket(socketConnection);
 
                 socketConnection.on('connect', () => {
@@ -99,7 +100,7 @@ const RealTimePnL: React.FC = () => {
 
     const checkMarketStatus = async () => {
         try {
-            const response = await fetch('http://localhost:5050/api/virtual/market-status');
+            const response = await fetch(ENDPOINTS.MARKET_STATUS);
             const result = await response.json();
             
             if (result.status === 'success') {
@@ -128,7 +129,7 @@ const RealTimePnL: React.FC = () => {
                 return;
             }
 
-            const response = await fetch(`http://localhost:5050/api/virtual/holdings/${user.id}`, {
+            const response = await fetch(ENDPOINTS.HOLDINGS(user.id), {
                 headers: authService.getAuthHeaders()
             });
             const result = await response.json();
@@ -142,7 +143,7 @@ const RealTimePnL: React.FC = () => {
                     let currentPrice = holding.avgPrice; // fallback to avg price
                     
                     try {
-                        const priceResponse = await fetch(`http://localhost:5050/api/virtual/quote/${holding.symbol}`);
+                        const priceResponse = await fetch(ENDPOINTS.QUOTE(holding.symbol));
                         const priceData = await priceResponse.json();
                         if (priceData.status === 'success' && priceData.data.price) {
                             currentPrice = priceData.data.price;

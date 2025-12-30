@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, TrendingUp, TrendingDown, AlertCircle, CheckCircle } from 'lucide-react';
 import { authService } from '@/lib/auth';
+import { ENDPOINTS } from '@/lib/config';
 
 interface OrderPanelProps {
     symbol: string;
@@ -33,7 +34,7 @@ const OrderPanel: React.FC<OrderPanelProps> = ({ symbol, type, onClose, onOrderC
 
     const fetchStockQuote = async () => {
         try {
-            const response = await fetch(`http://localhost:5050/api/virtual/quote/${symbol}`);
+            const response = await fetch(ENDPOINTS.QUOTE(symbol));
             const data = await response.json();
             
             if (data.status === 'success') {
@@ -91,7 +92,7 @@ const OrderPanel: React.FC<OrderPanelProps> = ({ symbol, type, onClose, onOrderC
                 ...(orderType === 'LIMIT' && { limitPrice: parseFloat(limitPrice) })
             };
 
-            const response = await fetch(`http://localhost:5050/api/virtual/order/${user.id}`, {
+            const response = await fetch(ENDPOINTS.ORDER(user.id), {
                 method: 'POST',
                 headers: authService.getAuthHeaders(),
                 body: JSON.stringify(orderData)

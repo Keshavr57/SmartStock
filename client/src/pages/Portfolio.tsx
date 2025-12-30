@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, PieChart, Activity, RefreshCw, BarChart3, User, Mail, Calendar, Settings } from 'lucide-react';
 import RealTimePnL from '../components/trading/RealTimePnL';
+import { ENDPOINTS } from '@/lib/config';
 
 interface PortfolioSummary {
     totalValue: number;
@@ -59,11 +60,11 @@ const Portfolio: React.FC = () => {
             const userId = currentUser.id;
             
             // Fetch portfolio summary
-            const summaryResponse = await fetch(`http://localhost:5050/api/virtual/portfolio/${userId}`);
+            const summaryResponse = await fetch(ENDPOINTS.PORTFOLIO(userId));
             const summaryData = await summaryResponse.json();
             
             // Fetch holdings
-            const holdingsResponse = await fetch(`http://localhost:5050/api/virtual/holdings/${userId}`);
+            const holdingsResponse = await fetch(ENDPOINTS.HOLDINGS(userId));
             const holdingsData = await holdingsResponse.json();
             
             if (summaryData.status === 'success') {
@@ -77,7 +78,7 @@ const Portfolio: React.FC = () => {
                         let currentPrice = holding.avgPrice;
                         
                         try {
-                            const priceResponse = await fetch(`http://localhost:5050/api/virtual/quote/${holding.symbol}`);
+                            const priceResponse = await fetch(ENDPOINTS.QUOTE(holding.symbol));
                             const priceData = await priceResponse.json();
                             if (priceData.status === 'success' && priceData.data.price) {
                                 currentPrice = priceData.data.price;

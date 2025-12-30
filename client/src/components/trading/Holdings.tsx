@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { authService } from '@/lib/auth';
+import { ENDPOINTS } from '@/lib/config';
 
 interface Holding {
     symbol: string;
@@ -34,7 +35,7 @@ const Holdings: React.FC = () => {
                 return;
             }
 
-            const response = await fetch(`http://localhost:5050/api/virtual/holdings/${user.id}`, {
+            const response = await fetch(ENDPOINTS.HOLDINGS(user.id), {
                 headers: authService.getAuthHeaders()
             });
             const data = await response.json();

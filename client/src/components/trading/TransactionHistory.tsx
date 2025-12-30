@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Clock, Filter } from 'lucide-react';
 import { authService } from '@/lib/auth';
+import { ENDPOINTS } from '@/lib/config';
 
 interface Transaction {
     symbol: string;
@@ -32,7 +33,7 @@ const TransactionHistory: React.FC = () => {
                 return;
             }
 
-            const response = await fetch(`http://localhost:5050/api/virtual/transactions/${user.id}?limit=${limit}`, {
+            const response = await fetch(ENDPOINTS.TRANSACTIONS(user.id, limit), {
                 headers: authService.getAuthHeaders()
             });
             const data = await response.json();
