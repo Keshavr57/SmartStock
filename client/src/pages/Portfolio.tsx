@@ -448,7 +448,7 @@ const Portfolio: React.FC = () => {
                         )}
 
                         {activeTab === 'pnl' && (
-                            <RealTimePnL userId={userId} />
+                            <RealTimePnL />
                         )}
                     </div>
                 </div>

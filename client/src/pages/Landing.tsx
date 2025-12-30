@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Menu, X, Bot, MessageCircle, BarChart3, TrendingDown } from 'lucide-react';
+import { TrendingUp, Menu, X, Bot, MessageCircle, BarChart3 } from 'lucide-react';
 import { MarketTable } from "@/components/MarketTable";
 import { authService } from '@/lib/auth';
 

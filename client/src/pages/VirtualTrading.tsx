@@ -10,15 +10,33 @@ import RealTimePnL from '../components/trading/RealTimePnL';
 import { authService } from '@/lib/auth';
 import { ENDPOINTS } from '@/lib/config';
 
+interface PortfolioData {
+    totalValue: number;
+    balance: number;
+    totalPnL: number;
+    holdingsCount: number;
+}
+
+interface MarketStatus {
+    isOpen: boolean;
+    status: string;
+}
+
+interface SearchResult {
+    symbol: string;
+    name: string;
+    price: number;
+}
+
 const VirtualTrading: React.FC = () => {
     const [activeTab, setActiveTab] = useState('portfolio');
     const [selectedStock, setSelectedStock] = useState('RELIANCE.NS');
-    const [portfolioData, setPortfolioData] = useState(null);
-    const [marketStatus, setMarketStatus] = useState(null);
+    const [portfolioData, setPortfolioData] = useState<PortfolioData | null>(null);
+    const [marketStatus, setMarketStatus] = useState<MarketStatus | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState([]);
+    const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [showOrderPanel, setShowOrderPanel] = useState(false);
-    const [orderType, setOrderType] = useState('BUY');
+    const [orderType, setOrderType] = useState<'BUY' | 'SELL'>('BUY');
 
     useEffect(() => {
         fetchPortfolioData();
