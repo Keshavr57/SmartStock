@@ -1,4 +1,4 @@
-import { TrendingUp, Menu, Sun, Moon, Search, Cpu } from "lucide-react"
+import { TrendingUp, Menu, Sun, Moon, Search, Cpu, LogOut } from "lucide-react"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { cn } from "@/lib/utils"
@@ -8,13 +8,14 @@ interface NavbarProps {
     toggleTheme: () => void
     onPageChange: (page: string) => void
     currentPage: string
+    onLogout?: () => void
 }
 
-export function Navbar({ isDark, toggleTheme, onPageChange, currentPage }: NavbarProps) {
+export function Navbar({ isDark, toggleTheme, onPageChange, currentPage, onLogout }: NavbarProps) {
     const navItems = [
         { label: "Home", id: "Home" },
         { label: "Compare", id: "Compare" },
-        { label: "Crypto", id: "Crypto" },
+        { label: "Virtual Trading", id: "VirtualTrading" },
         { label: "IPOs", id: "IPOs" },
         { icon: Cpu, label: "AI Advisor", id: "AI" },
         { label: "News", id: "News" },
@@ -62,13 +63,25 @@ export function Navbar({ isDark, toggleTheme, onPageChange, currentPage }: Navba
                         />
                     </div>
 
-                    <Button variant="premium" className="hidden sm:flex h-9 px-5 rounded-full font-bold text-white shadow-xl hover:scale-105 transition-transform active:scale-95">
-                        Connect Portfolio
+                    <Button variant="premium" className="hidden sm:flex h-9 px-5 rounded-full font-bold text-white shadow-xl hover:scale-105 transition-transform active:scale-95" onClick={() => onPageChange("Portfolio")}>
+                        Portfolio
                     </Button>
 
                     <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={toggleTheme}>
                         {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                     </Button>
+
+                    {onLogout && (
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-9 w-9 rounded-full text-red-600 hover:text-red-700 hover:bg-red-50" 
+                            onClick={onLogout}
+                            title="Logout"
+                        >
+                            <LogOut className="h-4 w-4" />
+                        </Button>
+                    )}
 
                     <Button variant="ghost" size="icon" className="md:hidden">
                         <Menu className="h-5 w-5" />

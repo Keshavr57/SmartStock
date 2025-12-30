@@ -316,7 +316,7 @@ def calculate_ipo_risk_level(ipo_data):
         return 'High', '🔴'
 
 def get_ipo_risk_assessment(ipo_name):
-    """Get detailed risk assessment for an IPO"""
+    """Get professional IPO risk assessment following 5-point structure"""
     ipos = get_fallback_current_ipos()
     
     # Find the IPO
@@ -330,56 +330,25 @@ def get_ipo_risk_assessment(ipo_name):
         return {
             'risk_level': 'Unknown',
             'risk_icon': '⚪',
-            'assessment': 'IPO not found in current database'
+            'assessment': 'IPO not found in current pipeline'
         }
     
     risk_level, risk_icon = calculate_ipo_risk_level(target_ipo)
     
-    assessment = f"""
-## 🎯 IPO Risk Assessment: {target_ipo['name']}
+    # Professional 5-point assessment
+    assessment = f"""**{risk_icon} {risk_level} Risk: {target_ipo['name']}**
 
-### {risk_icon} Risk Level: {risk_level}
+**1️⃣ Core insight:** {get_core_insight(target_ipo, risk_level)}
 
-**Key Factors:**
-• **Promoter Holding**: {target_ipo.get('promoter_holding', 'N/A')}% 
-• **Company Age**: {target_ipo.get('company_age', 'N/A')} years
-• **Profit History**: {target_ipo.get('profit_history', 'N/A')}
-• **Price Band**: {target_ipo.get('price_band', 'N/A')}
-• **Lot Size**: {target_ipo.get('lot_size', 'N/A')}
+**2️⃣ Market intuition:** {get_market_intuition(target_ipo, risk_level)}
 
-**Risk Analysis:**
-"""
-    
-    if risk_level == 'Low':
-        assessment += """
-✅ **Strong fundamentals** with high promoter holding
-✅ **Established company** with proven track record  
-✅ **Consistent profitability** over multiple years
-✅ **Lower investment risk** for conservative investors
-"""
-    elif risk_level == 'Medium':
-        assessment += """
-⚠️ **Moderate fundamentals** with decent promoter holding
-⚠️ **Growing company** with some track record
-⚠️ **Variable profitability** or recent profitability
-⚠️ **Balanced risk-reward** profile
-"""
-    else:
-        assessment += """
-🚨 **Weak fundamentals** with low promoter holding
-🚨 **Young company** with limited track record
-🚨 **Loss-making or inconsistent** profitability
-🚨 **High investment risk** - suitable only for risk-tolerant investors
-"""
-    
-    assessment += """
-### ⚠️ Important Warnings:
-• **This is an educational platform, not investment tips**
-• **IPO investments carry high risk** - prices can be volatile
-• **Do your own research** - read the prospectus carefully
-• **Consult financial advisors** before making investment decisions
-• **Only invest money you can afford to lose**
-"""
+**3️⃣ Key risk:** {get_key_risk(target_ipo, risk_level)}
+
+**4️⃣ Human element:** {get_human_element(target_ipo, risk_level)}
+
+**5️⃣ Professional takeaway:** {get_professional_takeaway(target_ipo, risk_level)}
+
+*Professional IPO analysis for educational purposes*"""
     
     return {
         'risk_level': risk_level,
@@ -387,3 +356,55 @@ def get_ipo_risk_assessment(ipo_name):
         'assessment': assessment,
         'ipo_data': target_ipo
     }
+
+def get_core_insight(ipo_data, risk_level):
+    """Generate core insight based on IPO fundamentals"""
+    promoter_holding = ipo_data.get('promoter_holding', 50)
+    company_age = ipo_data.get('company_age', 5)
+    
+    if risk_level == 'Low':
+        return f"Established player with {promoter_holding}% promoter skin in the game - institutional quality."
+    elif risk_level == 'Medium':
+        return f"Growing business with {company_age}-year track record - execution risk vs growth potential."
+    else:
+        return f"Early-stage story with {promoter_holding}% promoter holding - high beta, high uncertainty."
+
+def get_market_intuition(ipo_data, risk_level):
+    """Generate market intuition explanation"""
+    profit_history = ipo_data.get('profit_history', '').lower()
+    
+    if 'profitable for 10+' in profit_history:
+        return "Mature cash flows suggest defensive characteristics. Institutions will likely anchor on dividend yield and FCF multiples."
+    elif 'profitable' in profit_history:
+        return "Recent profitability indicates business model validation. Growth investors will focus on revenue trajectory and margin expansion."
+    else:
+        return "Loss-making suggests we're betting on future execution. Market will price in high growth expectations with binary outcomes."
+
+def get_key_risk(ipo_data, risk_level):
+    """Generate key risk assessment"""
+    company_age = ipo_data.get('company_age', 5)
+    
+    if risk_level == 'Low':
+        return f"Valuation risk if market multiples compress. {company_age}-year history provides downside support."
+    elif risk_level == 'Medium':
+        return "Execution risk on growth plans. Management track record becomes critical for sustained performance."
+    else:
+        return "Business model risk - unproven at scale. Market sentiment can create 50%+ swings in either direction."
+
+def get_human_element(ipo_data, risk_level):
+    """Generate human behavior connection"""
+    if risk_level == 'Low':
+        return "Conservative institutions will buy for stability. Retail FOMO typically limited due to higher price points."
+    elif risk_level == 'Medium':
+        return "Growth vs value debate creates mixed signals. Career risk makes fund managers wait for 2-3 quarters of results."
+    else:
+        return "Retail excitement vs institutional caution. Fear of missing the 'next big thing' drives irrational pricing."
+
+def get_professional_takeaway(ipo_data, risk_level):
+    """Generate professional takeaway"""
+    if risk_level == 'Low':
+        return "Quality business at reasonable valuation. Size position based on portfolio allocation, not excitement."
+    elif risk_level == 'Medium':
+        return "Wait for post-listing volatility to find better entry. Let the market discover fair value first."
+    else:
+        return "High-conviction play only. If you don't understand the business model deeply, skip it entirely."

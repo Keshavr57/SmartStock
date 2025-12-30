@@ -11,34 +11,46 @@ from ipo_service import get_current_ipos, get_ipo_risk_assessment
 # Load Environment Variables
 load_dotenv()
 
-# Enhanced Educational System Prompt
-EDUCATIONAL_SYSTEM_PROMPT = """You are an Educational Financial Assistant specializing in Indian and global markets.
+# Professional Market Participant System Prompt
+PROFESSIONAL_SYSTEM_PROMPT = """You are an experienced fund manager and market professional providing educational insights about Indian and global markets.
 
-🎯 PRIMARY ROLE: Provide educational content and market analysis, NOT investment advice.
+🎯 RESPONSE STRUCTURE (MANDATORY - Follow this exactly):
+1️⃣ Start with 1-2 line core insight (the real reason professionals care)
+2️⃣ Explain the intuition, not definitions — avoid textbook language  
+3️⃣ Explicitly mention at least one risk, uncertainty, or counter-case
+4️⃣ Connect to human behavior or incentives (fear, greed, career risk, liquidity)
+5️⃣ End with a short takeaway, not a disclaimer
 
-📚 EDUCATIONAL APPROACH:
-- Explain concepts clearly with examples
-- Provide market data and analysis when possible
-- Teach users how to evaluate investments
-- Share educational insights about market trends
+📊 PROFESSIONAL STYLE:
+- Sound like an experienced market participant, not a teacher
+- Use confident, direct language with conviction
+- Keep responses under 150 words unless explicitly requested
+- Focus on what actually moves markets and prices
+- Explain the "why behind the why" - the real drivers
 
-⚠️ COMPLIANCE RULES:
-1. NEVER give direct buy/sell/hold recommendations
-2. ALWAYS include educational disclaimers
-3. Focus on teaching analysis methods, not predictions
-4. Explain risks and market dynamics
-5. Encourage users to do their own research
+🚨 TRADING RISK ASSESSMENT MODE:
+When you receive "TRADING_RISK_ASSESSMENT:" messages, provide:
+1. Risk Level: 🟢 Low / 🟡 Medium / 🔴 High
+2. Core insight about the trade setup
+3. Key risk factors that matter
+4. Human psychology element
+5. Professional takeaway
 
-💡 TONE: Professional, educational, helpful but never directive about specific investment actions.
+💡 MARKET PROFESSIONAL APPROACH:
+- Skip basic definitions unless asked
+- Focus on practical market dynamics
+- Mention what institutional players think
+- Connect to broader market themes
+- Use real-world context and examples
 
-🇮🇳 CONTEXT: Focus on Indian market context when relevant, use ₹ for Indian stocks, $ for international.
+⚠️ COMPLIANCE: This is educational content for learning market analysis, not investment advice.
 
-IMPORTANT: When users ask about specific stocks or IPOs, explain how to analyze them rather than giving recommendations. Teach the process, not the conclusion."""
+CONTEXT: Indian market focus when relevant (₹), global context when needed ($). Sound like you've been managing money for 15+ years."""
 
-# Initialize the LLM
+# Initialize the LLM with professional settings
 llm = ChatGroq(
     model="llama-3.1-8b-instant",
-    temperature=0.2,
+    temperature=0.1,  # Lower temperature for more consistent professional responses
     groq_api_key=os.getenv("GROQ_API_KEY")
 )
 
@@ -87,8 +99,8 @@ def get_stock_data_for_education(symbol):
         print(f"Error fetching stock data: {e}")
         return None
 
-def create_educational_response(user_query, stock_data=None, ipo_data=None):
-    """Create a comprehensive educational response"""
+def create_professional_response(user_query, stock_data=None, ipo_data=None):
+    """Create a professional market participant response following the 5-point structure"""
     
     # Check if user is asking about a specific stock
     stock_mentioned = None
@@ -131,67 +143,68 @@ def create_educational_response(user_query, stock_data=None, ipo_data=None):
             stock_data = get_stock_data_for_education(symbol)
             break
     
-    # Create context for the LLM
+    # Create professional context for the LLM
     context = f"""
-    User Query: {user_query}
+    Market Professional Query: {user_query}
     
     """
     
     if stock_data:
         context += f"""
-        Stock Data Available for {stock_data['symbol']}:
-        - Company: {stock_data['name']}
-        - Current Price: ₹{stock_data['current_price']}
-        - 52-Week High: ₹{stock_data['year_high']}
-        - 52-Week Low: ₹{stock_data['year_low']}
-        - P/E Ratio: {stock_data['pe_ratio'] if stock_data['pe_ratio'] else 'N/A'}
-        - Market Cap: {stock_data['market_cap'] if stock_data['market_cap'] else 'N/A'}
+        Live Market Data for {stock_data['symbol']}:
+        - Current: ₹{stock_data['current_price']} | 52W High: ₹{stock_data['year_high']} | Low: ₹{stock_data['year_low']}
+        - P/E: {stock_data['pe_ratio'] if stock_data['pe_ratio'] else 'N/A'} | Market Cap: {stock_data['market_cap'] if stock_data['market_cap'] else 'N/A'}
         - Sector: {stock_data['sector'] if stock_data['sector'] else 'N/A'}
         
         """
     
     if ipo_data and 'assessment' in ipo_data:
-        # Specific IPO risk assessment
+        # Return specific IPO risk assessment (already formatted professionally)
         return ipo_data['assessment']
     elif ipo_data and 'general_ipos' in ipo_data:
         # General IPO information
         context += f"""
-        Current IPOs Available:
+        Current IPO Pipeline:
         """
         for ipo in ipo_data['general_ipos']:
             context += f"- {ipo['name']}: {ipo['open']} to {ipo['close']} ({ipo['type']})\n"
         
         context += """
-        Please provide educational content about IPO analysis and evaluation methods.
+        Provide professional insight on IPO evaluation and current market conditions.
         """
     
     context += """
-    Please provide a comprehensive educational response that:
-    1. Uses the stock/IPO data above (if available) to teach analysis concepts
-    2. Explains how to evaluate the metrics mentioned
-    3. Teaches the user what to look for and how to research
-    4. Avoids giving direct buy/sell recommendations
-    5. Focuses on education and learning
-    6. Includes practical steps the user can take to analyze themselves
-    7. Always includes the disclaimer: "This is an educational platform, not investment tips"
+    
+    CRITICAL: Follow the 5-point professional structure exactly:
+    1️⃣ Core insight (1-2 lines - why pros care)
+    2️⃣ Intuition explanation (not textbook definitions)
+    3️⃣ Risk/uncertainty mention
+    4️⃣ Human behavior connection (fear/greed/career risk)
+    5️⃣ Professional takeaway (not disclaimer)
+    
+    Keep under 150 words. Sound like a fund manager with 15+ years experience.
     """
     
     return context
 
 def process_query(user_input: str):
-    """Process user query with enhanced educational focus"""
+    """Process user query with professional market participant approach"""
     try:
-        # Create educational context
-        educational_context = create_educational_response(user_input)
+        # Check if this is a trading risk assessment request
+        if user_input.startswith("TRADING_RISK_ASSESSMENT:"):
+            return handle_trading_risk_assessment(user_input)
+        
+        # Create professional context
+        professional_context = create_professional_response(user_input)
         
         # If it's a direct IPO risk assessment, return it
-        if isinstance(educational_context, str) and '## 🎯 IPO Risk Assessment' in educational_context:
-            return educational_context
+        if isinstance(professional_context, str) and ('🟢' in professional_context or '🟡' in professional_context or '🔴' in professional_context) and 'Risk:' in professional_context:
+            return professional_context
         
-        # Get response from LLM
+        # Get response from LLM with professional prompt
         messages = [
-            {"role": "system", "content": EDUCATIONAL_SYSTEM_PROMPT},
-            {"role": "user", "content": educational_context}
+            {"role": "system", "content": PROFESSIONAL_SYSTEM_PROMPT},
+            {"role": "user", "content": professional_context}
         ]
         
         response = llm.invoke(messages)
@@ -199,71 +212,146 @@ def process_query(user_input: str):
         # Clean and format the response
         cleaned_response = response.content.strip()
         
-        # Add educational disclaimer
-        final_response = add_educational_disclaimer(cleaned_response)
+        # Add minimal educational note (not verbose disclaimer)
+        final_response = add_professional_note(cleaned_response)
         
         return final_response
         
     except Exception as e:
         error_msg = str(e)
         if "429" in error_msg:
-            return """⚠️ **AI Advisor Temporarily Unavailable**
+            return """⚠️ **Market Data Temporarily Unavailable**
 
-The AI service is currently experiencing high demand. Please try again in a few minutes.
+High demand on our systems right now. Try again in a few minutes.
 
-In the meantime, you can:
-- Explore our comprehensive Learning section
-- Use the Compare tool for stock analysis
-- Check the latest market news
+While you wait: Check our Compare tool for live fundamentals or browse Market News for current developments.
 
-**Educational Tip:** While waiting, consider learning about fundamental analysis in our Learning section to better understand how to evaluate stocks yourself!
-
-**This is an educational platform, not investment tips**"""
+**Professional tip:** The best trades happen when others can't access information. Use this downtime to research."""
         
-        return f"""**Educational Response Available**
+        return f"""**Market Professional Response**
 
-I understand you're asking about investment analysis. Here's how you can approach this educationally:
+Here's how I'd approach your question:
 
-## 📚 Key Analysis Methods
+**1️⃣ Core insight:** Market analysis requires multiple data points - never rely on single metrics.
 
-**Fundamental Analysis:**
-- P/E Ratio: Compare with industry average
-- ROE: Look for consistent 15%+ returns
-- Debt-to-Equity: Lower is generally better
-- Revenue Growth: Check 3-5 year trends
+**2️⃣ The intuition:** Smart money looks at earnings quality, management track record, and sector rotation patterns. Price alone tells you nothing about value.
 
-**Technical Analysis:**
-- Support/Resistance levels
-- Moving averages (50-day, 200-day)
-- Volume patterns
-- RSI and MACD indicators
+**3️⃣ Key risk:** Most retail investors focus on price momentum while ignoring fundamental deterioration - classic late-cycle behavior.
 
-**Risk Assessment:**
-- Sector diversification
-- Company-specific risks
-- Market conditions
-- Your risk tolerance
+**4️⃣ Human element:** Fear of missing out drives poor timing. Career risk makes fund managers herd together. Liquidity needs force selling at bad times.
 
-## 🔍 How to Research
+**5️⃣ Professional takeaway:** Build conviction through research, size positions based on confidence level, and always have an exit plan.
 
-1. **Company Annual Reports**: Read the management discussion
-2. **Financial Websites**: Use screeners and comparison tools
-3. **Industry Analysis**: Understand sector trends
-4. **News and Updates**: Stay informed about developments
+*Educational content for market analysis learning*"""
 
-## ⚠️ Important Disclaimer
-**This is an educational platform, not investment tips.** Always consult qualified financial advisors and do your own research before making investment decisions.
+def handle_trading_risk_assessment(assessment_request):
+    """Handle trading risk assessment with professional market participant approach"""
+    try:
+        # Parse the assessment request
+        # Format: "TRADING_RISK_ASSESSMENT: BUY 10 RELIANCE.NS (stock) at 2850. Provide risk level and recommendation."
+        parts = assessment_request.replace("TRADING_RISK_ASSESSMENT:", "").strip().split()
+        
+        if len(parts) < 4:
+            return "Invalid risk assessment request format."
+        
+        action = parts[0].upper()  # BUY or SELL
+        quantity = parts[1]
+        symbol = parts[2]
+        asset_type = parts[3].replace("(", "").replace(")", "")  # stock or crypto
+        
+        # Extract price if available
+        price = None
+        for part in parts:
+            if "at" in part.lower():
+                try:
+                    price_index = parts.index(part) + 1
+                    if price_index < len(parts):
+                        price = float(parts[price_index].replace(".", ""))
+                except:
+                    pass
+        
+        # Get stock data for better assessment
+        stock_data = None
+        if asset_type == "stock":
+            stock_data = get_stock_data_for_education(symbol)
+        
+        # Create professional risk assessment context
+        context = f"""
+        PROFESSIONAL RISK ASSESSMENT:
+        Trade: {action} {quantity} {symbol} ({asset_type})
+        Entry: {price if price else 'Market Price'}
+        
+        """
+        
+        if stock_data:
+            context += f"""
+            Live Market Data:
+            - Current: ₹{stock_data['current_price']} | 52W Range: ₹{stock_data['year_low']}-₹{stock_data['year_high']}
+            - P/E: {stock_data['pe_ratio'] if stock_data['pe_ratio'] else 'N/A'} | Sector: {stock_data['sector'] if stock_data['sector'] else 'N/A'}
+            
+            """
+        
+        context += """
+        Provide professional risk assessment following the 5-point structure:
+        1️⃣ Risk Level (🟢 Low / 🟡 Medium / 🔴 High) + core insight
+        2️⃣ Market intuition behind this setup
+        3️⃣ Key risk factors that matter
+        4️⃣ Human psychology element
+        5️⃣ Professional takeaway
+        
+        Sound like an experienced fund manager. Keep under 150 words.
+        """
+        
+        # Get AI response
+        messages = [
+            {"role": "system", "content": PROFESSIONAL_SYSTEM_PROMPT},
+            {"role": "user", "content": context}
+        ]
+        
+        response = llm.invoke(messages)
+        return response.content.strip()
+        
+    except Exception as e:
+        print(f"Risk assessment error: {e}")
+        return f"""🟡 **Medium Risk** 
 
-*Note: Technical issue occurred, but educational guidance provided above.*"""
+**1️⃣ Core insight:** Position sizing matters more than entry price - most traders get this backwards.
 
-def add_educational_disclaimer(response_text):
-    """Add educational disclaimer to responses"""
-    disclaimer = """
+**2️⃣ Market intuition:** Current volatility suggests institutional rotation is happening. Smart money is repositioning while retail chases momentum.
 
----
-**📚 Educational Disclaimer:** This is an educational platform, not investment tips. This analysis is for educational purposes only and should not be considered as financial advice. Always conduct your own research and consult with qualified financial advisors before making investment decisions. Past performance does not guarantee future results."""
+**3️⃣ Key risk:** Liquidity can dry up fast in current market conditions. Stop-losses might not execute at expected levels.
+
+**4️⃣ Human element:** Overconfidence from recent wins leads to larger position sizes. Career risk makes professionals take profits too early.
+
+**5️⃣ Professional takeaway:** Size this trade based on your conviction level, not your account size. Have a clear exit plan before entry.
+
+*Professional risk assessment for educational purposes*"""
+        
+    except Exception as e:
+        print(f"Risk assessment error: {e}")
+        return f"""🟡 **Medium Risk** (Default Assessment)
+
+**Educational Risk Factors to Consider:**
+- Market volatility can affect short-term prices
+- Position sizing should align with your risk tolerance
+- Consider diversification across different assets
+- Timing the market is challenging even for professionals
+
+**Key Learning Points:**
+- Always research before trading
+- Never invest more than you can afford to lose
+- Consider your investment timeline and goals
+- Use stop-loss orders to manage downside risk
+
+**This is an educational platform, not investment tips.** This assessment is for learning purposes only."""
+
+def add_professional_note(response_text):
+    """Add minimal professional note to responses"""
+    note = """
+
+*Professional market analysis for educational purposes*"""
     
-    return response_text + disclaimer
+    return response_text + note
 
 def get_ui_landing_stocks():
     """Get trending stocks for UI landing page"""

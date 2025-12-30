@@ -1,70 +1,68 @@
 import { Button } from "./ui/button"
-import { Card, CardContent } from "./ui/card"
-import { Globe, Shield, Zap } from "lucide-react"
+import { IndianRupee, Globe, Brain, Clock } from "lucide-react"
 
 const features = [
     {
+        icon: IndianRupee,
+        title: "Indian Markets (NSE/BSE)",
+        desc: "Real-time data from National and Bombay Stock Exchanges"
+    },
+    {
         icon: Globe,
-        title: "Global Markets",
-        desc: "NSE/BSE and Global Crypto at your fingertips."
+        title: "Global Crypto Markets",
+        desc: "Track Bitcoin, Ethereum, and emerging cryptocurrencies"
     },
     {
-        icon: Zap,
-        title: "Instant Alerts",
-        desc: "Never miss a move with real-time price triggers."
+        icon: Brain,
+        title: "AI-Powered Insights",
+        desc: "Smart analysis and personalized investment recommendations"
     },
     {
-        icon: Shield,
-        title: "AI Security",
-        desc: "Enterprise-grade analysis with smart risk metrics."
+        icon: Clock,
+        title: "Portfolio Management",
+        desc: "Connect and manage your investments in one place"
     }
 ]
 
 export function Hero() {
     return (
-        <section className="relative overflow-hidden py-20 px-4">
-            {/* Background blobs for depth */}
-            <div className="absolute top-0 left-1/2 -z-10 h-[400px] w-[600px] -translate-x-1/2 rounded-full bg-blue-500/10 blur-[120px]" />
-            <div className="absolute bottom-0 right-0 -z-10 h-[300px] w-[300px] rounded-full bg-violet-500/10 blur-[100px]" />
+        <section className="min-h-screen bg-white py-16 px-4">
+            <div className="container mx-auto max-w-6xl">
+                <div className="text-center mb-20">
+                    <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6">
+                        Connect Your Portfolio to <br />
+                        <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                            Grow with Smart AI
+                        </span>
+                    </h1>
 
-            <div className="container mx-auto text-center">
-                <div className="inline-flex items-center gap-2 rounded-full border bg-muted/50 px-3 py-1 mb-6 text-sm font-medium">
-                    <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    Indian Market Live: Nifty 21,750 (+0.8%)
+                    <p className="mx-auto max-w-3xl text-lg text-gray-600 mb-10 leading-relaxed">
+                        India's most comprehensive platform for stock analysis, cryptocurrency tracking, and 
+                        AI-powered investment insights. Make smarter decisions with real-time NSE/BSE data 
+                        and global market intelligence.
+                    </p>
+
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                        <Button size="lg" className="h-12 px-8 text-base font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                            Connect Portfolio Now
+                        </Button>
+                        <Button size="lg" variant="outline" className="h-12 px-8 text-base font-medium border-gray-300 hover:bg-gray-50 rounded-lg">
+                            Explore Demo
+                        </Button>
+                    </div>
                 </div>
 
-                <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6">
-                    Invest Smarter with <br />
-                    <span className="gradient-text">AI Intelligence</span>
-                </h1>
-
-                <p className="mx-auto max-w-2xl text-lg text-muted-foreground mb-10">
-                    The all-in-one platform for modern traders. Analyze stocks, track crypto,
-                    and get AI-powered insights to grow your wealth with precision.
-                </p>
-
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-20">
-                    <Button size="lg" variant="premium" className="h-12 px-8 text-md">
-                        Start Trading Now
-                    </Button>
-                    <Button size="lg" variant="outline" className="h-12 px-8 text-md">
-                        View Market Demo
-                    </Button>
-                </div>
-
-                <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
                     {features.map((f, i) => (
-                        <Card key={i} className="glass border-none shadow-none text-left">
-                            <CardContent className="pt-6">
-                                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                                    <f.icon className="h-6 w-6 text-primary" />
-                                </div>
-                                <h3 className="font-bold text-lg mb-2">{f.title}</h3>
-                                <p className="text-sm text-muted-foreground leading-relaxed">
-                                    {f.desc}
-                                </p>
-                            </CardContent>
-                        </Card>
+                        <div key={i} className="text-center">
+                            <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+                                <f.icon className="h-8 w-8 text-gray-800" strokeWidth={1.5} />
+                            </div>
+                            <h3 className="font-semibold text-base mb-2 text-gray-900">{f.title}</h3>
+                            <p className="text-sm text-gray-600 leading-relaxed px-2">
+                                {f.desc}
+                            </p>
+                        </div>
                     ))}
                 </div>
             </div>

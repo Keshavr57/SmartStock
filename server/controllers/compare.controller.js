@@ -2,6 +2,8 @@ import { fetchYahooFundamentals } from "../services/yahoo.service.js";
 import { fetchIndianStock } from "../services/indianStock.service.js";
 import { fetchAlternativeIndianStock, fetchAlternativeUSStock } from "../services/fallback.service.js";
 import comprehensiveStockService from "../services/comprehensiveStockService.js";
+import enhancedStockService from "../services/enhancedStockService.js";
+import robustStockService from "../services/robustStockService.js";
 
 export const compareStocks = async (req, res) => {
   try {
@@ -88,32 +90,36 @@ export const getComprehensiveComparison = async (req, res) => {
       });
     }
 
-    console.log(`📊 Fetching comprehensive comparison for: ${symbols.join(', ')}`);
+    console.log(`📊 Fetching ROBUST comprehensive comparison for: ${symbols.join(', ')}`);
     
+    // Use the new robust service for the best data
     const results = await Promise.allSettled(
-      symbols.map(symbol => comprehensiveStockService.getComprehensiveStockData(symbol.trim().toUpperCase()))
+      symbols.map(symbol => robustStockService.getComprehensiveStockData(symbol.trim().toUpperCase()))
     );
 
     const comparison = results.map((result, index) => {
       if (result.status === 'fulfilled') {
         return result.value;
       } else {
-        console.error(`❌ Failed to fetch data for ${symbols[index]}:`, result.reason);
-        return comprehensiveStockService.getMockData(symbols[index].trim().toUpperCase());
+        console.error(`❌ Failed to fetch robust data for ${symbols[index]}:`, result.reason);
+        // Fallback to enhanced service, then to original service
+        return enhancedStockService.getComprehensiveStockData(symbols[index].trim().toUpperCase())
+          .catch(() => comprehensiveStockService.getMockData(symbols[index].trim().toUpperCase()));
       }
     });
 
     res.json({
       success: true,
       comparison,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      dataSource: 'robust_multi_api_v2'
     });
 
   } catch (err) {
-    console.error("❌ Comprehensive Compare Error:", err);
+    console.error("❌ Robust Comprehensive Compare Error:", err);
     res.status(500).json({ 
       success: false, 
-      error: "Failed to fetch comprehensive comparison", 
+      error: "Failed to fetch robust comprehensive comparison", 
       details: err.message 
     });
   }

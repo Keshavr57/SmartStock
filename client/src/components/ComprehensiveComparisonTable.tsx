@@ -151,95 +151,38 @@ export default function ComprehensiveComparisonTable({ data, loading }: Comprehe
     {
       title: 'Key Metrics',
       rows: [
-        { label: 'Market Cap', key: 'marketCap', format: formatLargeCurrency },
         { label: 'PE Ratio', key: 'peRatio', format: formatNumber },
-        { label: 'Book Value', key: 'bookValue', format: formatCurrency },
-        { label: 'PB Ratio', key: 'pbRatio', format: formatNumber },
-        { label: 'ROE', key: 'roe', format: (v: number | null) => formatPercentage(v ? v * 100 : null) },
-        { label: 'ROCE', key: 'roce', format: (v: number | null) => formatPercentage(v ? v * 100 : null) },
         { label: 'EPS', key: 'eps', format: formatNumber },
-        { label: 'Dividend Yield', key: 'dividendYield', format: (v: number | null) => formatPercentage(v ? v * 100 : null) },
+        { label: 'Volume', key: 'volume', format: (v: number | null) => v ? v.toLocaleString() : 'N/A' },
       ]
     },
     {
-      title: 'Returns',
-      rows: [
-        { label: '1 Month', key: 'oneMonthReturn', format: formatPercentage, showIcon: true },
-        { label: '3 Month', key: 'threeMonthReturn', format: formatPercentage, showIcon: true },
-        { label: '1 Year', key: 'oneYearReturn', format: formatPercentage, showIcon: true },
-        { label: '3 Year', key: 'threeYearReturn', format: formatPercentage, showIcon: true },
-        { label: '5 Year', key: 'fiveYearReturn', format: formatPercentage, showIcon: true },
-      ]
-    },
-    {
-      title: 'Historical Performance',
-      rows: [
-        { label: '3 Month High', key: 'threeMonthHigh', format: formatCurrency },
-        { label: '3 Month Low', key: 'threeMonthLow', format: formatCurrency },
-        { label: '1 Year High', key: 'oneYearHigh', format: formatCurrency },
-        { label: '1 Year Low', key: 'oneYearLow', format: formatCurrency },
-        { label: '3 Year High', key: 'threeYearHigh', format: formatCurrency },
-        { label: '3 Year Low', key: 'threeYearLow', format: formatCurrency },
-        { label: '5 Year High', key: 'fiveYearHigh', format: formatCurrency },
-        { label: '5 Year Low', key: 'fiveYearLow', format: formatCurrency },
-      ]
-    },
-    {
-      title: 'Income Statement',
+      title: 'Financial Data (When Available)',
       rows: [
         { label: 'Revenue', key: 'revenue', format: formatLargeCurrency },
-        { label: 'Expenses', key: 'expenses', format: formatLargeCurrency },
-        { label: 'EBITDA', key: 'ebitda', format: formatLargeCurrency },
-        { label: 'Profit Before Tax', key: 'profitBeforeTax', format: formatLargeCurrency },
-        { label: 'Net Profit', key: 'netProfit', format: formatLargeCurrency },
-      ]
-    },
-    {
-      title: 'Balance Sheet',
-      rows: [
+        { label: 'Net Income', key: 'netIncome', format: formatLargeCurrency },
         { label: 'Total Assets', key: 'totalAssets', format: formatLargeCurrency },
-        { label: 'Total Liabilities', key: 'totalLiabilities', format: formatLargeCurrency },
-      ]
-    },
-    {
-      title: 'Cash Flow',
-      rows: [
-        { label: 'Operating Activities', key: 'operatingActivities', format: formatLargeCurrency },
-        { label: 'Investing Activities', key: 'investingActivities', format: formatLargeCurrency },
-        { label: 'Financing Activities', key: 'financingActivities', format: formatLargeCurrency },
-        { label: 'Net Cash Flow', key: 'netCashFlow', format: formatLargeCurrency },
-      ]
-    },
-    {
-      title: 'Share Holding Pattern',
-      rows: [
-        { label: 'Promoters', key: 'promoters', format: formatPercentage },
-        { label: 'DII', key: 'dii', format: formatPercentage },
-        { label: 'FII', key: 'fii', format: formatPercentage },
-        { label: 'Public', key: 'public', format: formatPercentage },
-        { label: 'Government', key: 'government', format: formatPercentage },
-      ]
-    },
-    {
-      title: 'Technicals',
-      rows: [
-        { label: '50 DMA', key: 'fiftyDMA', format: formatCurrency },
-        { label: '200 DMA', key: 'twoHundredDMA', format: formatCurrency },
-        { label: 'RSI (14)', key: 'rsi', format: formatNumber },
-        { label: 'MACD (12,26)', key: 'macd', format: formatNumber },
-      ]
-    },
-    {
-      title: 'Margin Availability',
-      rows: [
-        { label: 'MTF', key: 'mtf', format: formatPercentage },
-        { label: 'Pledge Margin', key: 'pledgeMargin', format: formatPercentage },
+        { label: 'ROE', key: 'roe', format: formatPercentage },
       ]
     }
   ];
 
   return (
     <div className="space-y-6">
+      {/* Data Availability Notice */}
+      <Card className="border-muted/50 bg-card/50 backdrop-blur-sm">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+            <span>Real-time price data available</span>
+            <div className="w-2 h-2 rounded-full bg-yellow-500 ml-4"></div>
+            <span>Financial data available when possible</span>
+            <div className="w-2 h-2 rounded-full bg-gray-400 ml-4"></div>
+            <span>Some advanced metrics may show N/A</span>
+          </div>
+        </CardContent>
+      </Card>
+
       {sections.map((section) => (
         <Card key={section.title} className="border-muted/50 bg-card/50 backdrop-blur-sm">
           <CardHeader className="pb-4">

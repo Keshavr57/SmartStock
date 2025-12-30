@@ -9,7 +9,7 @@ class IndianMarketService {
     // Get trending Indian stocks for home page
     async getTrendingStocks() {
         try {
-            console.log("🇮🇳 Fetching trending Indian stocks...");
+            console.log(" Fetching trending Indian stocks...");
             
             // Get top gainers from Indian API
             const response = await axios.get(`${this.baseUrl}/top-gainers`, {

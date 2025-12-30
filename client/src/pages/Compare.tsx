@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { X, ArrowLeftRight, Plus, Search, BarChart2 } from 'lucide-react'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
+import { X, Plus, Search } from 'lucide-react'
 import { compareAssets, getAssetsHistory, getComprehensiveComparison } from '@/lib/api'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import ComprehensiveComparisonTable from '@/components/ComprehensiveComparisonTable'
+import StockRecommendationEngine from '@/components/StockRecommendationEngine'
 
 export default function Compare() {
     const [selectedAssets, setSelectedAssets] = useState<string[]>(['RELIANCE.NS', 'TCS.NS'])
@@ -93,130 +93,317 @@ export default function Compare() {
         }
     }
 
+    // Mock technical indicators data for demo
+    const technicalData = [
+        { name: 'RSI', value: 65 },
+        { name: 'MACD', value: 45 },
+        { name: 'Volume', value: 85 }
+    ]
+
     return (
-        <div className="p-6 container mx-auto space-y-8 min-h-screen">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-2xl premium-gradient flex items-center justify-center text-white shadow-lg">
-                        <ArrowLeftRight className="h-7 w-7" />
-                    </div>
-                    <div>
-                        <h1 className="text-4xl font-extrabold tracking-tight">Compare Assets</h1>
-                        <p className="text-muted-foreground text-lg">Comprehensive side-by-side analysis of stocks and crypto.</p>
+        <div className="min-h-screen bg-white dark:bg-zinc-950 p-6">
+            <div className="max-w-7xl mx-auto space-y-8">
+                {/* Header - Figma Style */}
+                <div className="text-center space-y-4">
+                    <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
+                        Compare & Learn About Stocks
+                    </h1>
+                    <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                        Compare stocks side-by-side and get educational analysis to learn about stock evaluation. 
+                        Our AI-powered recommendations help you understand what makes a good investment.
+                    </p>
+                    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 max-w-2xl mx-auto">
+                        <p className="text-sm text-blue-800 dark:text-blue-200">
+                            <strong>Educational Purpose:</strong> All recommendations are for learning only, not financial advice.
+                        </p>
                     </div>
                 </div>
-            </div>
 
-            {/* Asset Selection */}
-            <Card className="border-muted/50 bg-card/50 backdrop-blur-sm">
-                <CardHeader className="pb-4 border-b">
-                    <CardTitle className="text-xl">Asset Selection</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6 space-y-6">
-                    <div className="flex flex-col md:flex-row gap-4">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Search by symbol (e.g. RELIANCE.NS, BTC-USD, AAPL)..."
-                                className="pl-10 h-11 rounded-xl bg-background/50"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && addAsset(searchQuery)}
-                            />
-                        </div>
-                        <Button
-                            className="h-11 px-8 rounded-xl premium-gradient shadow-md"
-                            onClick={() => addAsset(searchQuery)}
-                            disabled={!searchQuery.trim() || selectedAssets.length >= 3}
-                        >
-                            <Plus className="h-4 w-4 mr-2" /> Add Asset
-                        </Button>
-                    </div>
-
-                    <div className="bg-amber-500/10 p-4 rounded-xl border border-amber-500/20 flex items-start gap-3 shadow-sm animate-in fade-in slide-in-from-top-2">
-                        <div className="text-amber-600 mt-1">
-                            <ArrowLeftRight className="h-4 w-4" />
-                        </div>
-                        <div className="text-sm">
-                            <span className="font-bold text-amber-900 dark:text-amber-200">Important for Indian Stocks:</span> Always add <code className="bg-amber-500/20 px-1.5 py-0.5 rounded text-amber-700 dark:text-amber-300 font-bold font-mono">.NS</code> (e.g., <code className="bg-amber-500/20 px-1.5 py-0.5 rounded text-amber-700 dark:text-amber-300 font-bold font-mono">TCS.NS</code>) to fetch real-time NSE data.
-                        </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-4 items-center">
-                        {selectedAssets.map(asset => (
-                            <div key={asset} className="flex items-center gap-3 bg-primary/5 text-primary px-4 py-2 rounded-xl border border-primary/20 font-bold group shadow-sm">
-                                <span>{asset}</span>
-                                <X
-                                    className="h-4 w-4 cursor-pointer hover:text-red-500 transition-colors"
+                {/* Asset Selection - Figma Style */}
+                <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        Select Assets to Compare (Max 3)
+                    </h3>
+                    
+                    <div className="flex flex-wrap items-center gap-3">
+                        {selectedAssets.map((asset) => (
+                            <div key={asset} className="flex items-center gap-2 bg-gray-100 dark:bg-zinc-800 px-4 py-2 rounded-full">
+                                <span className="font-medium text-gray-900 dark:text-white">{asset}</span>
+                                <button
                                     onClick={() => removeAsset(asset)}
-                                />
+                                    className="w-5 h-5 rounded-full bg-gray-300 dark:bg-zinc-600 hover:bg-red-500 hover:text-white flex items-center justify-center transition-colors"
+                                >
+                                    <X className="h-3 w-3" />
+                                </button>
                             </div>
                         ))}
-                        {selectedAssets.length === 0 && (
-                            <p className="text-muted-foreground text-sm">Add assets to start comparing.</p>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Price Chart */}
-            <Card className="border-muted/50 overflow-hidden bg-card/50 backdrop-blur-sm">
-                <CardHeader className="border-b bg-muted/20">
-                    <CardTitle>Price Performance (1 Month)</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
-                    <div className="h-[400px] w-full">
-                        {chartData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={chartData}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--outline))" opacity={0.1} />
-                                    <XAxis
-                                        dataKey="name"
-                                        stroke="hsl(var(--muted-foreground))"
-                                        fontSize={12}
-                                        tickLine={false}
-                                        axisLine={false}
-                                    />
-                                    <YAxis
-                                        stroke="hsl(var(--muted-foreground))"
-                                        fontSize={12}
-                                        tickLine={false}
-                                        axisLine={false}
-                                        tickFormatter={(value) => `${value.toLocaleString()}`}
-                                    />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '12px', border: '1px solid hsl(var(--border))', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
-                                        labelClassName="font-bold border-b pb-1 mb-2"
-                                    />
-                                    {selectedAssets.map((asset, i) => (
-                                        <Line
-                                            key={asset}
-                                            type="monotone"
-                                            dataKey={asset}
-                                            stroke={i === 0 ? '#2563eb' : i === 1 ? '#9333ea' : '#10b981'}
-                                            strokeWidth={3}
-                                            dot={false}
-                                            activeDot={{ r: 6, strokeWidth: 0 }}
-                                            animationDuration={1000}
-                                        />
-                                    ))}
-                                </LineChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className="h-full flex items-center justify-center flex-col gap-4 text-muted-foreground">
-                                <BarChart2 className="h-12 w-12 opacity-20" />
-                                <p>{loading ? 'Loading market data...' : 'No historical data available for selected assets.'}</p>
+                        
+                        {selectedAssets.length < 3 && (
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    placeholder="Add asset..."
+                                    className="w-40 h-10 rounded-full border-gray-300 dark:border-zinc-600"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && addAsset(searchQuery)}
+                                />
+                                <Button
+                                    size="sm"
+                                    className="rounded-full"
+                                    onClick={() => addAsset(searchQuery)}
+                                    disabled={!searchQuery.trim()}
+                                >
+                                    <Plus className="h-4 w-4" />
+                                </Button>
                             </div>
                         )}
                     </div>
-                </CardContent>
-            </Card>
+                </div>
 
-            {/* Comprehensive Comparison Table */}
-            <ComprehensiveComparisonTable 
-                data={comprehensiveData} 
-                loading={comprehensiveLoading} 
-            />
+                {/* Price Performance Chart - Figma Style */}
+                <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        Price Performance
+                    </h3>
+                    
+                    <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-6">
+                        <div className="h-[400px] w-full">
+                            {chartData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={chartData}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                                        <XAxis
+                                            dataKey="name"
+                                            stroke="#6b7280"
+                                            fontSize={12}
+                                            tickLine={false}
+                                            axisLine={false}
+                                        />
+                                        <YAxis
+                                            stroke="#6b7280"
+                                            fontSize={12}
+                                            tickLine={false}
+                                            axisLine={false}
+                                            tickFormatter={(value) => `${value.toLocaleString()}`}
+                                        />
+                                        <Tooltip
+                                            contentStyle={{ 
+                                                backgroundColor: 'white', 
+                                                border: '1px solid #e5e7eb', 
+                                                borderRadius: '8px',
+                                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                                            }}
+                                        />
+                                        {selectedAssets.map((asset, i) => (
+                                            <Line
+                                                key={asset}
+                                                type="monotone"
+                                                dataKey={asset}
+                                                stroke={i === 0 ? '#3b82f6' : i === 1 ? '#8b5cf6' : '#10b981'}
+                                                strokeWidth={2}
+                                                dot={false}
+                                                activeDot={{ r: 4, strokeWidth: 0 }}
+                                            />
+                                        ))}
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
+                                    {loading ? 'Loading chart data...' : 'No data available'}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Fundamentals & Technical Indicators - Figma Style */}
+                <div className="grid lg:grid-cols-2 gap-8">
+                    {/* Fundamentals & Ratings */}
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            Fundamentals & Ratings
+                        </h3>
+                        
+                        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-6 space-y-6">
+                            {comprehensiveData.length > 0 ? comprehensiveData.map((asset, index) => (
+                                <div key={asset.symbol || index} className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="font-semibold text-gray-900 dark:text-white">
+                                            {asset.symbol || selectedAssets[index]}
+                                        </h4>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                                            <span className="text-sm font-medium">Live Data</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 gap-4 text-sm">
+                                        <div>
+                                            <div className="text-gray-600 dark:text-gray-400">Current Price</div>
+                                            <div className="font-semibold">
+                                                ₹{asset.lastTradedPrice?.toLocaleString() || 'N/A'}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="text-gray-600 dark:text-gray-400">24h Change</div>
+                                            <div className={cn(
+                                                "font-semibold",
+                                                (asset.oneDayChangePercent || 0) >= 0 ? "text-green-500" : "text-red-500"
+                                            )}>
+                                                {(asset.oneDayChangePercent || 0) >= 0 ? '+' : ''}{asset.oneDayChangePercent?.toFixed(2) || 'N/A'}%
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="text-gray-600 dark:text-gray-400">P/E Ratio</div>
+                                            <div className="font-semibold">
+                                                {asset.peRatio?.toFixed(2) || 'N/A'}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="text-gray-600 dark:text-gray-400">EPS</div>
+                                            <div className="font-semibold">
+                                                ₹{asset.eps?.toFixed(2) || 'N/A'}
+                                            </div>
+                                        </div>
+                                        {asset.revenue && (
+                                            <>
+                                                <div>
+                                                    <div className="text-gray-600 dark:text-gray-400">Revenue</div>
+                                                    <div className="font-semibold">
+                                                        ₹{(asset.revenue / 10000000).toFixed(0)}K Cr
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div className="text-gray-600 dark:text-gray-400">ROE</div>
+                                                    <div className="font-semibold">
+                                                        {asset.roe?.toFixed(2) || 'N/A'}%
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            )) : (
+                                // Fallback to basic comparison data or default
+                                selectedAssets.map((asset, index) => (
+                                    <div key={asset} className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="font-semibold text-gray-900 dark:text-white">
+                                                {asset.replace('.NS', '')}
+                                            </h4>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-yellow-400"></div>
+                                                <span className="text-sm font-medium">Loading...</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-2 gap-4 text-sm">
+                                            <div>
+                                                <div className="text-gray-600 dark:text-gray-400">Current Price</div>
+                                                <div className="font-semibold">Loading...</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-gray-600 dark:text-gray-400">24h Change</div>
+                                                <div className="font-semibold">Loading...</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-gray-600 dark:text-gray-400">P/E Ratio</div>
+                                                <div className="font-semibold">Loading...</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-gray-600 dark:text-gray-400">EPS</div>
+                                                <div className="font-semibold">Loading...</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Technical Indicators */}
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            Technical Indicators
+                        </h3>
+                        
+                        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-6">
+                            <div className="h-[300px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={technicalData}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                                        <XAxis
+                                            dataKey="name"
+                                            stroke="#6b7280"
+                                            fontSize={12}
+                                            tickLine={false}
+                                            axisLine={false}
+                                        />
+                                        <YAxis
+                                            stroke="#6b7280"
+                                            fontSize={12}
+                                            tickLine={false}
+                                            axisLine={false}
+                                            domain={[0, 100]}
+                                        />
+                                        <Tooltip
+                                            contentStyle={{ 
+                                                backgroundColor: 'white', 
+                                                border: '1px solid #e5e7eb', 
+                                                borderRadius: '8px'
+                                            }}
+                                        />
+                                        <Bar dataKey="value" fill="#1f2937" radius={[4, 4, 0, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Latest News & Analysis - Figma Style */}
+                <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        Latest News & Analysis
+                    </h3>
+                    
+                    <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-6 space-y-4">
+                        {selectedAssets.map((asset, index) => (
+                            <div key={asset} className="flex items-start justify-between py-3 border-b border-gray-100 dark:border-zinc-800 last:border-b-0">
+                                <div className="space-y-1">
+                                    <div className="font-medium text-gray-900 dark:text-white text-sm">
+                                        {asset.replace('.NS', '')}
+                                    </div>
+                                    <div className="text-gray-600 dark:text-gray-400 text-sm">
+                                        {index === 0 ? 'Strong Q3 results boost confidence' : 'Digital transformation deals surge'}
+                                    </div>
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    2 hours ago
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Educational Stock Recommendations */}
+                {selectedAssets.length > 0 && (
+                    <StockRecommendationEngine data={comprehensiveData} />
+                )}
+
+                {/* Stock Comparison Table */}
+                {selectedAssets.length > 0 && (
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            Detailed Stock Comparison
+                        </h3>
+                        <ComprehensiveComparisonTable 
+                            data={comprehensiveData} 
+                            loading={comprehensiveLoading} 
+                        />
+                    </div>
+                )}
+            </div>
         </div>
     )
 }

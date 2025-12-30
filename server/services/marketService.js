@@ -12,7 +12,7 @@ class MarketService {
             // 2. Get crypto data from CoinGecko
             const cryptoIds = 'bitcoin,ethereum,polygon-ecosystem,solana';
             const cryptoRes = await axios.get(`https://api.coingecko.com/api/v3/coins/markets`, {
-                params: { vs_currency: 'usd', ids: cryptoIds, price_change_percentage: '24h' }
+                params: { vs_currency: 'inr', ids: cryptoIds, price_change_percentage: '24h' }
             });
 
             const cryptoData = cryptoRes.data.map(coin => ({

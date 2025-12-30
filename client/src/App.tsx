@@ -7,11 +7,20 @@ import IPOs from "@/pages/IPOs"
 import Learn from "@/pages/ComprehensiveLearn"
 import AIAdvisor from "@/pages/AIAdvisor"
 import News from "@/pages/News"
+import VirtualTrading from "@/pages/VirtualTrading"
+import Portfolio from "@/pages/Portfolio"
+import Landing from "@/pages/Landing"
 import { Footer } from "@/components/Footer"
+import { Button } from "@/components/ui/button"
+import { Menu } from "lucide-react"
+import { authService } from "@/lib/auth"
 
 export default function App() {
     const [isDark, setIsDark] = useState(false)
     const [currentPage, setCurrentPage] = useState("Home")
+    const [showSidebar, setShowSidebar] = useState(true)
+    const [isAuthenticated, setIsAuthenticated] = useState(false)
+    const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         if (isDark) {
@@ -20,6 +29,59 @@ export default function App() {
             document.documentElement.classList.remove("dark")
         }
     }, [isDark])
+
+    // Check authentication status on app load
+    useEffect(() => {
+        const checkAuth = async () => {
+            setLoading(true)
+            
+            if (authService.isAuthenticated()) {
+                // Try to refresh user profile
+                const user = await authService.getProfile()
+                if (user) {
+                    setIsAuthenticated(true)
+                } else {
+                    // Token might be expired, logout
+                    authService.logout()
+                    setIsAuthenticated(false)
+                }
+            } else {
+                setIsAuthenticated(false)
+            }
+            
+            setLoading(false)
+        }
+
+        checkAuth()
+    }, [])
+
+    const handleLogin = () => {
+        setIsAuthenticated(true)
+        setCurrentPage("Home")
+    }
+
+    const handleLogout = () => {
+        authService.logout()
+        setIsAuthenticated(false)
+        setCurrentPage("Home")
+    }
+
+    // Show loading spinner while checking authentication
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center">
+                <div className="flex items-center space-x-2">
+                    <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-gray-600 dark:text-gray-400">Loading...</span>
+                </div>
+            </div>
+        )
+    }
+
+    // If not authenticated, show landing page
+    if (!isAuthenticated) {
+        return <Landing onLogin={handleLogin} />
+    }
 
     const renderPage = () => {
         switch (currentPage) {
@@ -35,6 +97,11 @@ export default function App() {
                 return <AIAdvisor />
             case "News":
                 return <News />
+            case "VirtualTrading":
+            case "Virtual Trading":
+                return <VirtualTrading />
+            case "Portfolio":
+                return <Portfolio />
             case "Home":
             case "Dashboard":
                 return <Home />
@@ -50,11 +117,23 @@ export default function App() {
                 toggleTheme={() => setIsDark(!isDark)}
                 onPageChange={setCurrentPage}
                 currentPage={currentPage}
+                onLogout={handleLogout}
             />
 
             <div className="flex">
-                <Sidebar onPageChange={setCurrentPage} currentPage={currentPage} />
-                <main className="flex-1 min-h-[calc(100vh-64px)] flex flex-col">
+                {showSidebar && <Sidebar onPageChange={setCurrentPage} currentPage={currentPage} />}
+                
+                <main className="flex-1 min-h-[calc(100vh-64px)] flex flex-col relative">
+                    {/* Toggle Sidebar Button */}
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="absolute top-4 left-4 z-10 md:hidden lg:flex"
+                        onClick={() => setShowSidebar(!showSidebar)}
+                    >
+                        <Menu className="h-4 w-4" />
+                    </Button>
+                    
                     <div className="flex-1">
                         {renderPage()}
                     </div>
