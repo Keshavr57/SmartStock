@@ -11,10 +11,14 @@ import { authService } from '@/lib/auth';
 import { ENDPOINTS } from '@/lib/config';
 
 interface PortfolioData {
-    totalValue: number;
     balance: number;
+    totalValue: number;
+    invested: number;
+    currentValue: number;
     totalPnL: number;
+    totalPnLPercent: number;
     holdingsCount: number;
+    transactionsCount: number;
 }
 
 interface MarketStatus {

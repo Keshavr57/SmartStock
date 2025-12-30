@@ -31,7 +31,7 @@ interface CandleData {
 const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, height = 500 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const socketRef = useRef<Socket | null>(null);
-    const animationRef = useRef<number>();
+    const animationRef = useRef<number | null>(null);
     
     const [currentPrice, setCurrentPrice] = useState<PriceData | null>(null);
     const [candleData, setCandleData] = useState<CandleData[]>([]);
@@ -97,7 +97,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, height = 50
                 const newPrice = basePrice * (1 + randomChange);
                 
                 // Update current price display
-                setCurrentPrice(prev => ({
+                setCurrentPrice(() => ({
                     price: newPrice,
                     change: newPrice - basePrice,
                     changePercent: ((newPrice - basePrice) / basePrice) * 100,

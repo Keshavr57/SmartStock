@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
-import { X, Plus, Search } from 'lucide-react'
+import { X, Plus } from 'lucide-react'
 import { compareAssets, getAssetsHistory, getComprehensiveComparison } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
@@ -11,7 +10,6 @@ import StockRecommendationEngine from '@/components/StockRecommendationEngine'
 
 export default function Compare() {
     const [selectedAssets, setSelectedAssets] = useState<string[]>(['RELIANCE.NS', 'TCS.NS'])
-    const [comparisonData, setComparisonData] = useState<any[]>([])
     const [comprehensiveData, setComprehensiveData] = useState<any[]>([])
     const [chartData, setChartData] = useState<any[]>([])
     const [loading, setLoading] = useState(false)
@@ -285,7 +283,7 @@ export default function Compare() {
                                 </div>
                             )) : (
                                 // Fallback to basic comparison data or default
-                                selectedAssets.map((asset, index) => (
+                                selectedAssets.map((asset) => (
                                     <div key={asset} className="space-y-3">
                                         <div className="flex items-center justify-between">
                                             <h4 className="font-semibold text-gray-900 dark:text-white">
@@ -368,7 +366,7 @@ export default function Compare() {
                     </h3>
                     
                     <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-6 space-y-4">
-                        {selectedAssets.map((asset, index) => (
+                        {selectedAssets.map((asset) => (
                             <div key={asset} className="flex items-start justify-between py-3 border-b border-gray-100 dark:border-zinc-800 last:border-b-0">
                                 <div className="space-y-1">
                                     <div className="font-medium text-gray-900 dark:text-white text-sm">

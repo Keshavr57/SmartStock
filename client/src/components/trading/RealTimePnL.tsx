@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, Activity, RefreshCw } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Activity } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { authService } from '@/lib/auth';
 import { ENDPOINTS, API_CONFIG } from '@/lib/config';

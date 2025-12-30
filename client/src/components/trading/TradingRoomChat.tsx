@@ -59,7 +59,7 @@ const TradingRoomChat: React.FC<TradingRoomChatProps> = ({ symbol, userId }) => 
             setMessages([welcomeMessage]);
         });
 
-        socketConnection.on('connect_error', (error) => {
+        socketConnection.on('connect_error', () => {
             console.log(`💬 Trading room connection failed for ${symbol}, working offline`);
             
             // Add offline message

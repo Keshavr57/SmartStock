@@ -151,7 +151,7 @@ const TransactionHistory: React.FC = () => {
                                             }`} />
                                         ) : (
                                             <TrendingDown className={`h-4 w-4 ${
-                                                transaction.type === 'BUY' ? 'text-green-600' : 'text-red-600'
+                                                transaction.type === 'SELL' ? 'text-red-600' : 'text-green-600'
                                             }`} />
                                         )}
                                     </div>

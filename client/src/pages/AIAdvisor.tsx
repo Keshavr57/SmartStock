@@ -1,9 +1,7 @@
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Bot, Send, User, BookOpen, MessageSquare } from 'lucide-react'
+import { Bot, Send, User, BookOpen } from 'lucide-react'
 import { processAiQuery } from '@/lib/api'
 
 interface Message {

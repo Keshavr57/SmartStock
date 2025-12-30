@@ -6,7 +6,6 @@ import {
     BookOpen, 
     Clock, 
     Search,
-    TrendingUp,
     Target,
     PlayCircle,
     RefreshCw

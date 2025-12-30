@@ -1,11 +1,30 @@
 import { MarketTable } from "@/components/MarketTable"
-import { TrendingUp, DollarSign, Activity, BarChart3, ArrowUpRight, Eye, BookOpen, Brain, Newspaper, Clock, Star, Target, Zap, RefreshCw } from "lucide-react"
+import { TrendingUp, DollarSign, Activity, BarChart3, ArrowUpRight, Eye, BookOpen, Brain, Newspaper, Star, Target, RefreshCw } from "lucide-react"
 import { useState, useEffect } from "react"
 import { authService } from "@/lib/auth"
 import { ENDPOINTS } from "@/lib/config"
 
+interface PortfolioData {
+    totalValue: number;
+    totalInvested: number;
+    totalPnL: number;
+    totalPnLPercent: number;
+    availableBalance: number;
+    holdingsCount: number;
+    dayPnL: number;
+    dayPnLPercent: number;
+}
+
+interface Transaction {
+    type: 'BUY' | 'SELL';
+    symbol: string;
+    quantity: number;
+    price: number;
+    date: string;
+}
+
 export default function Home() {
-    const [portfolioData, setPortfolioData] = useState({
+    const [portfolioData, setPortfolioData] = useState<PortfolioData>({
         totalValue: 0,
         totalInvested: 0,
         totalPnL: 0,
@@ -15,7 +34,7 @@ export default function Home() {
         dayPnL: 0,
         dayPnLPercent: 0
     });
-    const [recentTransactions, setRecentTransactions] = useState([]);
+    const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -54,7 +73,7 @@ export default function Home() {
         }
     };
 
-    const formatCurrency = (amount) => {
+    const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-IN', {
             style: 'currency',
             currency: 'INR',
@@ -62,7 +81,7 @@ export default function Home() {
         }).format(amount);
     };
 
-    const formatPercentage = (percent) => {
+    const formatPercentage = (percent: number) => {
         const sign = percent >= 0 ? '+' : '';
         return `${sign}${percent.toFixed(2)}%`;
     };

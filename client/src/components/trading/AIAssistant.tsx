@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, Send, Bot, User, X, HelpCircle, TrendingUp, BarChart3, Volume2, Shield } from 'lucide-react';
+import { MessageCircle, Send, Bot, User, X, TrendingUp, BarChart3, Volume2, Shield } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { API_CONFIG } from '@/lib/config';
 
@@ -94,7 +94,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ symbol, marketData }) => {
             setMessages([welcomeMessage]);
         });
 
-        socketRef.current.on('connect_error', (error) => {
+        socketRef.current.on('connect_error', () => {
             console.log('🤖 AI Assistant connection failed, working in offline mode');
             
             // Add offline message

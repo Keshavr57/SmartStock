@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Info } from 'lucide-react'
+import { TrendingUp, AlertTriangle, CheckCircle, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface StockData {
