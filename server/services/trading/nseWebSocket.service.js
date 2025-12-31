@@ -11,7 +11,7 @@ class NSEWebSocketService {
     }
 
     subscribeToPrice(socket, symbol) {
-        console.log(`📊 Subscribing ${socket.id} to ${symbol} via NSE polling`);
+        console.log(`Subscribing ${socket.id} to ${symbol} via NSE polling`);
         
         // Add socket to subscribers
         if (!this.subscribers.has(symbol)) {

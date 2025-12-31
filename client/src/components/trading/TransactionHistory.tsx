@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Clock, Filter } from 'lucide-react';
-import { authService } from '@/lib/auth';
-import { ENDPOINTS } from '@/lib/config';
+import { authService } from '../../lib/auth';
+import { ENDPOINTS } from '../../lib/config';
 
 interface Transaction {
     symbol: string;

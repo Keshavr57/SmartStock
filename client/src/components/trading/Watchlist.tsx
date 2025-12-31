@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X, TrendingUp, TrendingDown, Eye } from 'lucide-react';
-import { authService } from '@/lib/auth';
-import { ENDPOINTS } from '@/lib/config';
+import { authService } from '../../lib/auth';
+import { ENDPOINTS } from '../../lib/config';
 
 interface WatchlistItem {
     symbol: string;

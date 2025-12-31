@@ -121,8 +121,8 @@ const startServer = async () => {
   await connectDB();
 
   server.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`🔌 Socket.IO enabled for real-time trading`);
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Socket.IO enabled for real-time trading`);
   });
 };
 

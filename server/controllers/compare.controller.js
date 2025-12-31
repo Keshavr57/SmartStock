@@ -23,17 +23,17 @@ export const compareStocks = async (req, res) => {
         
         // If Indian API fails or returns incomplete data, try fallback
         if (!data || !data.pe) {
-          console.log(`🔄 Using fallback for ${sym}`);
+          console.log(`Using fallback for ${sym}`);
           data = await fetchAlternativeIndianStock(sym);
         }
         
         // Last resort: Yahoo Finance
         if (!data) {
-          console.log(`🔄 Using Yahoo as last resort for ${sym}`);
+          console.log(`Using Yahoo as last resort for ${sym}`);
           data = await fetchYahooFundamentals(sym);
         }
       } else {
-        console.log(`🇺🇸 Processing US/International stock: ${sym}`);
+        console.log(`Processing US/International stock: ${sym}`);
         
         // For US/international stocks, try Yahoo first
         data = await fetchYahooFundamentals(sym);
@@ -47,7 +47,7 @@ export const compareStocks = async (req, res) => {
 
       if (!data) {
         // If everything fails, add a placeholder
-        console.log(`❌ No data found for ${sym}`);
+        console.log(`No data found for ${sym}`);
         results.push({
           symbol: sym,
           price: null,
@@ -74,7 +74,7 @@ export const compareStocks = async (req, res) => {
       comparison: results
     });
   } catch (err) {
-    console.error("❌ Compare Error:", err);
+    console.error("Compare Error:", err);
     res.status(500).json({ error: "Compare failed", details: err.message });
   }
 };
@@ -101,7 +101,7 @@ export const getComprehensiveComparison = async (req, res) => {
       if (result.status === 'fulfilled') {
         return result.value;
       } else {
-        console.error(`❌ Failed to fetch robust data for ${symbols[index]}:`, result.reason);
+        console.error(`Failed to fetch robust data for ${symbols[index]}:`, result.reason);
         // Fallback to enhanced service, then to original service
         return enhancedStockService.getComprehensiveStockData(symbols[index].trim().toUpperCase())
           .catch(() => comprehensiveStockService.getMockData(symbols[index].trim().toUpperCase()));
@@ -116,7 +116,7 @@ export const getComprehensiveComparison = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("❌ Robust Comprehensive Compare Error:", err);
+    console.error("Robust Comprehensive Compare Error:", err);
     res.status(500).json({ 
       success: false, 
       error: "Failed to fetch robust comprehensive comparison", 

@@ -1,7 +1,7 @@
 import { TrendingUp, Menu, Sun, Moon, Search, Cpu, LogOut } from "lucide-react"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
-import { cn } from "@/lib/utils"
+import { cn } from "../lib/utils"
 
 interface NavbarProps {
     isDark: boolean

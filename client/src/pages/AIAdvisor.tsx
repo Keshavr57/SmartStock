@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Bot, Send, User, BookOpen } from 'lucide-react'
-import { processAiQuery } from '@/lib/api'
+import { processAiQuery } from '../lib/api'
 
 interface Message {
     role: 'user' | 'assistant'

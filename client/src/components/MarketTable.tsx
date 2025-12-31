@@ -1,5 +1,5 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { getMarketHighlights, getMarketCharts } from "@/lib/api"
+import { getMarketHighlights, getMarketCharts } from "../lib/api"
 import { useState, useEffect } from "react"
 import { ChevronUp, ChevronDown } from "lucide-react"
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { RefreshCw, TrendingUp, TrendingDown } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
-import { API_CONFIG, ENDPOINTS } from '@/lib/config';
+import { API_CONFIG, ENDPOINTS } from '../../lib/config';
 
 interface TradingViewChartProps {
     symbol: string;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Menu, X, Bot, MessageCircle, BarChart3 } from 'lucide-react';
 import { MarketTable } from "@/components/MarketTable";
-import { authService } from '@/lib/auth';
+import { authService } from '../lib/auth';
 
 // Google OAuth configuration
 declare global {

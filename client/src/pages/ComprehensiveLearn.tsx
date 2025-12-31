@@ -11,7 +11,7 @@ import {
     RefreshCw
 } from "lucide-react"
 import { useState, useEffect } from "react"
-import { getLearningList } from "@/lib/api"
+import { getLearningList } from "../lib/api"
 
 interface Lesson {
     id: string;

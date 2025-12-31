@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
-import { authService } from '@/lib/auth';
-import { ENDPOINTS } from '@/lib/config';
+import { authService } from '../../lib/auth';
+import { ENDPOINTS } from '../../lib/config';
 
 interface Holding {
     symbol: string;

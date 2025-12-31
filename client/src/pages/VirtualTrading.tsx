@@ -7,8 +7,8 @@ import Holdings from '../components/trading/Holdings';
 import Watchlist from '../components/trading/Watchlist';
 import TransactionHistory from '../components/trading/TransactionHistory';
 import RealTimePnL from '../components/trading/RealTimePnL';
-import { authService } from '@/lib/auth';
-import { ENDPOINTS } from '@/lib/config';
+import { authService } from '../lib/auth';
+import { ENDPOINTS } from '../lib/config';
 
 interface PortfolioData {
     balance: number;

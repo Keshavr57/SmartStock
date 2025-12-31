@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, PieChart, Activity, RefreshCw, BarChart3, User, Mail, Calendar, Settings } from 'lucide-react';
 import RealTimePnL from '../components/trading/RealTimePnL';
-import { ENDPOINTS } from '@/lib/config';
+import { ENDPOINTS } from '../lib/config';
 
 interface PortfolioSummary {
     totalValue: number;

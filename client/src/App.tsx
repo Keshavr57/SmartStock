@@ -13,7 +13,7 @@ import Landing from "@/pages/Landing"
 import { Footer } from "@/components/Footer"
 import { Button } from "@/components/ui/button"
 import { Menu } from "lucide-react"
-import { authService } from "@/lib/auth"
+import { authService } from "./lib/auth"
 
 export default function App() {
     const [isDark, setIsDark] = useState(false)

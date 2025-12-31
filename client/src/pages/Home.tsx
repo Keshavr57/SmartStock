@@ -1,8 +1,8 @@
 import { MarketTable } from "@/components/MarketTable"
 import { TrendingUp, DollarSign, Activity, BarChart3, ArrowUpRight, Eye, BookOpen, Brain, Newspaper, Star, Target, RefreshCw } from "lucide-react"
 import { useState, useEffect } from "react"
-import { authService } from "@/lib/auth"
-import { ENDPOINTS } from "@/lib/config"
+import { authService } from "../lib/auth"
+import { ENDPOINTS } from "../lib/config"
 
 interface PortfolioData {
     totalValue: number;

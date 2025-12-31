@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, Send, Bot, User, X, TrendingUp, BarChart3, Volume2, Shield } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
-import { API_CONFIG } from '@/lib/config';
+import { API_CONFIG } from '../../lib/config';
 
 interface Message {
     id: string;

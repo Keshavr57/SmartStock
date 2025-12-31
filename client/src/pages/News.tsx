@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { getTrendingNews, getNewsBySentiment, getNewsByImpact } from "@/lib/api"
+import { getTrendingNews, getNewsBySentiment, getNewsByImpact } from "../lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ExternalLink, Clock, Newspaper, RefreshCw, Search } from "lucide-react"

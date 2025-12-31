@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { TrendingUp, RefreshCw, Calendar, DollarSign, AlertTriangle } from "lucide-react"
 import { useState, useEffect } from "react"
-import { getUpcomingIPOs } from "@/lib/api"
+import { getUpcomingIPOs } from "../lib/api"
 
 export default function IPOs() {
     const [ipos, setIpos] = useState<any[]>([])

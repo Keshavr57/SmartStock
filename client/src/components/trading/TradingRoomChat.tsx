@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, Send, Users, X, Minimize2, Maximize2 } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
-import { API_CONFIG } from '@/lib/config';
+import { API_CONFIG } from '../../lib/config';
 
 interface ChatMessage {
     id: number;
