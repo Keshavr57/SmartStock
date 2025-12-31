@@ -1,0 +1,19 @@
+{
+  "name": "smartstock",
+  "version": "1.0.0",
+  "description": "SmartStock - AI-Powered Stock Trading Platform",
+  "private": true,
+  "scripts": {
+    "build": "cd client && npm install && npm run build",
+    "start": "cd server && npm start",
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && npm run dev",
+    "install:all": "npm install && cd client && npm install && cd ../server && npm install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Keshavr57/SmartStock.git"
+  },
+  "author": "Keshav Rajput",
+  "license": "MIT"
+}
