@@ -59,7 +59,7 @@ export const fetchYahooFundamentals = async (symbol) => {
       recommendation: data.financialData?.recommendationKey ?? "neutral"
     };
   } catch (err) {
-    console.error("❌ Yahoo Error for", symbol, ":", err.message);
+    console.error("Yahoo Error for", symbol, ":", err.message);
     return null;
   }
 };
@@ -88,7 +88,7 @@ export const fetchYahooHistory = async (symbol, range = "1mo") => {
       price: q.close
     }));
   } catch (err) {
-    console.error("❌ Yahoo History Error:", err.message);
+    console.error("Yahoo History Error:", err.message);
     return [];
   }
 };

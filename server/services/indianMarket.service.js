@@ -32,7 +32,7 @@ class IndianMarketService {
             return await this.getPopularStocks();
 
         } catch (error) {
-            console.error("❌ Indian API trending stocks error:", error.message);
+            console.error("Indian API trending stocks error:", error.message);
             return await this.getPopularStocks();
         }
     }
@@ -71,7 +71,7 @@ class IndianMarketService {
     // Get upcoming IPOs from Indian API
     async getUpcomingIPOs() {
         try {
-            console.log("🇮🇳 Fetching upcoming IPOs from Indian API...");
+            console.log("Fetching upcoming IPOs from Indian API...");
             
             const response = await axios.get(`${this.baseUrl}/upcoming-ipos`, {
                 headers: {
@@ -97,7 +97,7 @@ class IndianMarketService {
             return this.getMockIPOs();
 
         } catch (error) {
-            console.error("❌ Indian API IPO error:", error.message);
+            console.error("Indian API IPO error:", error.message);
             return this.getMockIPOs();
         }
     }

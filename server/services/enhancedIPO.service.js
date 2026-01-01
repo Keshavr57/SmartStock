@@ -40,12 +40,12 @@ class EnhancedIPOService {
 
     async getCurrentIPOs() {
         try {
-            console.log('🔍 Fetching current IPO data from multiple sources...');
+            console.log('Fetching current IPO data from multiple sources...');
             
             // Check cache first
             const cached = this.getFromCache('enhanced_ipos');
             if (cached) {
-                console.log('📦 Using cached IPO data');
+                console.log('Using cached IPO data');
                 return this.filterCurrentIPOs(cached);
             }
 
@@ -54,21 +54,21 @@ class EnhancedIPOService {
             // Try each source
             for (const source of this.sources) {
                 try {
-                    console.log(`🌐 Fetching from ${source.name}...`);
+                    console.log(`Fetching from ${source.name}...`);
                     const ipos = await this.fetchFromSource(source);
                     if (ipos && ipos.length > 0) {
                         allIPOs = [...allIPOs, ...ipos];
-                        console.log(`✅ Got ${ipos.length} IPOs from ${source.name}`);
+                        console.log(`Got ${ipos.length} IPOs from ${source.name}`);
                     }
                 } catch (error) {
-                    console.log(`❌ ${source.name} failed:`, error.message);
+                    console.log(`${source.name} failed:`, error.message);
                     continue;
                 }
             }
 
             // If no data from APIs, create realistic mock data for December 2025
             if (allIPOs.length === 0) {
-                console.log('📝 Creating realistic IPO data for December 2025...');
+                console.log('Creating realistic IPO data for December 2025...');
                 allIPOs = this.createRealisticIPOData();
             }
 
@@ -80,11 +80,11 @@ class EnhancedIPOService {
             // Cache the result
             this.setCache('enhanced_ipos', allIPOs);
             
-            console.log(`🎯 Returning ${allIPOs.length} current/upcoming IPOs`);
+            console.log(`Returning ${allIPOs.length} current/upcoming IPOs`);
             return allIPOs;
 
         } catch (error) {
-            console.error('❌ Error fetching IPO data:', error.message);
+            console.error('Error fetching IPO data:', error.message);
             // Return realistic mock data as fallback
             return this.createRealisticIPOData();
         }
@@ -418,10 +418,10 @@ class EnhancedIPOService {
 
     getRiskIcon(riskLevel) {
         switch (riskLevel) {
-            case 'Low': return '🟢';
-            case 'Medium': return '🟡';
-            case 'High': return '🔴';
-            default: return '⚪';
+            case 'Low': return 'LOW';
+            case 'Medium': return 'MED';
+            case 'High': return 'HIGH';
+            default: return 'N/A';
         }
     }
 

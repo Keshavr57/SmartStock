@@ -4,7 +4,7 @@ import indianMarketService from './indianMarket.service.js';
 class MarketService {
     async getLandingPageData() {
         try {
-            console.log("🏠 Fetching landing page data...");
+            console.log("Fetching landing page data...");
 
             // 1. Get trending Indian stocks using Indian API
             const stocks = await indianMarketService.getTrendingStocks();
@@ -23,14 +23,14 @@ class MarketService {
                 image: coin.image
             }));
 
-            console.log("✅ Landing page data fetched successfully");
+            console.log("Landing page data fetched successfully");
             return {
                 stocks: stocks,
                 crypto: cryptoData
             };
 
         } catch (error) {
-            console.error("❌ Market Service Error:", error.message);
+            console.error("Market Service Error:", error.message);
             
             // Fallback to mock data if all APIs fail
             return {

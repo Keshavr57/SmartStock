@@ -52,7 +52,7 @@ class NSEWebSocketService {
             try {
                 await this.fetchNSEPrice(symbol);
             } catch (error) {
-                console.error(`❌ Error polling NSE for ${symbol}:`, error.message);
+                console.error(`Error polling NSE for ${symbol}:`, error.message);
             }
         }, 5000);
         
@@ -115,11 +115,11 @@ class NSEWebSocketService {
                     });
                 }
                 
-                console.log(`✅ Updated price for ${symbol}: ₹${priceData.price}`);
+                console.log(`Updated price for ${symbol}: ₹${priceData.price}`);
             }
 
         } catch (error) {
-            console.error(`❌ Error fetching NSE price for ${symbol}:`, error.message);
+            console.error(`Error fetching NSE price for ${symbol}:`, error.message);
         }
     }
 

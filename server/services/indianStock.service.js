@@ -64,7 +64,7 @@ export const fetchIndianStock = async (symbol) => {
       recommendation: d.rating ?? d.recommendation ?? "neutral"
     };
   } catch (err) {
-    console.error("❌ Indian API Error for", symbol, ":", err.message);
+    console.error("Indian API Error for", symbol, ":", err.message);
     return null;
   }
 };

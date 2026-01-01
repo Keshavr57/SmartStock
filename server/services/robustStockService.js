@@ -25,7 +25,7 @@ class RobustStockService {
         };
 
         // Debug: Log loaded keys
-        console.log('🔑 RobustStockService initialized with API keys');
+        console.log('RobustStockService initialized with API keys');
 
         // Cache for 3 minutes
         this.cache = new Map();
@@ -34,13 +34,13 @@ class RobustStockService {
 
     async getComprehensiveStockData(symbol) {
         try {
-            console.log(`🔍 Fetching robust data for ${symbol}`);
+            console.log(`Fetching robust data for ${symbol}`);
             
             // Check cache
             const cacheKey = `robust_${symbol}`;
             const cached = this.getFromCache(cacheKey);
             if (cached) {
-                console.log(`📦 Using cached data for ${symbol}`);
+                console.log(`Using cached data for ${symbol}`);
                 return cached;
             }
 
@@ -57,11 +57,11 @@ class RobustStockService {
 
             // Cache and return
             this.setCache(cacheKey, result);
-            console.log(`✅ Robust data fetched for ${symbol}`);
+            console.log(`Robust data fetched for ${symbol}`);
             return result;
 
         } catch (error) {
-            console.error(`❌ Error in robust service for ${symbol}:`, error.message);
+            console.error(`Error in robust service for ${symbol}:`, error.message);
             return this.getEmptyDataStructure(symbol);
         }
     }
@@ -97,7 +97,7 @@ class RobustStockService {
 
     async getYahooData(symbol) {
         try {
-            console.log(`🔍 Fetching Yahoo data for ${symbol}`);
+            console.log(`Fetching Yahoo data for ${symbol}`);
             
             // Use a simpler Yahoo Finance approach
             const response = await axios.get(`${this.apis.yahooQuery1}/v8/finance/chart/${symbol}`, {
@@ -111,7 +111,7 @@ class RobustStockService {
                 const data = response.data.chart.result[0];
                 const meta = data.meta;
                 
-                console.log(`✅ Yahoo data found for ${symbol}`);
+                console.log(`Yahoo data found for ${symbol}`);
                 return {
                     name: meta.longName || meta.shortName,
                     lastTradedPrice: meta.regularMarketPrice,
@@ -134,7 +134,7 @@ class RobustStockService {
 
     async getFinnhubData(symbol) {
         try {
-            console.log(`🔍 Fetching Finnhub data for ${symbol}`);
+            console.log(`Fetching Finnhub data for ${symbol}`);
             
             const [profile, metrics] = await Promise.allSettled([
                 axios.get(`${this.apis.finnhub}/stock/profile2?symbol=${symbol}&token=${this.keys.finnhub}`),
@@ -145,7 +145,7 @@ class RobustStockService {
 
             if (profile.status === 'fulfilled' && profile.value.data) {
                 const p = profile.value.data;
-                console.log(`📋 Finnhub profile found for ${symbol}`);
+                console.log(`Finnhub profile found for ${symbol}`);
                 result.name = p.name;
                 result.sector = p.finnhubIndustry;
                 result.website = p.weburl;
@@ -156,7 +156,7 @@ class RobustStockService {
 
             if (metrics.status === 'fulfilled' && metrics.value.data?.metric) {
                 const m = metrics.value.data.metric;
-                console.log(`📊 Finnhub metrics found for ${symbol}`);
+                console.log(`Finnhub metrics found for ${symbol}`);
                 result.peRatio = m.peBasicExclExtraTTM;
                 result.pbRatio = m.pbQuarterly;
                 result.roe = m.roeRfy;
@@ -180,7 +180,7 @@ class RobustStockService {
 
     async getFMPDataNew(symbol) {
         try {
-            console.log(`🔍 Fetching FMP data (new) for ${symbol}`);
+            console.log(`Fetching FMP data (new) for ${symbol}`);
             
             // Try the working FMP endpoints
             const response = await axios.get(`${this.apis.fmp}/profile/${symbol}?apikey=${this.keys.fmp}`, {
@@ -189,7 +189,7 @@ class RobustStockService {
 
             if (response.data && Array.isArray(response.data) && response.data.length > 0) {
                 const data = response.data[0];
-                console.log(`📋 FMP profile found for ${symbol}`);
+                console.log(`FMP profile found for ${symbol}`);
                 
                 return {
                     name: data.companyName,
@@ -217,7 +217,7 @@ class RobustStockService {
 
     async getIndianStockData(symbol, result) {
         try {
-            console.log(`🔍 Fetching Indian stock data for ${symbol}`);
+            console.log(`Fetching Indian stock data for ${symbol}`);
             
             const [indianData, yahooData] = await Promise.allSettled([
                 this.getIndianAPIData(symbol),
@@ -242,7 +242,7 @@ class RobustStockService {
     async getIndianAPIData(symbol) {
         try {
             const cleanSymbol = symbol.replace('.NS', '').replace('.BO', '');
-            console.log(`🇮🇳 Calling Indian API for: ${cleanSymbol}`);
+            console.log(`Calling Indian API for: ${cleanSymbol}`);
             
             const response = await axios.get(`${this.apis.indianAPI}/stock`, {
                 params: { name: cleanSymbol },
@@ -254,7 +254,7 @@ class RobustStockService {
             });
 
             if (response.data && response.status === 200) {
-                console.log(`🇮🇳 Indian API comprehensive data found for ${symbol}`);
+                console.log(`Indian API comprehensive data found for ${symbol}`);
                 const data = response.data;
                 
                 // Extract financial data from the comprehensive response
@@ -404,13 +404,13 @@ class RobustStockService {
                     result.government = parseFloat(data.shareholding.government);
                 }
 
-                console.log(`✅ Extracted comprehensive Indian data for ${symbol}`);
+                console.log(`Extracted comprehensive Indian data for ${symbol}`);
                 return result;
             }
 
             return null;
         } catch (error) {
-            console.error(`❌ Indian API error for ${symbol}:`, error.response?.status, error.response?.data || error.message);
+            console.error(`Indian API error for ${symbol}:`, error.response?.status, error.response?.data || error.message);
             return null;
         }
     }
@@ -453,7 +453,7 @@ class RobustStockService {
 
     async getCryptoData(symbol, result) {
         try {
-            console.log(`🔍 Fetching crypto data for ${symbol}`);
+            console.log(`Fetching crypto data for ${symbol}`);
             const coinId = this.getCoinGeckoId(symbol);
             
             const response = await axios.get(`${this.apis.coinGecko}/coins/${coinId}`, {

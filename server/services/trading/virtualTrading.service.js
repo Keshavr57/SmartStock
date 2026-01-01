@@ -40,7 +40,7 @@ class VirtualTradingService {
         try {
             const { symbol, type, quantity, orderType = 'MARKET' } = orderData;
             
-            console.log(`🔄 Executing ${type} order: ${quantity} shares of ${symbol}`);
+            console.log(`Executing ${type} order: ${quantity} shares of ${symbol}`);
 
             // Get current market price with fallbacks
             const stockData = await robustStockService.getComprehensiveStockData(symbol);
@@ -99,7 +99,7 @@ class VirtualTradingService {
             await portfolio.save();
             await this.updatePortfolioValues(userId);
 
-            console.log(`✅ Order executed: ${type} ${quantity} ${symbol} at ₹${currentPrice}`);
+            console.log(`Order executed: ${type} ${quantity} ${symbol} at ₹${currentPrice}`);
             return { success: true, transaction, portfolio };
 
         } catch (error) {

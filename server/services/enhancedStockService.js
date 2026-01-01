@@ -35,13 +35,13 @@ class EnhancedStockService {
 
     async getComprehensiveStockData(symbol) {
         try {
-            console.log(`🔍 Fetching comprehensive data for ${symbol}`);
+            console.log(`Fetching comprehensive data for ${symbol}`);
             
             // Check cache first
             const cacheKey = `enhanced_${symbol}`;
             const cached = this.getFromCache(cacheKey);
             if (cached) {
-                console.log(`📦 Using cached data for ${symbol}`);
+                console.log(`Using cached data for ${symbol}`);
                 return cached;
             }
 
@@ -59,11 +59,11 @@ class EnhancedStockService {
             // Cache the result
             this.setCache(cacheKey, result);
             
-            console.log(`✅ Enhanced data fetched for ${symbol}`);
+            console.log(`Enhanced data fetched for ${symbol}`);
             return result;
 
         } catch (error) {
-            console.error(`❌ Error fetching enhanced data for ${symbol}:`, error.message);
+            console.error(`Error fetching enhanced data for ${symbol}:`, error.message);
             return this.getEmptyDataStructure(symbol);
         }
     }
@@ -221,7 +221,7 @@ class EnhancedStockService {
 
     async getCryptoData(symbol, result) {
         try {
-            console.log(`🔍 Fetching crypto data for ${symbol}`);
+            console.log(`Fetching crypto data for ${symbol}`);
             const coinId = this.getCoinGeckoId(symbol);
             
             const response = await axios.get(`${this.apis.coinGecko.baseURL}/coins/${coinId}`, {
@@ -246,15 +246,15 @@ class EnhancedStockService {
                 result.totalSupply = coin.market_data.total_supply;
                 result.maxSupply = coin.market_data.max_supply;
                 
-                console.log(`✅ Crypto data processed for ${symbol}`);
+                console.log(`Crypto data processed for ${symbol}`);
             } else {
-                console.log(`⚠️ No market data found for ${symbol}`);
+                console.log(`No market data found for ${symbol}`);
             }
 
             return result;
 
         } catch (error) {
-            console.error(`❌ Error fetching crypto data for ${symbol}:`, error.message);
+            console.error(`Error fetching crypto data for ${symbol}:`, error.message);
             return result;
         }
     }
@@ -262,7 +262,7 @@ class EnhancedStockService {
     // API-specific methods
     async getFMPData(symbol) {
         try {
-            console.log(`🔍 Fetching FMP data for ${symbol}`);
+            console.log(`Fetching FMP data for ${symbol}`);
             
             // Use the new FMP API structure for free tier
             const [quote, profile] = await Promise.allSettled([
@@ -275,17 +275,17 @@ class EnhancedStockService {
             // Process quote data (new endpoint)
             if (quote.status === 'fulfilled' && quote.value.data && Array.isArray(quote.value.data) && quote.value.data.length > 0) {
                 const q = quote.value.data[0];
-                console.log(`💰 FMP Quote data found for ${symbol}`);
+                console.log(`FMP Quote data found for ${symbol}`);
                 result.price = q.price;
                 result.volume = q.volume;
             } else {
-                console.log(`⚠️ No FMP quote data for ${symbol}`);
+                console.log(`No FMP quote data for ${symbol}`);
             }
 
             // Process profile data
             if (profile.status === 'fulfilled' && profile.value.data && Array.isArray(profile.value.data) && profile.value.data.length > 0) {
                 const p = profile.value.data[0];
-                console.log(`📋 FMP Profile data found for ${symbol}`);
+                console.log(`FMP Profile data found for ${symbol}`);
                 result.companyName = p.companyName;
                 result.sector = p.sector;
                 result.industry = p.industry;
@@ -297,14 +297,14 @@ class EnhancedStockService {
                 result.pe = p.pe;
                 result.eps = p.eps;
             } else {
-                console.log(`⚠️ No FMP profile data for ${symbol}`);
+                console.log(`No FMP profile data for ${symbol}`);
             }
 
-            console.log(`✅ FMP data processed for ${symbol}:`, Object.keys(result));
+            console.log(`FMP data processed for ${symbol}:`, Object.keys(result));
             return result;
 
         } catch (error) {
-            console.error(`❌ FMP API error for ${symbol}:`, error.response?.data || error.message);
+            console.error(`FMP API error for ${symbol}:`, error.response?.data || error.message);
             return null;
         }
     }
@@ -364,7 +364,7 @@ class EnhancedStockService {
 
     async getYahooData(symbol) {
         try {
-            console.log(`🔍 Fetching Yahoo data for ${symbol}`);
+            console.log(`Fetching Yahoo data for ${symbol}`);
             
             const [quote, fundamentals] = await Promise.allSettled([
                 axios.get(`${this.apis.yahoo.baseURL}/v8/finance/chart/${symbol}`, { timeout: 10000 }),
@@ -376,7 +376,7 @@ class EnhancedStockService {
             // Process quote data
             if (quote.status === 'fulfilled' && quote.value.data?.chart?.result?.[0]) {
                 const q = quote.value.data.chart.result[0].meta;
-                console.log(`💰 Yahoo Quote data found for ${symbol}`);
+                console.log(`Yahoo Quote data found for ${symbol}`);
                 result.price = q.regularMarketPrice;
                 result.change = q.regularMarketPrice - q.previousClose;
                 result.changePercent = ((q.regularMarketPrice - q.previousClose) / q.previousClose) * 100;
@@ -384,13 +384,13 @@ class EnhancedStockService {
                 result.fiftyTwoWeekHigh = q.fiftyTwoWeekHigh;
                 result.fiftyTwoWeekLow = q.fiftyTwoWeekLow;
             } else {
-                console.log(`⚠️ No Yahoo quote data for ${symbol}`);
+                console.log(`No Yahoo quote data for ${symbol}`);
             }
 
             // Process fundamentals
             if (fundamentals.status === 'fulfilled' && fundamentals.value.data?.quoteSummary?.result?.[0]) {
                 const f = fundamentals.value.data.quoteSummary.result[0];
-                console.log(`📊 Yahoo Fundamentals data found for ${symbol}`);
+                console.log(`Yahoo Fundamentals data found for ${symbol}`);
                 
                 if (f.summaryDetail) {
                     result.pe = f.summaryDetail.trailingPE?.raw;
@@ -441,14 +441,14 @@ class EnhancedStockService {
                     result.totalEquity = balance.totalStockholderEquity?.raw;
                 }
             } else {
-                console.log(`⚠️ No Yahoo fundamentals data for ${symbol}`);
+                console.log(`No Yahoo fundamentals data for ${symbol}`);
             }
 
-            console.log(`✅ Yahoo data processed for ${symbol}:`, Object.keys(result));
+            console.log(`Yahoo data processed for ${symbol}:`, Object.keys(result));
             return result;
 
         } catch (error) {
-            console.error(`❌ Yahoo API error for ${symbol}:`, error.response?.data || error.message);
+            console.error(`Yahoo API error for ${symbol}:`, error.response?.data || error.message);
             return null;
         }
     }

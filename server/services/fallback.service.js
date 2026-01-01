@@ -20,7 +20,7 @@ export const fetchAlternativeIndianStock = async (symbol) => {
     
     return null;
   } catch (err) {
-    console.error("❌ Fallback API Error:", err.message);
+    console.error("Fallback API Error:", err.message);
     return null;
   }
 };
