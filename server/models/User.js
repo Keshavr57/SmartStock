@@ -9,7 +9,6 @@ const userSchema = new mongoose.Schema({
     email: {
         type: String,
         required: true,
-        unique: true,
         lowercase: true,
         trim: true
     },
@@ -20,8 +19,7 @@ const userSchema = new mongoose.Schema({
         }
     },
     googleId: {
-        type: String,
-        sparse: true // Allows multiple null values
+        type: String
     },
     avatar: {
         type: String,
