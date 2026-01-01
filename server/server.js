@@ -27,19 +27,29 @@ const app = express();
 const server = createServer(app);
 
 // ================= MIDDLEWARE =================
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ["http://localhost:5173", "http://localhost:3000", "http://localhost:3001"],
+// More permissive CORS configuration for deployment debugging
+const corsOptions = {
+  origin: true, // Temporarily allow all origins for debugging
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
-}));
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+};
+
+console.log('🌐 CORS Configuration:', {
+  ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
+  NODE_ENV: process.env.NODE_ENV
+});
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // ================= SOCKET.IO SETUP =================
 const io = new Server(server, {
   cors: {
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || ["http://localhost:5173", "http://localhost:3000", "http://localhost:3001"],
-    methods: ["GET", "POST"]
+    origin: true, // Temporarily allow all origins
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
@@ -105,6 +115,19 @@ io.on('connection', (socket) => {
 });
 
 // ================= ROUTES =================
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    environment: {
+      NODE_ENV: process.env.NODE_ENV,
+      ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
+      AI_SERVICE_URL: process.env.AI_SERVICE_URL
+    }
+  });
+});
+
 app.use('/api/auth', authRoutes);
 app.use("/api", compareRoutes);
 app.use('/api/chat', chatRoutes)
