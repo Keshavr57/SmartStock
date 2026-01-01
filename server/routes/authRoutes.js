@@ -271,4 +271,14 @@ router.post('/logout', authenticateToken, (req, res) => {
     });
 });
 
+// Debug endpoint to check environment variables (remove in production)
+router.get('/debug/env', (req, res) => {
+    res.json({
+        ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
+        NODE_ENV: process.env.NODE_ENV,
+        AI_SERVICE_URL: process.env.AI_SERVICE_URL,
+        PORT: process.env.PORT
+    });
+});
+
 export { router, authenticateToken };
