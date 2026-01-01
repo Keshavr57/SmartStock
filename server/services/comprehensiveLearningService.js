@@ -3,7 +3,7 @@ import { COMPREHENSIVE_LESSONS, LEARNING_CATEGORIES, DIFFICULTY_LEVELS } from '.
 
 class ComprehensiveLearningService {
     constructor() {
-        this.aiServiceUrl = 'http://127.0.0.1:8000';
+        this.aiServiceUrl = process.env.AI_SERVICE_URL || 'https://smartstock-ai-service.onrender.com';
         this.fallbackContent = this.generateFallbackContent();
     }
 

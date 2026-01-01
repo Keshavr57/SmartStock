@@ -5,9 +5,9 @@ export const getAIChatResponse = async (req, res) => {
     try {
         const { message, userId } = req.body;
 
-        // Use the IP/URL where your FastAPI is running. 
-        // Since both are on your laptop, localhost:8000 is correct.
-        const response = await axios.post('http://localhost:8000/process', {
+        // Use the deployed AI service URL
+        const aiServiceUrl = process.env.AI_SERVICE_URL || 'https://smartstock-ai-service.onrender.com';
+        const response = await axios.post(`${aiServiceUrl}/process`, {
             message: message,
             user_id: userId || "guest_user" // fallback if userId is missing
         });
