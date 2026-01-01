@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import Optional
-
+import os
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -9,7 +9,14 @@ from engine import process_query
 from ipo_service import get_current_ipos
 from engine import get_ui_landing_stocks
 
-app = FastAPI()
+# Get port from environment (Render sets this automatically)
+PORT = int(os.getenv("PORT", 10000))
+
+app = FastAPI(
+    title="SmartStock AI Service",
+    description="AI-powered stock analysis and advisory service",
+    version="1.0.0"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -22,6 +29,14 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     message: str
     user_id: Optional[str] = "learning_section"
+
+@app.get("/")
+async def root():
+    return {"message": "SmartStock AI Service is running", "status": "healthy"}
+
+@app.get("/health")
+async def health_check():
+    return {"status": "OK", "service": "AI Service"}
 
 @app.post("/process")
 async def chat_endpoint(request: ChatRequest):
@@ -46,7 +61,9 @@ if __name__ == "__main__":
     import uvicorn
     import os
     
-    port = int(os.getenv("PORT", 8000))
-    host = os.getenv("HOST", "127.0.0.1")
+    # Render provides PORT environment variable
+    port = int(os.getenv("PORT", 10000))
+    host = "0.0.0.0"  # Must bind to 0.0.0.0 for Render
     
-    uvicorn.run(app, host=host, port=port)
+    print(f"Starting AI service on {host}:{port}")
+    uvicorn.run(app, host=host, port=port, log_level="info")

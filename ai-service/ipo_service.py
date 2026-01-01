@@ -309,11 +309,11 @@ def calculate_ipo_risk_level(ipo_data):
     
     # Determine final risk level
     if risk_score <= 2:
-        return 'Low', '🟢'
+        return 'Low', 'LOW'
     elif risk_score <= 5:
-        return 'Medium', '🟡'
+        return 'Medium', 'MED'
     else:
-        return 'High', '🔴'
+        return 'High', 'HIGH'
 
 def get_ipo_risk_assessment(ipo_name):
     """Get professional IPO risk assessment following 5-point structure"""
@@ -329,26 +329,26 @@ def get_ipo_risk_assessment(ipo_name):
     if not target_ipo:
         return {
             'risk_level': 'Unknown',
-            'risk_icon': '⚪',
+            'risk_icon': 'N/A',
             'assessment': 'IPO not found in current pipeline'
         }
     
     risk_level, risk_icon = calculate_ipo_risk_level(target_ipo)
     
     # Professional 5-point assessment
-    assessment = f"""**{risk_icon} {risk_level} Risk: {target_ipo['name']}**
+    assessment = f"""{risk_icon} {risk_level} Risk: {target_ipo['name']}
 
-**1️⃣ Core insight:** {get_core_insight(target_ipo, risk_level)}
+1. Core insight: {get_core_insight(target_ipo, risk_level)}
 
-**2️⃣ Market intuition:** {get_market_intuition(target_ipo, risk_level)}
+2. Market intuition: {get_market_intuition(target_ipo, risk_level)}
 
-**3️⃣ Key risk:** {get_key_risk(target_ipo, risk_level)}
+3. Key risk: {get_key_risk(target_ipo, risk_level)}
 
-**4️⃣ Human element:** {get_human_element(target_ipo, risk_level)}
+4. Human element: {get_human_element(target_ipo, risk_level)}
 
-**5️⃣ Professional takeaway:** {get_professional_takeaway(target_ipo, risk_level)}
+5. Professional takeaway: {get_professional_takeaway(target_ipo, risk_level)}
 
-*Professional IPO analysis for educational purposes*"""
+Professional IPO analysis for educational purposes"""
     
     return {
         'risk_level': risk_level,
