@@ -190,16 +190,27 @@ def create_professional_response(user_query, stock_data=None, ipo_data=None):
 def process_query(user_input: str):
     """Process user query with professional market participant approach"""
     try:
+        print(f"🔍 Processing query: {user_input}")
+        
         # Check if this is a trading risk assessment request
         if user_input.startswith("TRADING_RISK_ASSESSMENT:"):
             return handle_trading_risk_assessment(user_input)
         
         # Create professional context
         professional_context = create_professional_response(user_input)
+        print(f"🔍 Professional context created: {professional_context[:200]}...")
         
         # If it's a direct IPO risk assessment, return it
         if isinstance(professional_context, str) and ('LOW' in professional_context or 'MEDIUM' in professional_context or 'HIGH' in professional_context) and 'Risk:' in professional_context:
             return professional_context
+        
+        # Check if GROQ API key is available
+        groq_key = os.getenv("GROQ_API_KEY")
+        if not groq_key:
+            print("🚨 GROQ API KEY NOT FOUND!")
+            return "AI service configuration error: API key not found"
+        
+        print(f"🔍 GROQ API Key available: {groq_key[:10]}...")
         
         # Get response from LLM with professional prompt
         messages = [
@@ -207,7 +218,9 @@ def process_query(user_input: str):
             {"role": "user", "content": professional_context}
         ]
         
+        print("🔍 Sending request to GROQ...")
         response = llm.invoke(messages)
+        print(f"🔍 GROQ response received: {response.content[:100]}...")
         
         # Clean and format the response
         cleaned_response = response.content.strip()
@@ -218,6 +231,7 @@ def process_query(user_input: str):
         return final_response
         
     except Exception as e:
+        print(f"🚨 Process query error: {str(e)}")
         error_msg = str(e)
         if "429" in error_msg:
             return """WARNING: Market Data Temporarily Unavailable

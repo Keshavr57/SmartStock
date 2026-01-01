@@ -41,6 +41,9 @@ async def health_check():
 @app.post("/process")
 async def chat_endpoint(request: ChatRequest):
     try:
+        print(f"🤖 AI Service received query: {request.message}")
+        print(f"🤖 User ID: {request.user_id}")
+        
         # BYPASS LOGIC: If the system asks for raw IPO data, return it directly
         if request.message == "FETCH_LIVE_IPOS_NOW":
             raw_data = get_current_ipos()
@@ -51,10 +54,14 @@ async def chat_endpoint(request: ChatRequest):
             return {"status": "success", "answer": raw_data}
         
         # Otherwise, let the AI Agent handle the chat normally
+        print("🤖 Processing query with AI engine...")
         ai_answer = process_query(request.message)
+        print(f"🤖 AI Response generated: {ai_answer[:100]}...")
+        
         return {"status": "success", "answer": ai_answer}
         
     except Exception as e:
+        print(f"🚨 AI Service Error: {str(e)}")
         return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":
