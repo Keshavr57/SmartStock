@@ -192,71 +192,48 @@ def process_query(user_input: str):
     try:
         print(f"🔍 Processing query: {user_input}")
         
-        # Check if this is a trading risk assessment request
-        if user_input.startswith("TRADING_RISK_ASSESSMENT:"):
-            return handle_trading_risk_assessment(user_input)
-        
-        # Create professional context
-        professional_context = create_professional_response(user_input)
-        print(f"🔍 Professional context created: {professional_context[:200]}...")
-        
-        # If it's a direct IPO risk assessment, return it
-        if isinstance(professional_context, str) and ('LOW' in professional_context or 'MEDIUM' in professional_context or 'HIGH' in professional_context) and 'Risk:' in professional_context:
-            return professional_context
-        
         # Check if GROQ API key is available
         groq_key = os.getenv("GROQ_API_KEY")
         if not groq_key:
             print("🚨 GROQ API KEY NOT FOUND!")
-            return "AI service configuration error: API key not found"
+            return "AI service configuration error: API key not found. Please contact support."
         
         print(f"🔍 GROQ API Key available: {groq_key[:10]}...")
         
-        # Get response from LLM with professional prompt
+        # Simple direct approach - skip complex context creation for now
+        simple_prompt = f"""You are an experienced stock market advisor. Answer this question professionally and concisely:
+
+Question: {user_input}
+
+Provide a helpful, specific answer about stocks, trading, or market analysis. Keep it under 150 words and sound professional."""
+
         messages = [
-            {"role": "system", "content": PROFESSIONAL_SYSTEM_PROMPT},
-            {"role": "user", "content": professional_context}
+            {"role": "system", "content": "You are a professional stock market advisor with 15+ years of experience. Provide specific, actionable insights."},
+            {"role": "user", "content": simple_prompt}
         ]
         
-        print("🔍 Sending request to GROQ...")
+        print("🔍 Sending simplified request to GROQ...")
         response = llm.invoke(messages)
         print(f"🔍 GROQ response received: {response.content[:100]}...")
         
-        # Clean and format the response
-        cleaned_response = response.content.strip()
-        
-        # Add minimal educational note (not verbose disclaimer)
-        final_response = add_professional_note(cleaned_response)
-        
-        return final_response
+        if response and response.content:
+            return response.content.strip() + "\n\nEducational content for market analysis learning."
+        else:
+            print("🚨 Empty response from GROQ")
+            return "AI service returned empty response. Please try again."
         
     except Exception as e:
         print(f"🚨 Process query error: {str(e)}")
-        error_msg = str(e)
-        if "429" in error_msg:
-            return """WARNING: Market Data Temporarily Unavailable
-
-High demand on our systems right now. Try again in a few minutes.
-
-While you wait: Check our Compare tool for live fundamentals or browse Market News for current developments.
-
-Professional tip: The best trades happen when others can't access information. Use this downtime to research."""
         
-        return f"""Market Professional Response
+        # Return a more specific error message
+        return f"""AI Service Error: {str(e)}
 
-Here's how I'd approach your question:
+This appears to be a technical issue with our AI service. Please try:
+1. Asking a simpler question
+2. Waiting a few minutes and trying again
+3. Contacting support if the issue persists
 
-1. Core insight: Market analysis requires multiple data points - never rely on single metrics.
-
-2. The intuition: Smart money looks at earnings quality, management track record, and sector rotation patterns. Price alone tells you nothing about value.
-
-3. Key risk: Most retail investors focus on price momentum while ignoring fundamental deterioration - classic late-cycle behavior.
-
-4. Human element: Fear of missing out drives poor timing. Career risk makes fund managers herd together. Liquidity needs force selling at bad times.
-
-5. Professional takeaway: Build conviction through research, size positions based on confidence level, and always have an exit plan.
-
-Educational content for market analysis learning"""
+Error details: {str(e)[:100]}"""
 
 def handle_trading_risk_assessment(assessment_request):
     """Handle trading risk assessment with professional market participant approach"""

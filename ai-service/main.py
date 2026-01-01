@@ -38,6 +38,36 @@ async def root():
 async def health_check():
     return {"status": "OK", "service": "AI Service"}
 
+@app.get("/test")
+async def test_ai():
+    """Simple test endpoint to verify AI functionality"""
+    try:
+        # Test GROQ API key
+        groq_key = os.getenv("GROQ_API_KEY")
+        if not groq_key:
+            return {"status": "error", "message": "GROQ API key not found"}
+        
+        # Test simple AI query
+        from engine import llm, PROFESSIONAL_SYSTEM_PROMPT
+        
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant. Respond with exactly: 'AI service is working correctly!'"},
+            {"role": "user", "content": "Test message"}
+        ]
+        
+        response = llm.invoke(messages)
+        
+        return {
+            "status": "success", 
+            "groq_key_present": bool(groq_key),
+            "groq_key_prefix": groq_key[:10] if groq_key else None,
+            "ai_response": response.content,
+            "message": "AI service test completed"
+        }
+        
+    except Exception as e:
+        return {"status": "error", "message": f"AI test failed: {str(e)}"}
+
 @app.post("/process")
 async def chat_endpoint(request: ChatRequest):
     try:
@@ -52,6 +82,10 @@ async def chat_endpoint(request: ChatRequest):
         if request.message == "FETCH_STOCKS_JSON":
             raw_data = get_ui_landing_stocks()
             return {"status": "success", "answer": raw_data}
+        
+        # Test simple response first
+        if request.message.lower() == "test":
+            return {"status": "success", "answer": "AI service is receiving messages correctly!"}
         
         # Otherwise, let the AI Agent handle the chat normally
         print("🤖 Processing query with AI engine...")
