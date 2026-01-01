@@ -4,12 +4,39 @@
     {
       "src": "client/package.json",
       "use": "@vercel/static-build"
+    },
+    {
+      "src": "api/index.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/ai.py",
+      "use": "@vercel/python"
     }
   ],
   "routes": [
     {
+      "src": "/api/ai/(.*)",
+      "dest": "/api/ai.py"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "/index.html"
     }
-  ]
+  ],
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "server/**"
+    },
+    "api/ai.py": {
+      "includeFiles": "ai-service/**"
+    }
+  },
+  "env": {
+    "NODE_ENV": "production"
+  }
 }
