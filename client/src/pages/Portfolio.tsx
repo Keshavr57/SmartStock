@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, PieChart, Activity, RefreshCw, BarChart3, User, Mail, Calendar, Settings } from 'lucide-react';
 import RealTimePnL from '../components/trading/RealTimePnL';
 import { ENDPOINTS } from '../lib/config';
+import { api } from '../lib/api';
 
 interface PortfolioSummary {
     totalValue: number;
@@ -59,62 +60,92 @@ const Portfolio: React.FC = () => {
             const currentUser = JSON.parse(userData);
             const userId = currentUser.id;
             
+            console.log('Fetching portfolio for user:', userId);
+            console.log('User data:', currentUser);
+            
             // Fetch portfolio summary
-            const summaryResponse = await fetch(ENDPOINTS.PORTFOLIO(userId));
-            const summaryData = await summaryResponse.json();
+            const summaryResponse = await api.get(`/virtual/portfolio/${userId}`);
+            const summaryData = summaryResponse.data;
+            
+            console.log('Portfolio Summary Response:', summaryData);
             
             // Fetch holdings
-            const holdingsResponse = await fetch(ENDPOINTS.HOLDINGS(userId));
-            const holdingsData = await holdingsResponse.json();
+            const holdingsResponse = await api.get(`/virtual/holdings/${userId}`);
+            const holdingsData = holdingsResponse.data;
+            
+            console.log('Holdings Response:', holdingsData);
             
             if (summaryData.status === 'success') {
+                console.log('Setting portfolio summary:', summaryData.data);
                 setPortfolioSummary(summaryData.data);
+            } else {
+                console.error('Portfolio summary error:', summaryData);
+                // Set default values if API fails
+                setPortfolioSummary({
+                    totalValue: 100000,
+                    totalInvested: 0,
+                    totalPnL: 0,
+                    totalPnLPercent: 0,
+                    availableBalance: 100000,
+                    holdingsCount: 0,
+                    dayPnL: 0,
+                    dayPnLPercent: 0
+                });
             }
             
             if (holdingsData.status === 'success') {
-                // Transform holdings data with real-time prices
-                const transformedHoldings = await Promise.all(
-                    holdingsData.data.map(async (holding: any) => {
-                        let currentPrice = holding.avgPrice;
-                        
-                        try {
-                            const priceResponse = await fetch(ENDPOINTS.QUOTE(holding.symbol));
-                            const priceData = await priceResponse.json();
-                            if (priceData.status === 'success' && priceData.data.price) {
-                                currentPrice = priceData.data.price;
-                            }
-                        } catch (error) {
-                            console.log(`Could not fetch price for ${holding.symbol}`);
-                        }
-                        
-                        const marketValue = currentPrice * holding.quantity;
-                        const pnl = (currentPrice - holding.avgPrice) * holding.quantity;
-                        const pnlPercent = ((currentPrice - holding.avgPrice) / holding.avgPrice) * 100;
-                        
-                        return {
-                            symbol: holding.symbol,
-                            name: holding.name || holding.symbol,
-                            quantity: holding.quantity,
-                            avgPrice: holding.avgPrice,
-                            currentPrice,
-                            marketValue,
-                            pnl,
-                            pnlPercent,
-                            sector: holding.sector || 'Unknown'
-                        };
-                    })
-                );
+                // Use server-calculated values directly to avoid NaN issues
+                const transformedHoldings = holdingsData.data.map((holding: any) => {
+                    // Validate all numeric values from server
+                    const avgPrice = parseFloat(holding.avgPrice) || 0;
+                    const currentPrice = parseFloat(holding.currentPrice) || avgPrice;
+                    const quantity = parseFloat(holding.quantity) || 0;
+                    const invested = parseFloat(holding.invested) || 0;
+                    const currentValue = parseFloat(holding.currentValue) || 0;
+                    const pnl = parseFloat(holding.pnl) || 0;
+                    const pnlPercent = parseFloat(holding.pnlPercent) || 0;
+                    
+                    return {
+                        symbol: holding.symbol || '',
+                        name: holding.name || holding.symbol || '',
+                        quantity: quantity,
+                        avgPrice: avgPrice,
+                        currentPrice: currentPrice,
+                        marketValue: currentValue,
+                        invested: invested,
+                        pnl: pnl,
+                        pnlPercent: pnlPercent,
+                        sector: holding.sector || 'Unknown',
+                        purchaseDate: holding.purchaseDate
+                    };
+                });
                 
                 setHoldings(transformedHoldings);
             }
         } catch (error) {
             console.error('Error fetching portfolio data:', error);
+            // Set default values to prevent blank screen
+            setPortfolioSummary({
+                totalValue: 0,
+                totalInvested: 0,
+                totalPnL: 0,
+                totalPnLPercent: 0,
+                availableBalance: 100000, // Default starting balance
+                holdingsCount: 0,
+                dayPnL: 0,
+                dayPnLPercent: 0
+            });
         } finally {
             setLoading(false);
         }
     };
 
     const formatCurrency = (amount: number) => {
+        // Handle NaN, null, undefined values
+        if (isNaN(amount) || amount === null || amount === undefined) {
+            return '₹0';
+        }
+        
         return new Intl.NumberFormat('en-IN', {
             style: 'currency',
             currency: 'INR',
@@ -165,15 +196,14 @@ const Portfolio: React.FC = () => {
 
             <div className="max-w-7xl mx-auto px-4 py-6">
                 {/* Portfolio Summary Cards */}
-                {portfolioSummary && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                         {/* Total Value */}
                         <div className="bg-white rounded-lg shadow-sm p-6">
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm font-medium text-gray-600">Total Portfolio Value</p>
                                     <p className="text-2xl font-bold text-gray-900">
-                                        {formatCurrency(portfolioSummary.totalValue)}
+                                        {portfolioSummary ? formatCurrency(portfolioSummary.totalValue) : '₹0'}
                                     </p>
                                 </div>
                                 <PieChart className="h-8 w-8 text-blue-500" />
@@ -182,23 +212,23 @@ const Portfolio: React.FC = () => {
 
                         {/* Total P&L */}
                         <div className={`rounded-lg shadow-sm p-6 ${
-                            portfolioSummary.totalPnL >= 0 ? 'bg-green-50' : 'bg-red-50'
+                            (portfolioSummary?.totalPnL || 0) >= 0 ? 'bg-green-50' : 'bg-red-50'
                         }`}>
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm font-medium text-gray-600">Total P&L</p>
                                     <p className={`text-2xl font-bold ${
-                                        portfolioSummary.totalPnL >= 0 ? 'text-green-600' : 'text-red-600'
+                                        (portfolioSummary?.totalPnL || 0) >= 0 ? 'text-green-600' : 'text-red-600'
                                     }`}>
-                                        {formatCurrency(portfolioSummary.totalPnL)}
+                                        {portfolioSummary ? formatCurrency(portfolioSummary.totalPnL) : '₹0'}
                                     </p>
                                     <p className={`text-sm ${
-                                        portfolioSummary.totalPnL >= 0 ? 'text-green-600' : 'text-red-600'
+                                        (portfolioSummary?.totalPnL || 0) >= 0 ? 'text-green-600' : 'text-red-600'
                                     }`}>
-                                        {portfolioSummary.totalPnL >= 0 ? '+' : ''}{portfolioSummary.totalPnLPercent.toFixed(2)}%
+                                        {portfolioSummary ? (portfolioSummary.totalPnL >= 0 ? '+' : '') + portfolioSummary.totalPnLPercent.toFixed(2) + '%' : '0.00%'}
                                     </p>
                                 </div>
-                                {portfolioSummary.totalPnL >= 0 ? (
+                                {(portfolioSummary?.totalPnL || 0) >= 0 ? (
                                     <TrendingUp className="h-8 w-8 text-green-500" />
                                 ) : (
                                     <TrendingDown className="h-8 w-8 text-red-500" />
@@ -212,7 +242,7 @@ const Portfolio: React.FC = () => {
                                 <div>
                                     <p className="text-sm font-medium text-gray-600">Available Balance</p>
                                     <p className="text-2xl font-bold text-gray-900">
-                                        {formatCurrency(portfolioSummary.availableBalance)}
+                                        {portfolioSummary ? formatCurrency(portfolioSummary.availableBalance) : '₹1,00,000'}
                                     </p>
                                 </div>
                                 <DollarSign className="h-8 w-8 text-green-500" />
@@ -225,7 +255,7 @@ const Portfolio: React.FC = () => {
                                 <div>
                                     <p className="text-sm font-medium text-gray-600">Holdings</p>
                                     <p className="text-2xl font-bold text-gray-900">
-                                        {portfolioSummary.holdingsCount}
+                                        {portfolioSummary ? portfolioSummary.holdingsCount : 0}
                                     </p>
                                     <p className="text-sm text-gray-500">Active positions</p>
                                 </div>
@@ -233,7 +263,6 @@ const Portfolio: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                )}
 
                 {/* Tabs */}
                 <div className="bg-white rounded-lg shadow-sm">

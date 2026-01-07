@@ -3,6 +3,8 @@ import { TrendingUp, DollarSign, Activity, BarChart3, ArrowUpRight, Eye, BookOpe
 import { useState, useEffect } from "react"
 import { authService } from "../lib/auth"
 import { ENDPOINTS } from "../lib/config"
+import { getMarketCharts } from "../lib/api"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 interface PortfolioData {
     totalValue: number;
@@ -35,11 +37,24 @@ export default function Home() {
         dayPnLPercent: 0
     });
     const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+    const [marketCharts, setMarketCharts] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         fetchUserData();
+        fetchMarketCharts();
     }, []);
+
+    const fetchMarketCharts = async () => {
+        try {
+            const response = await getMarketCharts();
+            if (response.success) {
+                setMarketCharts(response.charts);
+            }
+        } catch (error) {
+            console.error('Error fetching market charts:', error);
+        }
+    };
 
     const fetchUserData = async () => {
         try {
@@ -74,6 +89,11 @@ export default function Home() {
     };
 
     const formatCurrency = (amount: number) => {
+        // Handle NaN, null, undefined values
+        if (isNaN(amount) || amount === null || amount === undefined) {
+            return '₹0';
+        }
+        
         return new Intl.NumberFormat('en-IN', {
             style: 'currency',
             currency: 'INR',
@@ -82,6 +102,11 @@ export default function Home() {
     };
 
     const formatPercentage = (percent: number) => {
+        // Handle NaN, null, undefined values
+        if (isNaN(percent) || percent === null || percent === undefined) {
+            return '0.00%';
+        }
+        
         const sign = percent >= 0 ? '+' : '';
         return `${sign}${percent.toFixed(2)}%`;
     };
@@ -237,6 +262,114 @@ export default function Home() {
                             );
                         })
                     )}
+                </div>
+
+                {/* Market Charts Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    {/* NIFTY 50 Chart */}
+                    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div className="p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">NIFTY 50</h3>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                                            {marketCharts?.nifty?.currentPrice?.toLocaleString() || '24,150'}
+                                        </span>
+                                        <span className={`text-sm font-medium ${
+                                            (marketCharts?.nifty?.change || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                                        }`}>
+                                            {(marketCharts?.nifty?.change || 0) >= 0 ? '+' : ''}{(marketCharts?.nifty?.change || 0.5).toFixed(2)}%
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                            </div>
+                            <div className="h-32">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={marketCharts?.nifty?.data || []}>
+                                        <Line 
+                                            type="monotone" 
+                                            dataKey="value" 
+                                            stroke="#2563eb" 
+                                            strokeWidth={2}
+                                            dot={false}
+                                        />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* S&P 500 Chart */}
+                    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div className="p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">S&P 500</h3>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                                            {marketCharts?.sp500?.currentPrice?.toLocaleString() || '5,900'}
+                                        </span>
+                                        <span className={`text-sm font-medium ${
+                                            (marketCharts?.sp500?.change || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                                        }`}>
+                                            {(marketCharts?.sp500?.change || 0) >= 0 ? '+' : ''}{(marketCharts?.sp500?.change || 0.3).toFixed(2)}%
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                            </div>
+                            <div className="h-32">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={marketCharts?.sp500?.data || []}>
+                                        <Line 
+                                            type="monotone" 
+                                            dataKey="value" 
+                                            stroke="#10b981" 
+                                            strokeWidth={2}
+                                            dot={false}
+                                        />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Bitcoin Chart */}
+                    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div className="p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Bitcoin</h3>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                                            ${marketCharts?.btc?.currentPrice?.toLocaleString() || '95,000'}
+                                        </span>
+                                        <span className={`text-sm font-medium ${
+                                            (marketCharts?.btc?.change || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                                        }`}>
+                                            {(marketCharts?.btc?.change || 0) >= 0 ? '+' : ''}{(marketCharts?.btc?.change || 1.2).toFixed(2)}%
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                            </div>
+                            <div className="h-32">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={marketCharts?.btc?.data || []}>
+                                        <Line 
+                                            type="monotone" 
+                                            dataKey="value" 
+                                            stroke="#f59e0b" 
+                                            strokeWidth={2}
+                                            dot={false}
+                                        />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Quick Actions - Simple grid */}

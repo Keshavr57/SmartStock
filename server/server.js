@@ -61,6 +61,9 @@ const yahooService = new YahooWebSocketService(io);
 app.set('nseService', nseService);
 app.set('yahooService', yahooService);
 
+// Make io available globally for IPO updates
+global.io = io;
+
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log(`🔌 User connected: ${socket.id}`);
@@ -77,6 +80,18 @@ io.on('connection', (socket) => {
       // Other stocks - use Yahoo service
       yahooService.subscribeToPrice(socket, symbol);
     }
+  });
+
+  // Subscribe to IPO updates
+  socket.on('subscribe-ipo', () => {
+    console.log(`📈 Subscribing ${socket.id} to IPO updates`);
+    socket.join('ipo-updates');
+  });
+
+  // Unsubscribe from IPO updates
+  socket.on('unsubscribe-ipo', () => {
+    console.log(`📈 Unsubscribing ${socket.id} from IPO updates`);
+    socket.leave('ipo-updates');
   });
 
   // Unsubscribe from price updates

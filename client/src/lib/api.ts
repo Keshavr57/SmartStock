@@ -5,6 +5,15 @@ export const api = axios.create({
     baseURL: API_CONFIG.BASE_URL,
 });
 
+// Add auth interceptor to include token in all requests
+api.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
 export const aiApi = axios.create({
     baseURL: API_CONFIG.AI_SERVICE_URL,
 });
@@ -52,7 +61,8 @@ export const getLessonContent = async (id: string) => {
 
 // AI Advisor (Chat)
 export const processAiQuery = async (message: string, userId: string = 'client_user') => {
-    const response = await aiApi.post('/process', { message, user_id: userId });
+    // Use the main API instead of direct AI service call
+    const response = await api.post('/chat/ai-chat', { message, userId });
     return response.data;
 };
 

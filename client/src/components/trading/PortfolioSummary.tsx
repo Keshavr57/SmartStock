@@ -16,12 +16,37 @@ interface PortfolioSummaryProps {
 
 const PortfolioSummary: React.FC<PortfolioSummaryProps> = ({ data }) => {
     const formatCurrency = (amount: number) => {
+        // Handle NaN, null, undefined values
+        if (isNaN(amount) || amount === null || amount === undefined) {
+            return '₹0';
+        }
+        
         return new Intl.NumberFormat('en-IN', {
             style: 'currency',
             currency: 'INR',
             minimumFractionDigits: 0,
             maximumFractionDigits: 0
         }).format(amount);
+    };
+
+    const formatPercentage = (percent: number) => {
+        // Handle NaN, null, undefined values
+        if (isNaN(percent) || percent === null || percent === undefined) {
+            return '0.00';
+        }
+        return percent.toFixed(2);
+    };
+
+    // Validate data with fallbacks
+    const safeData = {
+        totalValue: parseFloat(data.totalValue) || 0,
+        balance: parseFloat(data.balance) || 0,
+        invested: parseFloat(data.invested) || 0,
+        currentValue: parseFloat(data.currentValue) || 0,
+        totalPnL: parseFloat(data.totalPnL) || 0,
+        totalPnLPercent: parseFloat(data.totalPnLPercent) || 0,
+        holdingsCount: parseInt(data.holdingsCount) || 0,
+        transactionsCount: parseInt(data.transactionsCount) || 0
     };
 
     return (
@@ -38,7 +63,7 @@ const PortfolioSummary: React.FC<PortfolioSummaryProps> = ({ data }) => {
                         <div>
                             <p className="text-sm font-medium text-blue-600">Total Value</p>
                             <p className="text-xl font-bold text-blue-900">
-                                {formatCurrency(data.totalValue)}
+                                {formatCurrency(safeData.totalValue)}
                             </p>
                         </div>
                     </div>
@@ -51,7 +76,7 @@ const PortfolioSummary: React.FC<PortfolioSummaryProps> = ({ data }) => {
                         <span className="text-sm font-medium text-gray-600">Available Balance</span>
                     </div>
                     <span className="font-semibold text-gray-900">
-                        {formatCurrency(data.balance)}
+                        {formatCurrency(safeData.balance)}
                     </span>
                 </div>
 
@@ -62,7 +87,7 @@ const PortfolioSummary: React.FC<PortfolioSummaryProps> = ({ data }) => {
                         <span className="text-sm font-medium text-gray-600">Invested</span>
                     </div>
                     <span className="font-semibold text-gray-900">
-                        {formatCurrency(data.invested)}
+                        {formatCurrency(safeData.invested)}
                     </span>
                 </div>
 
@@ -73,7 +98,7 @@ const PortfolioSummary: React.FC<PortfolioSummaryProps> = ({ data }) => {
                         <span className="text-sm font-medium text-gray-600">Current Value</span>
                     </div>
                     <span className="font-semibold text-gray-900">
-                        {formatCurrency(data.currentValue)}
+                        {formatCurrency(safeData.currentValue)}
                     </span>
                 </div>
 
@@ -81,7 +106,7 @@ const PortfolioSummary: React.FC<PortfolioSummaryProps> = ({ data }) => {
                 <div className="p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
-                            {data.totalPnL >= 0 ? (
+                            {safeData.totalPnL >= 0 ? (
                                 <TrendingUp className="h-5 w-5 text-green-500" />
                             ) : (
                                 <TrendingDown className="h-5 w-5 text-red-500" />
@@ -90,14 +115,14 @@ const PortfolioSummary: React.FC<PortfolioSummaryProps> = ({ data }) => {
                         </div>
                         <div className="text-right">
                             <div className={`font-semibold ${
-                                data.totalPnL >= 0 ? 'text-green-600' : 'text-red-600'
+                                safeData.totalPnL >= 0 ? 'text-green-600' : 'text-red-600'
                             }`}>
-                                {data.totalPnL >= 0 ? '+' : ''}{formatCurrency(data.totalPnL)}
+                                {safeData.totalPnL >= 0 ? '+' : ''}{formatCurrency(safeData.totalPnL)}
                             </div>
                             <div className={`text-sm ${
-                                data.totalPnL >= 0 ? 'text-green-600' : 'text-red-600'
+                                safeData.totalPnL >= 0 ? 'text-green-600' : 'text-red-600'
                             }`}>
-                                ({data.totalPnL >= 0 ? '+' : ''}{data.totalPnLPercent.toFixed(2)}%)
+                                ({safeData.totalPnL >= 0 ? '+' : ''}{formatPercentage(safeData.totalPnLPercent)}%)
                             </div>
                         </div>
                     </div>
@@ -106,13 +131,13 @@ const PortfolioSummary: React.FC<PortfolioSummaryProps> = ({ data }) => {
                 {/* Holdings Count */}
                 <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-600">Holdings</span>
-                    <span className="font-semibold text-gray-900">{data.holdingsCount}</span>
+                    <span className="font-semibold text-gray-900">{safeData.holdingsCount}</span>
                 </div>
 
                 {/* Transactions Count */}
                 <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-600">Transactions</span>
-                    <span className="font-semibold text-gray-900">{data.transactionsCount}</span>
+                    <span className="font-semibold text-gray-900">{safeData.transactionsCount}</span>
                 </div>
             </div>
 
@@ -120,14 +145,14 @@ const PortfolioSummary: React.FC<PortfolioSummaryProps> = ({ data }) => {
             <div className="mt-4 pt-4 border-t border-gray-200">
                 <div className="flex items-center justify-center">
                     <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        data.totalPnLPercent >= 5 ? 'bg-green-100 text-green-800' :
-                        data.totalPnLPercent >= 0 ? 'bg-yellow-100 text-yellow-800' :
-                        data.totalPnLPercent >= -5 ? 'bg-orange-100 text-orange-800' :
+                        safeData.totalPnLPercent >= 5 ? 'bg-green-100 text-green-800' :
+                        safeData.totalPnLPercent >= 0 ? 'bg-yellow-100 text-yellow-800' :
+                        safeData.totalPnLPercent >= -5 ? 'bg-orange-100 text-orange-800' :
                         'bg-red-100 text-red-800'
                     }`}>
-                        {data.totalPnLPercent >= 5 ? 'Excellent Performance' :
-                         data.totalPnLPercent >= 0 ? 'Positive Returns' :
-                         data.totalPnLPercent >= -5 ? 'Minor Loss' :
+                        {safeData.totalPnLPercent >= 5 ? 'Excellent Performance' :
+                         safeData.totalPnLPercent >= 0 ? 'Positive Returns' :
+                         safeData.totalPnLPercent >= -5 ? 'Minor Loss' :
                          'Significant Loss'}
                     </div>
                 </div>

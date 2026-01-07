@@ -24,6 +24,7 @@ export default function Compare() {
                 return
             }
             
+            console.log('🔍 Fetching comparison data for:', selectedAssets);
             setLoading(true)
             setComprehensiveLoading(true)
             
@@ -35,9 +36,15 @@ export default function Compare() {
                     getComprehensiveComparison(selectedAssets)
                 ])
 
+                console.log('📊 API Results:', {
+                    basic: basicRes.status,
+                    history: histRes.status,
+                    comprehensive: comprehensiveRes.status
+                });
+
                 // Handle basic comparison data
                 if (basicRes.status === 'fulfilled' && basicRes.value.success) {
-                    // Basic comparison data can be used if needed
+                    console.log('✅ Basic comparison data loaded');
                 }
 
                 // Handle chart data
@@ -45,27 +52,47 @@ export default function Compare() {
                     const dateMap: { [key: string]: any } = {}
                     const symbols = Object.keys(histRes.value.data)
 
+                    console.log('📈 Processing history for symbols:', symbols);
+                    console.log('📈 Sample data for first symbol:', histRes.value.data[symbols[0]]?.slice(0, 3));
+
                     symbols.forEach(s => {
                         histRes.value.data[s].forEach((point: any) => {
-                            const dStr = new Date(point.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                            // Handle both string and Date objects for date
+                            const date = new Date(point.date);
+                            const dStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                             if (!dateMap[dStr]) {
-                                dateMap[dStr] = { name: dStr }
+                                dateMap[dStr] = { name: dStr, date: date }
                             }
-                            dateMap[dStr][s] = point.price
+                            dateMap[dStr][s] = Math.round(point.price * 100) / 100 // Round to 2 decimal places
                         })
                     })
 
-                    const formattedChart = Object.values(dateMap).sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime())
+                    // Sort by actual date, not string
+                    const formattedChart = Object.values(dateMap)
+                        .sort((a: any, b: any) => a.date.getTime() - b.date.getTime())
+                        .map(item => {
+                            const { date, ...rest } = item as any;
+                            return rest;
+                        });
+                    
+                    console.log('📊 Chart data processed:', formattedChart.length, 'data points');
+                    console.log('📊 Sample chart data:', formattedChart.slice(0, 3));
                     setChartData(formattedChart)
+                } else {
+                    console.log('⚠️ No chart data available:', histRes);
+                    setChartData([]);
                 }
 
                 // Handle comprehensive data
                 if (comprehensiveRes.status === 'fulfilled' && comprehensiveRes.value.success) {
+                    console.log('✅ Comprehensive data loaded:', comprehensiveRes.value.comparison.length, 'items');
                     setComprehensiveData(comprehensiveRes.value.comparison)
+                } else {
+                    console.log('⚠️ No comprehensive data available:', comprehensiveRes);
                 }
 
             } catch (error) {
-                console.error("Failed to fetch comparison data:", error)
+                console.error("❌ Failed to fetch comparison data:", error)
             } finally {
                 setLoading(false)
                 setComprehensiveLoading(false)
@@ -164,9 +191,16 @@ export default function Compare() {
                     </h3>
                     
                     <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-6">
-                        <div className="h-[400px] w-full">
-                            {chartData.length > 0 ? (
-                                <ResponsiveContainer width="100%" height="100%">
+                        <div className="h-[400px] w-full min-h-[400px]">
+                            {loading ? (
+                                <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
+                                    <div className="flex items-center space-x-2">
+                                        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                        <span>Loading chart data...</span>
+                                    </div>
+                                </div>
+                            ) : chartData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%" minWidth={300} minHeight={400}>
                                     <LineChart data={chartData}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                                         <XAxis
@@ -181,7 +215,7 @@ export default function Compare() {
                                             fontSize={12}
                                             tickLine={false}
                                             axisLine={false}
-                                            tickFormatter={(value) => `${value.toLocaleString()}`}
+                                            tickFormatter={(value) => `₹${value.toLocaleString()}`}
                                         />
                                         <Tooltip
                                             contentStyle={{ 
@@ -190,6 +224,10 @@ export default function Compare() {
                                                 borderRadius: '8px',
                                                 boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                                             }}
+                                            formatter={(value: any, name: string) => [
+                                                `₹${value.toLocaleString()}`, 
+                                                name.replace('.NS', '')
+                                            ]}
                                         />
                                         {selectedAssets.map((asset, i) => (
                                             <Line
@@ -200,13 +238,21 @@ export default function Compare() {
                                                 strokeWidth={2}
                                                 dot={false}
                                                 activeDot={{ r: 4, strokeWidth: 0 }}
+                                                name={asset.replace('.NS', '')}
                                             />
                                         ))}
                                     </LineChart>
                                 </ResponsiveContainer>
                             ) : (
-                                <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
-                                    {loading ? 'Loading chart data...' : 'No data available'}
+                                <div className="h-full flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
+                                    <div className="text-6xl mb-4">📊</div>
+                                    <div className="text-lg font-medium mb-2">No chart data available</div>
+                                    <div className="text-sm text-center max-w-md">
+                                        {selectedAssets.length === 0 
+                                            ? "Add some stocks to compare their price performance"
+                                            : "Chart data is temporarily unavailable. Please try again later."
+                                        }
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -325,8 +371,8 @@ export default function Compare() {
                         </h3>
                         
                         <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-6">
-                            <div className="h-[300px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
+                            <div className="h-[300px] w-full min-h-[300px]">
+                                <ResponsiveContainer width="100%" height="100%" minWidth={300} minHeight={300}>
                                     <BarChart data={technicalData}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                                         <XAxis

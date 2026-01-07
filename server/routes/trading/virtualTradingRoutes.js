@@ -1,18 +1,89 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import virtualTradingService from '../../services/trading/virtualTrading.service.js';
 import robustStockService from '../../services/robustStockService.js';
 import { authenticateToken } from '../authRoutes.js';
 import User from '../../models/User.js';
+import { inMemoryUsers } from '../../utils/userStorage.js';
 
 const router = express.Router();
+
+// Helper function to get user data (database or in-memory)
+const getUserData = async (userId) => {
+    // Check if it's an in-memory user
+    if (userId.startsWith('temp_')) {
+        return inMemoryUsers.get(userId);
+    }
+    
+    // Check if database is connected
+    if (mongoose.connection.readyState !== 1) {
+        return null;
+    }
+    
+    // Get from database
+    try {
+        return await User.findById(userId);
+    } catch (error) {
+        console.error('Database user fetch error:', error);
+        return null;
+    }
+};
+
+// Helper function to update user data (database or in-memory)
+const updateUserData = async (userId, userData) => {
+    // Check if it's an in-memory user
+    if (userId.startsWith('temp_')) {
+        inMemoryUsers.set(userId, userData);
+        return true;
+    }
+    
+    // Check if database is connected
+    if (mongoose.connection.readyState !== 1) {
+        return false;
+    }
+    
+    // Update in database
+    try {
+        await userData.save();
+        return true;
+    } catch (error) {
+        console.error('Database user update error:', error);
+        return false;
+    }
+};
 
 // Get portfolio summary
 router.get('/portfolio/:userId', authenticateToken, async (req, res) => {
     try {
         const { userId } = req.params;
         
-        // Get user from database
-        const user = await User.findById(req.user.userId);
+        // Handle demo user
+        if (req.user.userId === 'demo_user_123') {
+            const demoSummary = {
+                totalValue: 111093.6,
+                totalInvested: 11093.6,
+                totalPnL: 52.5,
+                totalPnLPercent: 0.47,
+                availableBalance: 88906.4,
+                holdingsCount: 1,
+                dayPnL: 0,
+                dayPnLPercent: 0,
+                
+                // Client-compatible fields
+                balance: 88906.4,
+                invested: 11093.6,
+                currentValue: 11146.1,
+                transactionsCount: 1
+            };
+            
+            return res.json({
+                status: 'success',
+                data: demoSummary
+            });
+        }
+
+        // Get user data (database or in-memory)
+        const user = await getUserData(req.user.userId);
         if (!user) {
             return res.status(404).json({
                 status: 'error',
@@ -20,38 +91,77 @@ router.get('/portfolio/:userId', authenticateToken, async (req, res) => {
             });
         }
 
-        // Calculate portfolio summary from user's actual data
-        let totalValue = user.virtualBalance;
+        // Initialize values with proper defaults
+        let totalValue = parseFloat(user.virtualBalance) || 100000;
         let totalInvested = 0;
         let totalPnL = 0;
-        let holdingsCount = user.portfolio.length;
+        let holdingsCount = (user.portfolio && Array.isArray(user.portfolio)) ? user.portfolio.length : 0;
 
-        // Calculate values from actual holdings
-        for (const holding of user.portfolio) {
-            const invested = holding.avgPrice * holding.quantity;
-            totalInvested += invested;
+        // Calculate values from actual holdings with proper validation
+        if (user.portfolio && Array.isArray(user.portfolio) && user.portfolio.length > 0) {
+            console.log(`📊 Processing ${user.portfolio.length} holdings for user ${userId}`);
             
-            // Get current price (simplified for now)
-            try {
-                const currentPrice = holding.avgPrice; // Will be updated with real prices
-                const currentValue = currentPrice * holding.quantity;
-                totalValue += currentValue;
-                totalPnL += (currentValue - invested);
-            } catch (error) {
-                console.log(`Could not get price for ${holding.symbol}`);
+            for (const holding of user.portfolio) {
+                // Validate holding data
+                const avgPrice = parseFloat(holding.avgPrice) || 0;
+                const quantity = parseFloat(holding.quantity) || 0;
+                
+                console.log(`Processing holding: ${holding.symbol}, qty: ${quantity}, avgPrice: ${avgPrice}`);
+                
+                if (avgPrice > 0 && quantity > 0) {
+                    const invested = avgPrice * quantity;
+                    totalInvested += invested;
+                    
+                    // Get current price with fallback to avgPrice
+                    try {
+                        // Try to get real-time price
+                        const stockData = await robustStockService.getComprehensiveStockData(holding.symbol);
+                        const currentPrice = parseFloat(stockData.lastTradedPrice) || 
+                                           parseFloat(stockData.currentPrice) || 
+                                           avgPrice; // Fallback to purchase price
+                        
+                        console.log(`Current price for ${holding.symbol}: ${currentPrice}`);
+                        
+                        if (currentPrice > 0) {
+                            const currentValue = currentPrice * quantity;
+                            totalValue = (totalValue - invested) + currentValue; // Adjust total value
+                            totalPnL += (currentValue - invested);
+                        } else {
+                            // If no valid current price, use invested amount
+                            console.log(`Using invested amount for ${holding.symbol}: ${invested}`);
+                        }
+                    } catch (error) {
+                        console.log(`Could not get price for ${holding.symbol}, using avgPrice:`, error.message);
+                        // Use invested amount as fallback
+                    }
+                } else {
+                    console.log(`Invalid holding data for ${holding.symbol}: avgPrice=${avgPrice}, quantity=${quantity}`);
+                }
             }
+        } else {
+            console.log(`No portfolio holdings found for user ${userId}`);
         }
 
+        // Ensure all values are valid numbers
         const summary = {
-            totalValue: totalValue,
-            totalInvested: totalInvested,
-            totalPnL: totalPnL,
-            totalPnLPercent: totalInvested > 0 ? (totalPnL / totalInvested) * 100 : 0,
-            availableBalance: user.virtualBalance,
+            totalValue: isNaN(totalValue) ? 100000 : Math.round(totalValue * 100) / 100,
+            totalInvested: isNaN(totalInvested) ? 0 : Math.round(totalInvested * 100) / 100,
+            totalPnL: isNaN(totalPnL) ? 0 : Math.round(totalPnL * 100) / 100,
+            totalPnLPercent: (totalInvested > 0 && !isNaN(totalPnL)) ? 
+                Math.round((totalPnL / totalInvested) * 10000) / 100 : 0,
+            availableBalance: isNaN(user.virtualBalance) ? 100000 : Math.round(user.virtualBalance * 100) / 100,
             holdingsCount: holdingsCount,
             dayPnL: 0, // Can be calculated based on daily changes
-            dayPnLPercent: 0
+            dayPnLPercent: 0,
+            
+            // Add client-expected field names for compatibility
+            balance: isNaN(user.virtualBalance) ? 100000 : Math.round(user.virtualBalance * 100) / 100,
+            invested: isNaN(totalInvested) ? 0 : Math.round(totalInvested * 100) / 100,
+            currentValue: isNaN(totalValue - (user.virtualBalance || 0)) ? 0 : Math.round((totalValue - (user.virtualBalance || 0)) * 100) / 100,
+            transactionsCount: (user.transactions && Array.isArray(user.transactions)) ? user.transactions.length : 0
         };
+        
+        console.log(`📊 Portfolio summary for user ${userId}:`, summary);
         
         res.json({
             status: 'success',
@@ -71,8 +181,32 @@ router.get('/holdings/:userId', authenticateToken, async (req, res) => {
     try {
         const { userId } = req.params;
         
-        // Get user from database
-        const user = await User.findById(req.user.userId);
+        // Handle demo user
+        if (req.user.userId === 'demo_user_123') {
+            const demoHoldings = [
+                {
+                    symbol: 'RELIANCE.NS',
+                    name: 'Reliance Industries Limited',
+                    quantity: 7,
+                    avgPrice: 1584.8,
+                    currentPrice: 1592.3,
+                    invested: 11093.6,
+                    currentValue: 11146.1,
+                    pnl: 52.5,
+                    pnlPercent: 0.47,
+                    purchaseDate: new Date(),
+                    sector: 'Oil & Gas'
+                }
+            ];
+            
+            return res.json({
+                status: 'success',
+                data: demoHoldings
+            });
+        }
+
+        // Get user data (database or in-memory)
+        const user = await getUserData(req.user.userId);
         if (!user) {
             return res.status(404).json({
                 status: 'error',
@@ -80,15 +214,56 @@ router.get('/holdings/:userId', authenticateToken, async (req, res) => {
             });
         }
 
-        // Return user's actual portfolio holdings
-        const holdings = user.portfolio.map(holding => ({
-            symbol: holding.symbol,
-            quantity: holding.quantity,
-            avgPrice: holding.avgPrice,
-            purchaseDate: holding.purchaseDate,
-            name: holding.symbol.replace('.NS', ''), // Simple name extraction
-            sector: 'Unknown' // Can be enhanced later
-        }));
+        // Return user's actual portfolio holdings with enhanced data
+        const holdings = [];
+        
+        if (user.portfolio && Array.isArray(user.portfolio)) {
+            for (const holding of user.portfolio) {
+                // Validate holding data
+                const avgPrice = parseFloat(holding.avgPrice) || 0;
+                const quantity = parseFloat(holding.quantity) || 0;
+                
+                if (avgPrice > 0 && quantity > 0) {
+                    let currentPrice = avgPrice;
+                    let name = holding.symbol.replace('.NS', '');
+                    let sector = 'Unknown';
+                    
+                    // Try to get real-time data
+                    try {
+                        const stockData = await robustStockService.getComprehensiveStockData(holding.symbol);
+                        currentPrice = parseFloat(stockData.lastTradedPrice) || 
+                                     parseFloat(stockData.currentPrice) || 
+                                     avgPrice;
+                        name = stockData.name || stockData.companyName || name;
+                        sector = stockData.sector || sector;
+                    } catch (error) {
+                        console.log(`Could not get real-time data for ${holding.symbol}`);
+                    }
+                    
+                    // Calculate values with proper validation
+                    const invested = avgPrice * quantity;
+                    const currentValue = currentPrice * quantity;
+                    const pnl = currentValue - invested;
+                    const pnlPercent = invested > 0 ? (pnl / invested) * 100 : 0;
+                    
+                    holdings.push({
+                        symbol: holding.symbol,
+                        name: name,
+                        quantity: quantity,
+                        avgPrice: Math.round(avgPrice * 100) / 100,
+                        currentPrice: Math.round(currentPrice * 100) / 100,
+                        invested: Math.round(invested * 100) / 100,
+                        currentValue: Math.round(currentValue * 100) / 100,
+                        pnl: Math.round(pnl * 100) / 100,
+                        pnlPercent: Math.round(pnlPercent * 100) / 100,
+                        purchaseDate: holding.purchaseDate,
+                        sector: sector
+                    });
+                }
+            }
+        }
+        
+        console.log(`📊 Holdings for user ${userId}:`, holdings.length, 'holdings');
         
         res.json({
             status: 'success',

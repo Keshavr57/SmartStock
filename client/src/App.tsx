@@ -56,9 +56,21 @@ export default function App() {
     }, [])
 
     const handleLogin = () => {
-        setIsAuthenticated(true)
-        setCurrentPage("Home")
-    }
+        // Force re-check authentication status
+        const checkAuthAfterLogin = async () => {
+            if (authService.isAuthenticated()) {
+                const user = await authService.getProfile();
+                if (user) {
+                    setIsAuthenticated(true);
+                    setCurrentPage("Home");
+                } else {
+                    setIsAuthenticated(false);
+                }
+            }
+        };
+        
+        checkAuthAfterLogin();
+    };
 
     const handleLogout = () => {
         authService.logout()

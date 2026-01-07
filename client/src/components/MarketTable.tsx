@@ -170,9 +170,9 @@ export function MarketTable() {
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                             S&P 500 Performance
                         </h3>
-                        <div className="h-[300px] w-full">
+                        <div className="h-[300px] w-full min-h-[300px]">
                             {chartsData?.sp500 ? (
-                                <ResponsiveContainer width="100%" height="100%">
+                                <ResponsiveContainer width="100%" height="100%" minWidth={300} minHeight={300}>
                                     <AreaChart data={chartsData.sp500.data}>
                                         <defs>
                                             <linearGradient id="sp500Gradient" x1="0" y1="0" x2="0" y2="1">
@@ -224,9 +224,9 @@ export function MarketTable() {
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                             Crypto Market Trends
                         </h3>
-                        <div className="h-[300px] w-full">
+                        <div className="h-[300px] w-full min-h-[300px]">
                             {chartsData?.btc ? (
-                                <ResponsiveContainer width="100%" height="100%">
+                                <ResponsiveContainer width="100%" height="100%" minWidth={300} minHeight={300}>
                                     <AreaChart data={chartsData.btc.data}>
                                         <defs>
                                             <linearGradient id="cryptoGradient" x1="0" y1="0" x2="0" y2="1">

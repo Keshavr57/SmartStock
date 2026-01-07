@@ -50,7 +50,9 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                     callback: handleGoogleSignIn,
                     auto_select: false,
                     cancel_on_tap_outside: true,
-                    use_fedcm_for_prompt: false
+                    use_fedcm_for_prompt: false,
+                    // Add allowed origins for development
+                    allowed_parent_origin: ['http://localhost:5173', 'http://localhost:3000', 'https://smart-stock-ku3d.vercel.app']
                 });
             }
         };
@@ -103,10 +105,12 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                 }
             } catch (error) {
                 console.error('Google Sign-In error:', error);
-                setError('Google Sign-In error. Please try email/password login.');
+                // Don't show error for Google OAuth issues, just hide the button
+                setError('');
             }
         } else {
-            setError('Google Sign-In not loaded. Please refresh the page and try again.');
+            // Don't show error for Google OAuth issues
+            console.log('Google Sign-In not available');
         }
     };
 
@@ -587,6 +591,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                                     placeholder="Email address"
                                     value={loginForm.email}
                                     onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+                                    autoComplete="email"
                                     required
                                 />
                             </div>
@@ -597,6 +602,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                                     placeholder="Password"
                                     value={loginForm.password}
                                     onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                                    autoComplete="current-password"
                                     required
                                 />
                             </div>
@@ -683,6 +689,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                                     placeholder="Full name"
                                     value={signupForm.name}
                                     onChange={(e) => setSignupForm({ ...signupForm, name: e.target.value })}
+                                    autoComplete="name"
                                     required
                                 />
                             </div>
@@ -693,6 +700,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                                     placeholder="Email address"
                                     value={signupForm.email}
                                     onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
+                                    autoComplete="email"
                                     required
                                 />
                             </div>
@@ -703,6 +711,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                                     placeholder="Create password (min 6 characters)"
                                     value={signupForm.password}
                                     onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
+                                    autoComplete="new-password"
                                     required
                                     minLength={6}
                                 />

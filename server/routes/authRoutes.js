@@ -1,12 +1,38 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import { OAuth2Client } from 'google-auth-library';
 import User from '../models/User.js';
 
 const router = express.Router();
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+// Helper function to check database connection and attempt reconnection
+const ensureDatabaseConnection = async () => {
+    if (mongoose.connection.readyState === 1) {
+        return true; // Already connected
+    }
+    
+    console.log('⚠️ Database not connected, attempting to reconnect...');
+    try {
+        await mongoose.connect(process.env.MONGO_URI, {
+            dbName: "SmartStock",
+            serverSelectionTimeoutMS: 10000,
+            socketTimeoutMS: 45000,
+            maxPoolSize: 10,
+            retryWrites: true,
+            w: 'majority'
+        });
+        console.log('✅ Database reconnected successfully');
+        return true;
+    } catch (reconnectError) {
+        console.error('❌ Database reconnection failed:', reconnectError.message);
+        // Don't fallback to in-memory, throw error instead
+        throw new Error('Database connection required for authentication');
+    }
+};
 
 // Middleware to verify JWT token
 const authenticateToken = (req, res, next) => {
@@ -40,26 +66,33 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ error: 'Password must be at least 6 characters' });
         }
 
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ error: 'Please enter a valid email address' });
+        }
+
+        // Ensure database connection
+        await ensureDatabaseConnection();
+
         // Check if user already exists
-        const existingUser = await User.findOne({ email });
+        const existingUser = await User.findOne({ email: email.toLowerCase() });
         if (existingUser) {
             return res.status(400).json({ error: 'User already exists with this email' });
         }
 
-        // Hash password
-        const saltRounds = 10;
+        const saltRounds = 12; // Increased security
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-        // Create user
         const user = new User({
-            name,
-            email,
+            name: name.trim(),
+            email: email.toLowerCase().trim(),
             password: hashedPassword
         });
 
         await user.save();
+        console.log(`✅ New user registered: ${email}`);
 
-        // Generate JWT token
         const token = jwt.sign(
             { userId: user._id, email: user.email },
             JWT_SECRET,
@@ -74,13 +107,17 @@ router.post('/register', async (req, res) => {
                 id: user._id,
                 name: user.name,
                 email: user.email,
-                avatar: user.avatar,
-                virtualBalance: user.virtualBalance
+                virtualBalance: user.virtualBalance,
+                avatar: user.avatar
             }
         });
+
     } catch (error) {
         console.error('Registration error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        if (error.code === 11000) {
+            return res.status(400).json({ error: 'User already exists with this email' });
+        }
+        res.status(500).json({ error: 'Registration failed. Please try again.' });
     }
 });
 
@@ -94,24 +131,23 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ error: 'Email and password are required' });
         }
 
-        // Find user
-        const user = await User.findOne({ email });
+        // Ensure database connection
+        await ensureDatabaseConnection();
+
+        // Find user by email (case insensitive)
+        const user = await User.findOne({ email: email.toLowerCase() });
         if (!user) {
-            return res.status(400).json({ error: 'Invalid email or password' });
+            return res.status(401).json({ error: 'Invalid email or password' });
         }
 
-        // Check if user registered with Google
-        if (user.googleId && !user.password) {
-            return res.status(400).json({ error: 'Please login with Google' });
-        }
-
-        // Verify password
+        // Check password
         const isValidPassword = await bcrypt.compare(password, user.password);
         if (!isValidPassword) {
-            return res.status(400).json({ error: 'Invalid email or password' });
+            return res.status(401).json({ error: 'Invalid email or password' });
         }
 
-        // Generate JWT token
+        console.log(`✅ User logged in: ${email}`);
+
         const token = jwt.sign(
             { userId: user._id, email: user.email },
             JWT_SECRET,
@@ -126,41 +162,45 @@ router.post('/login', async (req, res) => {
                 id: user._id,
                 name: user.name,
                 email: user.email,
-                avatar: user.avatar,
-                virtualBalance: user.virtualBalance
+                virtualBalance: user.virtualBalance,
+                avatar: user.avatar
             }
         });
+
     } catch (error) {
         console.error('Login error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: 'Login failed. Please try again.' });
     }
 });
 
 // Google OAuth login
 router.post('/google', async (req, res) => {
     try {
-        const { credential } = req.body;
-
-        if (!credential) {
-            return res.status(400).json({ error: 'Google credential is required' });
+        const { token } = req.body;
+        
+        if (!token) {
+            return res.status(400).json({ error: 'Google token is required' });
         }
 
         // Verify Google token
         const ticket = await client.verifyIdToken({
-            idToken: credential,
+            idToken: token,
             audience: process.env.GOOGLE_CLIENT_ID
         });
 
         const payload = ticket.getPayload();
         const { sub: googleId, email, name, picture } = payload;
 
+        // Ensure database connection
+        await ensureDatabaseConnection();
+
         // Check if user exists
         let user = await User.findOne({ 
-            $or: [{ email }, { googleId }] 
+            $or: [{ googleId }, { email }] 
         });
 
         if (user) {
-            // Update Google ID if user exists but doesn't have it
+            // Update Google ID if not set
             if (!user.googleId) {
                 user.googleId = googleId;
                 user.avatar = picture;
@@ -177,8 +217,7 @@ router.post('/google', async (req, res) => {
             await user.save();
         }
 
-        // Generate JWT token
-        const token = jwt.sign(
+        const jwtToken = jwt.sign(
             { userId: user._id, email: user.email },
             JWT_SECRET,
             { expiresIn: '7d' }
@@ -187,24 +226,28 @@ router.post('/google', async (req, res) => {
         res.json({
             success: true,
             message: 'Google login successful',
-            token,
+            token: jwtToken,
             user: {
                 id: user._id,
                 name: user.name,
                 email: user.email,
-                avatar: user.avatar,
-                virtualBalance: user.virtualBalance
+                virtualBalance: user.virtualBalance,
+                avatar: user.avatar
             }
         });
+
     } catch (error) {
         console.error('Google login error:', error);
-        res.status(500).json({ error: 'Google authentication failed' });
+        res.status(500).json({ error: 'Google login failed' });
     }
 });
 
-// Get user profile
-router.get('/profile', authenticateToken, async (req, res) => {
+// Verify token
+router.get('/verify', authenticateToken, async (req, res) => {
     try {
+        // Ensure database connection
+        await ensureDatabaseConnection();
+
         const user = await User.findById(req.user.userId).select('-password');
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
@@ -216,32 +259,61 @@ router.get('/profile', authenticateToken, async (req, res) => {
                 id: user._id,
                 name: user.name,
                 email: user.email,
-                avatar: user.avatar,
                 virtualBalance: user.virtualBalance,
+                avatar: user.avatar
+            }
+        });
+    } catch (error) {
+        console.error('Token verification error:', error);
+        res.status(500).json({ error: 'Token verification failed' });
+    }
+});
+
+// Get user profile
+router.get('/profile', authenticateToken, async (req, res) => {
+    try {
+        // Ensure database connection
+        await ensureDatabaseConnection();
+
+        const user = await User.findById(req.user.userId).select('-password');
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        res.json({
+            success: true,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                virtualBalance: user.virtualBalance,
+                avatar: user.avatar,
                 portfolio: user.portfolio,
                 watchlist: user.watchlist,
-                preferences: user.preferences,
-                createdAt: user.createdAt
+                transactions: user.transactions.slice(-10) // Last 10 transactions
             }
         });
     } catch (error) {
         console.error('Profile fetch error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: 'Failed to fetch profile' });
     }
 });
 
 // Update user profile
 router.put('/profile', authenticateToken, async (req, res) => {
     try {
-        const { name, preferences } = req.body;
-        const user = await User.findById(req.user.userId);
+        const { name, avatar } = req.body;
 
+        // Ensure database connection
+        await ensureDatabaseConnection();
+
+        const user = await User.findById(req.user.userId);
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        if (name) user.name = name;
-        if (preferences) user.preferences = { ...user.preferences, ...preferences };
+        if (name) user.name = name.trim();
+        if (avatar) user.avatar = avatar;
 
         await user.save();
 
@@ -252,32 +324,21 @@ router.put('/profile', authenticateToken, async (req, res) => {
                 id: user._id,
                 name: user.name,
                 email: user.email,
-                avatar: user.avatar,
                 virtualBalance: user.virtualBalance,
-                preferences: user.preferences
+                avatar: user.avatar
             }
         });
     } catch (error) {
         console.error('Profile update error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: 'Failed to update profile' });
     }
 });
 
-// Logout (client-side token removal, but we can track it server-side if needed)
-router.post('/logout', authenticateToken, (req, res) => {
+// Logout (client-side token removal)
+router.post('/logout', (req, res) => {
     res.json({
         success: true,
         message: 'Logout successful'
-    });
-});
-
-// Debug endpoint to check environment variables (remove in production)
-router.get('/debug/env', (req, res) => {
-    res.json({
-        ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
-        NODE_ENV: process.env.NODE_ENV,
-        AI_SERVICE_URL: process.env.AI_SERVICE_URL,
-        PORT: process.env.PORT
     });
 });
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { authService } from '../../lib/auth';
+import { api } from '../../lib/api';
 import { ENDPOINTS } from '../../lib/config';
 
 interface Holding {
@@ -35,13 +36,10 @@ const Holdings: React.FC = () => {
                 return;
             }
 
-            const response = await fetch(ENDPOINTS.HOLDINGS(user.id), {
-                headers: authService.getAuthHeaders()
-            });
-            const data = await response.json();
+            const response = await api.get(`/virtual/holdings/${user.id}`);
             
-            if (data.status === 'success') {
-                setHoldings(data.data);
+            if (response.data.status === 'success') {
+                setHoldings(response.data.data);
             }
         } catch (error) {
             console.error('Error fetching holdings:', error);

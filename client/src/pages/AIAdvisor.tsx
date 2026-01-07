@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Bot, Send, User, BookOpen } from 'lucide-react'
 import { processAiQuery } from '../lib/api'
+import { authService } from '../lib/auth'
 
 interface Message {
     role: 'user' | 'assistant'
@@ -48,7 +49,9 @@ What market question can I help you analyze?`
         setIsTyping(true)
 
         try {
-            const res = await processAiQuery(query)
+            const user = authService.getUser();
+            const userId = user?.id || 'anonymous_user';
+            const res = await processAiQuery(query, userId);
             if (res.status === 'success') {
                 setMessages(prev => [...prev, { role: 'assistant', content: res.answer }])
             } else {

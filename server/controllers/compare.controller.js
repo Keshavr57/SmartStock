@@ -99,7 +99,12 @@ export const getComprehensiveComparison = async (req, res) => {
 
     const comparison = results.map((result, index) => {
       if (result.status === 'fulfilled') {
-        return result.value;
+        const data = result.value;
+        // Map netMargin to profitMargin for consistency with the analysis engine
+        return {
+          ...data,
+          profitMargin: data.netMargin || data.profitMargin
+        };
       } else {
         console.error(`Failed to fetch robust data for ${symbols[index]}:`, result.reason);
         // Fallback to enhanced service, then to original service

@@ -148,120 +148,42 @@ class ComprehensiveLearningService {
         
         // Return next 2 lessons from same difficulty or move to next level
         const nextInSameLevel = sameDifficultyLessons.slice(currentIndex + 1, currentIndex + 3);
-        
-        if (nextInSameLevel.length < 2) {
-            const nextLevel = this.getNextDifficultyLevel(lesson.difficulty);
-            if (nextLevel) {
-                const nextLevelLessons = COMPREHENSIVE_LESSONS[nextLevel].slice(0, 2 - nextInSameLevel.length);
-                return [...nextInSameLevel, ...nextLevelLessons];
-            }
-        }
-        
         return nextInSameLevel;
-    }
-
-    // Get related lessons from same category
-    getRelatedLessons(currentLessonId) {
-        const lesson = this.findLessonById(currentLessonId);
-        if (!lesson) return [];
-
-        return this.getLessonsByCategory(lesson.category)
-            .filter(l => l.id !== currentLessonId)
-            .slice(0, 3);
-    }
-
-    // Get next difficulty level
-    getNextDifficultyLevel(currentLevel) {
-        const levels = ['beginner', 'intermediate', 'advanced', 'expert'];
-        const currentIndex = levels.indexOf(currentLevel.toLowerCase());
-        return currentIndex < levels.length - 1 ? levels[currentIndex + 1] : null;
-    }
-
-    // Get learning categories
-    getCategories() {
-        return LEARNING_CATEGORIES;
-    }
-
-    // Get difficulty levels
-    getDifficultyLevels() {
-        return DIFFICULTY_LEVELS;
     }
 
     // Get learning statistics
     getLearningStats() {
-        const allLessons = [
-            ...COMPREHENSIVE_LESSONS.beginner,
-            ...COMPREHENSIVE_LESSONS.intermediate,
-            ...COMPREHENSIVE_LESSONS.advanced,
-            ...COMPREHENSIVE_LESSONS.expert
-        ];
-
-        return {
-            totalLessons: allLessons.length,
-            byDifficulty: {
-                beginner: COMPREHENSIVE_LESSONS.beginner.length,
-                intermediate: COMPREHENSIVE_LESSONS.intermediate.length,
-                advanced: COMPREHENSIVE_LESSONS.advanced.length,
-                expert: COMPREHENSIVE_LESSONS.expert.length
-            },
-            categories: LEARNING_CATEGORIES.length,
-            estimatedHours: Math.round(allLessons.reduce((total, lesson) => {
-                return total + parseInt(lesson.duration);
-            }, 0) / 60)
+        const stats = {
+            totalLessons: 0,
+            byDifficulty: {},
+            byCategory: {}
         };
+
+        Object.keys(COMPREHENSIVE_LESSONS).forEach(difficulty => {
+            const lessons = COMPREHENSIVE_LESSONS[difficulty];
+            stats.totalLessons += lessons.length;
+            stats.byDifficulty[difficulty] = lessons.length;
+
+            lessons.forEach(lesson => {
+                const category = lesson.category;
+                stats.byCategory[category] = (stats.byCategory[category] || 0) + 1;
+            });
+        });
+
+        return stats;
     }
 
-    // Generate fallback content for lessons
-    generateFallbackContent() {
-        return {
-            'what-are-stocks': `Stocks represent ownership shares in a company. When you buy a stock, you become a partial owner of that business.
-
-**Key Concepts:**
-• **Ownership**: You own a piece of the company's assets and future profits
-• **Dividends**: Some companies share profits with shareholders quarterly
-• **Capital Appreciation**: Stock value can increase as company grows
-• **Voting Rights**: Shareholders can vote on major company decisions
-
-**Indian Context:**
-Popular stocks like Reliance Industries, TCS, and HDFC Bank are traded on NSE and BSE. These represent ownership in some of India's largest companies.
-
-**Getting Started:**
-Start with blue-chip stocks from established companies. They're generally safer for beginners and provide steady returns over time.`,
-
-            'fundamental-analysis': `Fundamental analysis evaluates a company's intrinsic value by examining its financial health, business model, and growth prospects.
-
-**Key Ratios:**
-• **P/E Ratio**: Price divided by earnings per share - shows if stock is expensive
-• **ROE**: Return on Equity - measures how efficiently company uses shareholders' money  
-• **Debt-to-Equity**: Shows company's financial leverage and risk level
-• **Revenue Growth**: Indicates business expansion and market demand
-
-**Indian Examples:**
-TCS has consistently high ROE (>40%), showing efficient operations. Reliance's diversification across telecom, retail, and energy provides multiple growth avenues.
-
-**Practical Tips:**
-Compare companies within the same sector. A P/E of 25 might be reasonable for IT stocks but high for banking stocks.`
-        };
+    // Get all categories
+    getCategories() {
+        return Object.keys(LEARNING_CATEGORIES);
     }
 
-    // Generate generic content for lessons without specific fallback
-    generateGenericContent(lesson) {
-        return `# ${lesson.title}
-
-${lesson.description}
-
-This ${lesson.difficulty.toLowerCase()}-level lesson covers essential concepts that every investor should understand. The content focuses on practical applications in the Indian market context.
-
-**Key Learning Points:**
-${lesson.keyPoints.map(point => `• ${point}`).join('\n')}
-
-**Duration:** ${lesson.duration}
-**Category:** ${lesson.category}
-
-This lesson provides foundational knowledge that will help you make better investment decisions and understand market dynamics more effectively.`;
+    // Get all difficulty levels
+    getDifficultyLevels() {
+        return Object.keys(DIFFICULTY_LEVELS);
     }
 
-    // Search lessons by query
+    // Search lessons by title, description, or keywords
     searchLessons(query) {
         const allLessons = [
             ...COMPREHENSIVE_LESSONS.beginner,
@@ -278,6 +200,61 @@ This lesson provides foundational knowledge that will help you make better inves
             lesson.category.toLowerCase().includes(searchTerm) ||
             lesson.keyPoints.some(point => point.toLowerCase().includes(searchTerm))
         );
+    }
+
+    // Get related lessons based on category and difficulty
+    getRelatedLessons(lessonId) {
+        const lesson = this.findLessonById(lessonId);
+        if (!lesson) return [];
+
+        const allLessons = [
+            ...COMPREHENSIVE_LESSONS.beginner,
+            ...COMPREHENSIVE_LESSONS.intermediate,
+            ...COMPREHENSIVE_LESSONS.advanced,
+            ...COMPREHENSIVE_LESSONS.expert
+        ];
+
+        return allLessons
+            .filter(l => 
+                l.id !== lessonId && 
+                (l.category === lesson.category || l.difficulty === lesson.difficulty)
+            )
+            .slice(0, 3);
+    }
+
+    // Generate generic content for lessons when AI is unavailable
+    generateGenericContent(lesson) {
+        return `
+# ${lesson.title}
+
+## Overview
+${lesson.description}
+
+## Key Learning Points
+${lesson.keyPoints.map(point => `• ${point}`).join('\n')}
+
+## Duration
+This lesson typically takes ${lesson.duration} to complete.
+
+## Difficulty Level
+This is a ${lesson.difficulty} level lesson suitable for investors with ${lesson.difficulty === 'Beginner' ? 'no prior experience' : lesson.difficulty === 'Intermediate' ? 'basic knowledge' : lesson.difficulty === 'Advanced' ? 'good understanding' : 'extensive experience'} in stock market investing.
+
+## Next Steps
+After completing this lesson, consider exploring related topics in the ${lesson.category} category or advancing to the next difficulty level.
+
+*Note: This is fallback content. For enhanced, AI-generated content with examples and practical tips, please ensure the AI service is available.*
+        `.trim();
+    }
+
+    // Generate fallback content for all lessons
+    generateFallbackContent() {
+        const fallback = {};
+        
+        Object.values(COMPREHENSIVE_LESSONS).flat().forEach(lesson => {
+            fallback[lesson.id] = this.generateGenericContent(lesson);
+        });
+
+        return fallback;
     }
 }
 

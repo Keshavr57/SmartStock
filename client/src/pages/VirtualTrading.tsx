@@ -8,6 +8,7 @@ import Watchlist from '../components/trading/Watchlist';
 import TransactionHistory from '../components/trading/TransactionHistory';
 import RealTimePnL from '../components/trading/RealTimePnL';
 import { authService } from '../lib/auth';
+import { api } from '../lib/api';
 import { ENDPOINTS } from '../lib/config';
 
 interface PortfolioData {
@@ -61,27 +62,39 @@ const VirtualTrading: React.FC = () => {
                 return;
             }
 
-            const response = await fetch(ENDPOINTS.PORTFOLIO(user.id), {
-                headers: authService.getAuthHeaders()
-            });
-            const data = await response.json();
-            if (data.status === 'success') {
-                setPortfolioData(data.data);
+            const response = await api.get(`/virtual/portfolio/${user.id}`);
+            if (response.data.status === 'success') {
+                setPortfolioData(response.data.data);
             }
         } catch (error) {
             console.error('Error fetching portfolio:', error);
+            // Set default portfolio data to prevent blank screen
+            setPortfolioData({
+                balance: 100000,
+                totalValue: 100000,
+                invested: 0,
+                currentValue: 0,
+                totalPnL: 0,
+                totalPnLPercent: 0,
+                holdingsCount: 0,
+                transactionsCount: 0
+            });
         }
     };
 
     const fetchMarketStatus = async () => {
         try {
-            const response = await fetch(ENDPOINTS.MARKET_STATUS);
-            const data = await response.json();
-            if (data.status === 'success') {
-                setMarketStatus(data.data);
+            const response = await api.get('/virtual/market-status');
+            if (response.data.status === 'success') {
+                setMarketStatus(response.data.data);
             }
         } catch (error) {
             console.error('Error fetching market status:', error);
+            // Set default market status
+            setMarketStatus({
+                isOpen: true,
+                status: 'Market Open (Demo Mode)'
+            });
         }
     };
 
@@ -92,10 +105,9 @@ const VirtualTrading: React.FC = () => {
         }
 
         try {
-            const response = await fetch(ENDPOINTS.SEARCH(query));
-            const data = await response.json();
-            if (data.status === 'success') {
-                setSearchResults(data.data);
+            const response = await api.get(`/virtual/search/${query}`);
+            if (response.data.status === 'success') {
+                setSearchResults(response.data.data);
             }
         } catch (error) {
             console.error('Error searching stocks:', error);
@@ -218,7 +230,7 @@ const VirtualTrading: React.FC = () => {
                                 <div>
                                     <p className="text-sm font-medium text-gray-600">Total Value</p>
                                     <p className="text-2xl font-bold text-gray-900">
-                                        ₹{portfolioData.totalValue?.toLocaleString('en-IN')}
+                                        ₹{(portfolioData.totalValue || 0).toLocaleString('en-IN')}
                                     </p>
                                 </div>
                                 <DollarSign className="h-8 w-8 text-blue-500" />
@@ -230,7 +242,7 @@ const VirtualTrading: React.FC = () => {
                                 <div>
                                     <p className="text-sm font-medium text-gray-600">Available Balance</p>
                                     <p className="text-2xl font-bold text-gray-900">
-                                        ₹{portfolioData.balance?.toLocaleString('en-IN')}
+                                        ₹{(portfolioData.balance || 0).toLocaleString('en-IN')}
                                     </p>
                                 </div>
                                 <DollarSign className="h-8 w-8 text-green-500" />
@@ -242,12 +254,12 @@ const VirtualTrading: React.FC = () => {
                                 <div>
                                     <p className="text-sm font-medium text-gray-600">Total P&L</p>
                                     <p className={`text-2xl font-bold ${
-                                        portfolioData.totalPnL >= 0 ? 'text-green-600' : 'text-red-600'
+                                        (portfolioData.totalPnL || 0) >= 0 ? 'text-green-600' : 'text-red-600'
                                     }`}>
-                                        ₹{portfolioData.totalPnL?.toLocaleString('en-IN')}
+                                        ₹{(portfolioData.totalPnL || 0).toLocaleString('en-IN')}
                                     </p>
                                 </div>
-                                {portfolioData.totalPnL >= 0 ? (
+                                {(portfolioData.totalPnL || 0) >= 0 ? (
                                     <TrendingUp className="h-8 w-8 text-green-500" />
                                 ) : (
                                     <TrendingDown className="h-8 w-8 text-red-500" />
@@ -260,7 +272,7 @@ const VirtualTrading: React.FC = () => {
                                 <div>
                                     <p className="text-sm font-medium text-gray-600">Holdings</p>
                                     <p className="text-2xl font-bold text-gray-900">
-                                        {portfolioData.holdingsCount}
+                                        {portfolioData.holdingsCount || 0}
                                     </p>
                                 </div>
                                 <PieChart className="h-8 w-8 text-purple-500" />

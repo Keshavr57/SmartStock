@@ -44,6 +44,8 @@ class AuthService {
 
   async register(name: string, email: string, password: string): Promise<AuthResponse> {
     try {
+      console.log('Attempting registration with:', { name, email, apiUrl: AUTH_ENDPOINTS.REGISTER });
+      
       const response = await fetch(AUTH_ENDPOINTS.REGISTER, {
         method: 'POST',
         headers: {
@@ -52,7 +54,33 @@ class AuthService {
         body: JSON.stringify({ name, email, password }),
       });
 
+      console.log('Register response status:', response.status);
+      console.log('Register response ok:', response.ok);
+
+      if (!response.ok) {
+        console.error('Register response not ok:', response.status, response.statusText);
+        
+        // Try to get error message from response
+        try {
+          const errorData = await response.json();
+          console.log('Error response data:', errorData);
+          return {
+            success: false,
+            message: errorData.error || errorData.message || `Server error: ${response.status}`,
+            error: errorData.error || `HTTP ${response.status}`
+          };
+        } catch (parseError) {
+          console.error('Could not parse error response:', parseError);
+          return {
+            success: false,
+            message: `Server error: ${response.status} ${response.statusText}`,
+            error: `HTTP ${response.status}`
+          };
+        }
+      }
+
       const data = await response.json();
+      console.log('Register response data:', data);
 
       if (data.success && data.token && data.user) {
         this.setAuthData(data.token, data.user);
@@ -63,7 +91,7 @@ class AuthService {
       console.error('Registration error:', error);
       return {
         success: false,
-        message: 'Network error occurred',
+        message: 'Network error occurred. Please check your connection.',
         error: 'Failed to connect to server'
       };
     }
@@ -71,6 +99,8 @@ class AuthService {
 
   async login(email: string, password: string): Promise<AuthResponse> {
     try {
+      console.log('Attempting login with:', { email, apiUrl: AUTH_ENDPOINTS.LOGIN });
+      
       const response = await fetch(AUTH_ENDPOINTS.LOGIN, {
         method: 'POST',
         headers: {
@@ -79,7 +109,33 @@ class AuthService {
         body: JSON.stringify({ email, password }),
       });
 
+      console.log('Login response status:', response.status);
+      console.log('Login response ok:', response.ok);
+
+      if (!response.ok) {
+        console.error('Login response not ok:', response.status, response.statusText);
+        
+        // Try to get error message from response
+        try {
+          const errorData = await response.json();
+          console.log('Error response data:', errorData);
+          return {
+            success: false,
+            message: errorData.error || errorData.message || `Server error: ${response.status}`,
+            error: errorData.error || `HTTP ${response.status}`
+          };
+        } catch (parseError) {
+          console.error('Could not parse error response:', parseError);
+          return {
+            success: false,
+            message: `Server error: ${response.status} ${response.statusText}`,
+            error: `HTTP ${response.status}`
+          };
+        }
+      }
+
       const data = await response.json();
+      console.log('Login response data:', data);
 
       if (data.success && data.token && data.user) {
         this.setAuthData(data.token, data.user);
@@ -90,7 +146,7 @@ class AuthService {
       console.error('Login error:', error);
       return {
         success: false,
-        message: 'Network error occurred',
+        message: 'Network error occurred. Please check your connection.',
         error: 'Failed to connect to server'
       };
     }
@@ -158,7 +214,7 @@ class AuthService {
     }
 
     try {
-      const response = await fetch(AUTH_ENDPOINTS.VERIFY, {
+      const response = await fetch(`${API_BASE_URL}/auth/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
