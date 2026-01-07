@@ -191,7 +191,7 @@ export default function Compare() {
                     </h3>
                     
                     <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-6">
-                        <div className="h-[400px] w-full min-h-[400px]">
+                        <div className="h-[400px] w-full min-h-[400px]" style={{ width: '100%', height: '400px' }}>
                             {loading ? (
                                 <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
                                     <div className="flex items-center space-x-2">
@@ -200,8 +200,8 @@ export default function Compare() {
                                     </div>
                                 </div>
                             ) : chartData.length > 0 ? (
-                                <ResponsiveContainer width="100%" height="100%" minWidth={300} minHeight={400}>
-                                    <LineChart data={chartData}>
+                                <ResponsiveContainer width="100%" height={400} minWidth={300} minHeight={400}>
+                                    <LineChart data={chartData} width={800} height={400}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                                         <XAxis
                                             dataKey="name"

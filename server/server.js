@@ -29,11 +29,30 @@ const server = createServer(app);
 // ================= MIDDLEWARE =================
 // More permissive CORS configuration for deployment debugging
 const corsOptions = {
-  origin: true, // Temporarily allow all origins for debugging
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'https://smart-stock-ku3d.vercel.app',
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'https://accounts.google.com',
+      'https://smartstock-lkcx.onrender.com'
+    ];
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(null, true); // Allow all origins for now to debug
+    }
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
+  optionsSuccessStatus: 200
 };
 
 console.log('🌐 CORS Configuration:', {
@@ -42,6 +61,14 @@ console.log('🌐 CORS Configuration:', {
 });
 
 app.use(cors(corsOptions));
+
+// Add security headers for Google OAuth
+app.use((req, res, next) => {
+  res.header('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  res.header('Cross-Origin-Embedder-Policy', 'unsafe-none');
+  next();
+});
+
 app.use(express.json());
 
 // ================= SOCKET.IO SETUP =================

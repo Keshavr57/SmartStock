@@ -179,7 +179,19 @@ router.post('/google', async (req, res) => {
         const { token } = req.body;
         
         if (!token) {
-            return res.status(400).json({ error: 'Google token is required' });
+            return res.status(400).json({ 
+                success: false,
+                error: 'Google token is required' 
+            });
+        }
+
+        // Check if Google client is properly configured
+        if (!process.env.GOOGLE_CLIENT_ID) {
+            console.error('Google Client ID not configured');
+            return res.status(500).json({ 
+                success: false,
+                error: 'Google OAuth not configured' 
+            });
         }
 
         // Verify Google token
@@ -238,7 +250,27 @@ router.post('/google', async (req, res) => {
 
     } catch (error) {
         console.error('Google login error:', error);
-        res.status(500).json({ error: 'Google login failed' });
+        
+        // More specific error handling
+        if (error.message.includes('Token used too early')) {
+            return res.status(400).json({ 
+                success: false,
+                error: 'Invalid token timing' 
+            });
+        }
+        
+        if (error.message.includes('Invalid token')) {
+            return res.status(400).json({ 
+                success: false,
+                error: 'Invalid Google token' 
+            });
+        }
+
+        res.status(500).json({ 
+            success: false,
+            error: 'Google login failed',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 });
 

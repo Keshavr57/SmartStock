@@ -88,6 +88,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
     const handleGoogleButtonClick = () => {
         if (window.google) {
             try {
+                setGoogleLoading(true);
                 // Use the renderButton approach which is more reliable
                 const buttonContainer = document.getElementById('google-signin-container');
                 if (buttonContainer) {
@@ -95,7 +96,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                     window.google.accounts.id.renderButton(buttonContainer, {
                         theme: 'outline',
                         size: 'large',
-                        width: '100%',
+                        width: 350, // Fixed width instead of percentage
                         text: 'signin_with',
                         shape: 'rectangular'
                     });
@@ -103,14 +104,17 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                     // Fallback to prompt
                     window.google.accounts.id.prompt();
                 }
+                setGoogleLoading(false);
             } catch (error) {
                 console.error('Google Sign-In error:', error);
                 // Don't show error for Google OAuth issues, just hide the button
+                setGoogleLoading(false);
                 setError('');
             }
         } else {
             // Don't show error for Google OAuth issues
             console.log('Google Sign-In not available');
+            setGoogleLoading(false);
         }
     };
 
