@@ -154,15 +154,24 @@ class AuthService {
 
   async googleLogin(credential: string): Promise<AuthResponse> {
     try {
+      console.log('Google login attempt with endpoint:', AUTH_ENDPOINTS.GOOGLE);
+      console.log('Environment variables:', {
+        VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
+        NODE_ENV: import.meta.env.NODE_ENV,
+        MODE: import.meta.env.MODE
+      });
+      
       const response = await fetch(AUTH_ENDPOINTS.GOOGLE, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ credential }),
+        body: JSON.stringify({ token: credential }),
       });
 
+      console.log('Google login response status:', response.status);
       const data = await response.json();
+      console.log('Google login response data:', data);
 
       if (data.success && data.token && data.user) {
         this.setAuthData(data.token, data.user);

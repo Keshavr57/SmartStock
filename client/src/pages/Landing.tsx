@@ -50,14 +50,13 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                     callback: handleGoogleSignIn,
                     auto_select: false,
                     cancel_on_tap_outside: true,
-                    use_fedcm_for_prompt: false,
-                    // Add allowed origins for development
-                    allowed_parent_origin: ['http://localhost:5173', 'http://localhost:3000', 'https://smart-stock-ku3d.vercel.app']
+                    use_fedcm_for_prompt: false
                 });
             }
         };
 
         return () => {
+            // Cleanup
             if (document.head.contains(script)) {
                 document.head.removeChild(script);
             }
@@ -69,17 +68,26 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
         setError('');
 
         try {
+            console.log('Google Sign-In response received');
+            
+            // Use the correct API endpoint based on environment
+            const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050/api';
+            console.log('Using API URL:', apiUrl);
+            
             const result = await authService.googleLogin(response.credential);
             
             if (result.success) {
+                console.log('Google login successful');
                 setShowLoginModal(false);
                 setShowSignupModal(false);
                 onLogin();
             } else {
+                console.error('Google login failed:', result.error);
                 setError(result.error || result.message || 'Google authentication failed');
             }
         } catch (error) {
-            setError('Google authentication failed');
+            console.error('Google authentication error:', error);
+            setError('Google authentication failed. Please try again.');
         } finally {
             setGoogleLoading(false);
         }

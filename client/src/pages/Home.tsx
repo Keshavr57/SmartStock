@@ -285,9 +285,9 @@ export default function Home() {
                                 </div>
                                 <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                             </div>
-                            <div className="h-32">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={marketCharts?.nifty?.data || []}>
+                            <div className="h-32" style={{ width: '100%', height: '128px' }}>
+                                <ResponsiveContainer width="100%" height={128} minWidth={200} minHeight={128}>
+                                    <LineChart data={marketCharts?.nifty?.data || []} width={300} height={128}>
                                         <Line 
                                             type="monotone" 
                                             dataKey="value" 
@@ -320,9 +320,9 @@ export default function Home() {
                                 </div>
                                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                             </div>
-                            <div className="h-32">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={marketCharts?.sp500?.data || []}>
+                            <div className="h-32" style={{ width: '100%', height: '128px' }}>
+                                <ResponsiveContainer width="100%" height={128} minWidth={200} minHeight={128}>
+                                    <LineChart data={marketCharts?.sp500?.data || []} width={300} height={128}>
                                         <Line 
                                             type="monotone" 
                                             dataKey="value" 
@@ -355,9 +355,9 @@ export default function Home() {
                                 </div>
                                 <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
                             </div>
-                            <div className="h-32">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={marketCharts?.btc?.data || []}>
+                            <div className="h-32" style={{ width: '100%', height: '128px' }}>
+                                <ResponsiveContainer width="100%" height={128} minWidth={200} minHeight={128}>
+                                    <LineChart data={marketCharts?.btc?.data || []} width={300} height={128}>
                                         <Line 
                                             type="monotone" 
                                             dataKey="value" 
