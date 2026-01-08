@@ -46,7 +46,6 @@ const TradingRoomChat: React.FC<TradingRoomChatProps> = ({ symbol, userId }) => 
         setSocket(socketConnection);
 
         socketConnection.on('connect', () => {
-            console.log(`💬 Connected to trading room for ${symbol}`);
             socketConnection.emit('join-trading-room', symbol);
             
             // Add welcome message
@@ -60,8 +59,6 @@ const TradingRoomChat: React.FC<TradingRoomChatProps> = ({ symbol, userId }) => 
         });
 
         socketConnection.on('connect_error', () => {
-            console.log(`💬 Trading room connection failed for ${symbol}, working offline`);
-            
             // Add offline message
             const offlineMessage: ChatMessage = {
                 id: Date.now(),
@@ -81,7 +78,6 @@ const TradingRoomChat: React.FC<TradingRoomChatProps> = ({ symbol, userId }) => 
         });
 
         socketConnection.on('disconnect', () => {
-            console.log(`💬 Disconnected from trading room for ${symbol}`);
         });
     };
 
@@ -103,7 +99,6 @@ const TradingRoomChat: React.FC<TradingRoomChatProps> = ({ symbol, userId }) => 
             socket.emit('trading-message', message);
         } else {
             // Offline mode - just add to local messages
-            console.log('💬 Trading room offline, message stored locally');
         }
 
         // Add message to local state immediately

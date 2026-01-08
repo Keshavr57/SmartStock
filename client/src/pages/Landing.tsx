@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Menu, X, Bot, MessageCircle, BarChart3 } from 'lucide-react';
+import { TrendingUp, Menu, X, Bot, MessageCircle, BarChart3, BookOpen } from 'lucide-react';
 import { MarketTable } from "@/components/MarketTable";
 import { authService } from '../lib/auth';
 
@@ -68,25 +68,16 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
         setError('');
 
         try {
-            console.log('Google Sign-In response received');
-            
-            // Use the correct API endpoint based on environment
-            const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050/api';
-            console.log('Using API URL:', apiUrl);
-            
             const result = await authService.googleLogin(response.credential);
             
             if (result.success) {
-                console.log('Google login successful');
                 setShowLoginModal(false);
                 setShowSignupModal(false);
                 onLogin();
             } else {
-                console.error('Google login failed:', result.error);
                 setError(result.error || result.message || 'Google authentication failed');
             }
         } catch (error) {
-            console.error('Google authentication error:', error);
             setError('Google authentication failed. Please try again.');
         } finally {
             setGoogleLoading(false);
@@ -120,8 +111,6 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                 setError('');
             }
         } else {
-            // Don't show error for Google OAuth issues
-            console.log('Google Sign-In not available');
             setGoogleLoading(false);
         }
     };
@@ -202,9 +191,6 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                                 Compare
                             </button>
                             <button className="text-gray-600 hover:text-gray-900 font-medium px-4 py-2">
-                                Crypto
-                            </button>
-                            <button className="text-gray-600 hover:text-gray-900 font-medium px-4 py-2">
                                 IPOs
                             </button>
                             <button 
@@ -257,7 +243,6 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                             <div className="space-y-2">
                                 <button className="block w-full text-left px-4 py-2 text-gray-900 font-medium">Home</button>
                                 <button className="block w-full text-left px-4 py-2 text-gray-600">Compare</button>
-                                <button className="block w-full text-left px-4 py-2 text-gray-600">Crypto</button>
                                 <button className="block w-full text-left px-4 py-2 text-gray-600">IPOs</button>
                                 <button onClick={showLoginRequired} className="block w-full text-left px-4 py-2 text-gray-600">AI Advisor</button>
                                 <button onClick={showLoginRequired} className="block w-full text-left px-4 py-2 text-gray-600">News</button>
@@ -280,8 +265,8 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                 </div>
             </nav>
 
-            {/* Hero Section - Fixed */}
-            <section className="py-20 px-6 text-center">
+            {/* Hero Section - Clean and Consistent */}
+            <section className="py-20 px-6 text-center bg-white">
                 <div className="max-w-4xl mx-auto">
                     <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-4">
                         Learn Trading with
@@ -307,30 +292,38 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                 </div>
             </section>
 
-            {/* Features Grid */}
-            <section className="py-16 px-6">
+            {/* Features Grid - Pure White Background */}
+            <section className="py-16 px-6 bg-white">
                 <div className="max-w-6xl mx-auto">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                        <div className="text-center p-6 bg-gray-50 rounded-lg">
-                            <div className="text-4xl mb-4">💰</div>
+                        <div className="text-center p-6 bg-white rounded-lg border border-gray-200 hover:shadow-sm transition-shadow">
+                            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                                <TrendingUp className="h-6 w-6 text-green-600" />
+                            </div>
                             <h3 className="text-lg font-semibold text-gray-900 mb-2">Virtual Trading</h3>
                             <p className="text-gray-600 text-sm">Practice with ₹1,00,000 virtual money using real market data</p>
                         </div>
                         
-                        <div className="text-center p-6 bg-gray-50 rounded-lg">
-                            <div className="text-4xl mb-4">🎯</div>
+                        <div className="text-center p-6 bg-white rounded-lg border border-gray-200 hover:shadow-sm transition-shadow">
+                            <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                                <BarChart3 className="h-6 w-6 text-red-600" />
+                            </div>
                             <h3 className="text-lg font-semibold text-gray-900 mb-2">Stock Analysis</h3>
                             <p className="text-gray-600 text-sm">Compare stocks and get detailed analysis of Indian markets</p>
                         </div>
                         
-                        <div className="text-center p-6 bg-gray-50 rounded-lg">
-                            <div className="text-4xl mb-4">🧠</div>
+                        <div className="text-center p-6 bg-white rounded-lg border border-gray-200 hover:shadow-sm transition-shadow">
+                            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                                <Bot className="h-6 w-6 text-purple-600" />
+                            </div>
                             <h3 className="text-lg font-semibold text-gray-900 mb-2">AI-Powered Learning</h3>
                             <p className="text-gray-600 text-sm">Smart insights and educational recommendations</p>
                         </div>
                         
-                        <div className="text-center p-6 bg-gray-50 rounded-lg">
-                            <div className="text-4xl mb-4">📚</div>
+                        <div className="text-center p-6 bg-white rounded-lg border border-gray-200 hover:shadow-sm transition-shadow">
+                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                                <BookOpen className="h-6 w-6 text-blue-600" />
+                            </div>
                             <h3 className="text-lg font-semibold text-gray-900 mb-2">Educational Platform</h3>
                             <p className="text-gray-600 text-sm">Learn trading concepts with comprehensive resources</p>
                         </div>
@@ -339,65 +332,33 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
             </section>
 
             {/* Market Table Section */}
-            <section className="py-16 px-6">
+            <section className="py-16 px-6 bg-gray-50">
                 <div className="max-w-6xl mx-auto">
+                    <div className="text-center mb-12">
+                        <h2 className="text-3xl font-bold text-gray-900 mb-4">Live Market Data</h2>
+                        <p className="text-gray-600">Real-time stock prices and market movements from Indian exchanges</p>
+                    </div>
                     <MarketTable />
                 </div>
             </section>
 
-            {/* Market Analytics Charts */}
-            <section className="py-16 px-6 bg-gray-50">
-                <div className="max-w-6xl mx-auto">
-                    <div className="text-center mb-12">
-                        <h2 className="text-3xl font-bold text-gray-900 mb-4">Market Analytics</h2>
-                        <p className="text-gray-600">Visualize market trends and make informed decisions with our comprehensive charts and analytics</p>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {/* S&P 500 Performance Chart */}
-                        <div className="bg-white rounded-lg p-6 border border-gray-200">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4">S&P 500 Performance</h3>
-                            <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
-                                <div className="text-center">
-                                    <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                                    <p className="text-gray-500">Chart visualization</p>
-                                    <p className="text-sm text-gray-400">Login to view live data</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Crypto Market Trends */}
-                        <div className="bg-white rounded-lg p-6 border border-gray-200">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Crypto Market Trends</h3>
-                            <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
-                                <div className="text-center">
-                                    <TrendingUp className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                                    <p className="text-gray-500">Chart visualization</p>
-                                    <p className="text-sm text-gray-400">Login to view live data</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
             {/* Live Market News */}
-            <section className="py-16 px-6">
+            <section className="py-16 px-6 bg-white">
                 <div className="max-w-6xl mx-auto">
                     <div className="text-center mb-12">
                         <h2 className="text-3xl font-bold text-gray-900 mb-4">Live Market News</h2>
-                        <p className="text-gray-600">Stay updated with the latest developments in Indian stock markets and global cryptocurrency news</p>
+                        <p className="text-gray-600">Stay updated with the latest developments in Indian stock markets and global financial news</p>
                     </div>
                     
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         {/* Indian Markets */}
-                        <div>
+                        <div className="bg-white rounded-lg p-6 border border-gray-200">
                             <div className="flex items-center justify-between mb-6">
                                 <h3 className="text-xl font-semibold text-gray-900">Indian Markets</h3>
                                 <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium">NSE/BSE</span>
                             </div>
                             <div className="space-y-4">
-                                <div className="p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100" onClick={showLoginRequired}>
+                                <div className="p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors" onClick={showLoginRequired}>
                                     <div className="flex items-center space-x-2 mb-2">
                                         <span className="bg-red-600 text-white px-2 py-1 rounded text-xs font-bold">Breaking</span>
                                         <span className="text-sm text-gray-500">2 hours ago</span>
@@ -406,7 +367,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                                     <p className="text-gray-600 text-sm">RIL reports strong quarterly earnings driven by petrochemicals and retail segments...</p>
                                 </div>
                                 
-                                <div className="p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100" onClick={showLoginRequired}>
+                                <div className="p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors" onClick={showLoginRequired}>
                                     <div className="flex items-center space-x-2 mb-2">
                                         <span className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-bold">Markets</span>
                                         <span className="text-sm text-gray-500">5 hours ago</span>
@@ -417,29 +378,29 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                             </div>
                         </div>
 
-                        {/* Cryptocurrency */}
-                        <div>
+                        {/* Global Markets */}
+                        <div className="bg-white rounded-lg p-6 border border-gray-200">
                             <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-xl font-semibold text-gray-900">Cryptocurrency</h3>
-                                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">Global</span>
+                                <h3 className="text-xl font-semibold text-gray-900">Global Markets</h3>
+                                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">International</span>
                             </div>
                             <div className="space-y-4">
-                                <div className="p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100" onClick={showLoginRequired}>
+                                <div className="p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors" onClick={showLoginRequired}>
                                     <div className="flex items-center space-x-2 mb-2">
-                                        <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-bold">Regulation</span>
+                                        <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-bold">US Markets</span>
                                         <span className="text-sm text-gray-500">1 hour ago</span>
                                     </div>
-                                    <h4 className="font-semibold text-gray-900 mb-1">Bitcoin ETF Approval Drives Indian Crypto Interest</h4>
-                                    <p className="text-gray-600 text-sm">Global investors show increased interest following US Bitcoin ETF approvals...</p>
+                                    <h4 className="font-semibold text-gray-900 mb-1">S&P 500 Reaches Record High on Tech Rally</h4>
+                                    <p className="text-gray-600 text-sm">US markets surge as technology stocks lead gains amid positive earnings...</p>
                                 </div>
                                 
-                                <div className="p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100" onClick={showLoginRequired}>
+                                <div className="p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors" onClick={showLoginRequired}>
                                     <div className="flex items-center space-x-2 mb-2">
-                                        <span className="bg-purple-600 text-white px-2 py-1 rounded text-xs font-bold">Technology</span>
+                                        <span className="bg-purple-600 text-white px-2 py-1 rounded text-xs font-bold">Economy</span>
                                         <span className="text-sm text-gray-500">3 hours ago</span>
                                     </div>
-                                    <h4 className="font-semibold text-gray-900 mb-1">Ethereum Layer 2 Solutions Gain Traction in India</h4>
-                                    <p className="text-gray-600 text-sm">Polygon and other L2 networks see rising adoption among Indian developers...</p>
+                                    <h4 className="font-semibold text-gray-900 mb-1">Federal Reserve Signals Potential Rate Cuts</h4>
+                                    <p className="text-gray-600 text-sm">Central bank hints at monetary policy changes affecting global markets...</p>
                                 </div>
                             </div>
                         </div>
@@ -458,42 +419,44 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                     <div className="bg-white rounded-lg p-8 border border-gray-200">
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center space-x-3">
-                                <Bot className="h-8 w-8 text-blue-600" />
+                                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <Bot className="h-6 w-6 text-blue-600" />
+                                </div>
                                 <span className="text-lg font-semibold text-gray-900">SmartStock AI</span>
                             </div>
                             <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">Online</span>
                         </div>
                         
-                        <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                        <div className="bg-blue-50 rounded-lg p-4 mb-6 border border-blue-100">
                             <div className="flex items-start space-x-3">
-                                <Bot className="h-6 w-6 text-blue-600 mt-1" />
+                                <Bot className="h-6 w-6 text-blue-600 mt-1 flex-shrink-0" />
                                 <div>
-                                    <p className="text-gray-900">Hello! I'm your AI trading assistant. I can help you analyze stocks, cryptocurrencies, and provide investment insights. What would you like to know?</p>
+                                    <p className="text-gray-900">Hello! I'm your AI trading assistant. I can help you analyze Indian stocks, provide investment insights, and guide your trading decisions. What would you like to know?</p>
                                 </div>
                             </div>
                         </div>
                         
                         <div className="mb-6">
-                            <p className="text-sm text-gray-600 mb-3">Suggested questions:</p>
-                            <div className="flex flex-wrap gap-2">
-                                <button onClick={showLoginRequired} className="bg-blue-100 text-blue-800 px-3 py-2 rounded-lg text-sm hover:bg-blue-200">What's the outlook for AAPL?</button>
-                                <button onClick={showLoginRequired} className="bg-blue-100 text-blue-800 px-3 py-2 rounded-lg text-sm hover:bg-blue-200">Should I invest in Bitcoin?</button>
-                                <button onClick={showLoginRequired} className="bg-blue-100 text-blue-800 px-3 py-2 rounded-lg text-sm hover:bg-blue-200">Analyze Tesla's performance</button>
-                                <button onClick={showLoginRequired} className="bg-blue-100 text-blue-800 px-3 py-2 rounded-lg text-sm hover:bg-blue-200">Best IPOs this month?</button>
+                            <p className="text-sm text-gray-600 mb-3">Popular questions:</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                <button onClick={showLoginRequired} className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-sm hover:bg-blue-100 transition-colors text-left border border-blue-200">What's the outlook for RELIANCE?</button>
+                                <button onClick={showLoginRequired} className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-sm hover:bg-blue-100 transition-colors text-left border border-blue-200">Should I invest in TCS?</button>
+                                <button onClick={showLoginRequired} className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-sm hover:bg-blue-100 transition-colors text-left border border-blue-200">Analyze HDFC Bank performance</button>
+                                <button onClick={showLoginRequired} className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-sm hover:bg-blue-100 transition-colors text-left border border-blue-200">Best IPOs this month?</button>
                             </div>
                         </div>
                         
                         <div className="flex items-center space-x-3">
                             <input 
                                 type="text" 
-                                placeholder="Ask me about stocks, crypto, or trading strategies..."
-                                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Ask me about Indian stocks, IPOs, or trading strategies..."
+                                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
                                 onClick={showLoginRequired}
                                 readOnly
                             />
                             <button 
                                 onClick={showLoginRequired}
-                                className="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700"
+                                className="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-colors"
                             >
                                 <MessageCircle className="h-5 w-5" />
                             </button>
@@ -503,33 +466,33 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
             </section>
 
             {/* Footer */}
-            <footer className="bg-gray-900 text-white py-12 px-6">
+            <footer className="bg-white border-t border-gray-200 py-12 px-6">
                 <div className="max-w-6xl mx-auto">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                         {/* Logo & Description */}
                         <div className="md:col-span-2">
                             <div className="flex items-center space-x-2 mb-4">
-                                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                                <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
                                     <TrendingUp className="h-5 w-5 text-white" />
                                 </div>
-                                <span className="text-xl font-bold">SmartStock</span>
+                                <span className="text-xl font-bold text-gray-900">SmartStock</span>
                             </div>
-                            <p className="text-gray-400 mb-4 max-w-md">
+                            <p className="text-gray-600 mb-6 max-w-md">
                                 Learn trading with virtual money and real market data. 
-                                Educational platform for stock analysis and AI-powered insights.
+                                Educational platform for Indian stock analysis and AI-powered insights.
                             </p>
                             <div className="flex space-x-4">
-                                <button className="text-gray-400 hover:text-white">
+                                <button className="text-gray-400 hover:text-gray-600 transition-colors">
                                     <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
                                         <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/>
                                     </svg>
                                 </button>
-                                <button className="text-gray-400 hover:text-white">
+                                <button className="text-gray-400 hover:text-gray-600 transition-colors">
                                     <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
                                         <path d="M22.46 6c-.77.35-1.6.58-2.46.69.88-.53 1.56-1.37 1.88-2.38-.83.5-1.75.85-2.72 1.05C18.37 4.5 17.26 4 16 4c-2.35 0-4.27 1.92-4.27 4.29 0 .34.04.67.11.98C8.28 9.09 5.11 7.38 3 4.79c-.37.63-.58 1.37-.58 2.15 0 1.49.75 2.81 1.91 3.56-.71 0-1.37-.2-1.95-.5v.03c0 2.08 1.48 3.82 3.44 4.21a4.22 4.22 0 0 1-1.93.07 4.28 4.28 0 0 0 4 2.98 8.521 8.521 0 0 1-5.33 1.84c-.34 0-.68-.02-1.02-.06C3.44 20.29 5.7 21 8.12 21 16 21 20.33 14.46 20.33 8.79c0-.19 0-.37-.01-.56.84-.6 1.56-1.36 2.14-2.23z"/>
                                     </svg>
                                 </button>
-                                <button className="text-gray-400 hover:text-white">
+                                <button className="text-gray-400 hover:text-gray-600 transition-colors">
                                     <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
                                         <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
                                     </svg>
@@ -537,35 +500,36 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                             </div>
                         </div>
 
-                        {/* Quick Links */}
+                        {/* Platform Links */}
                         <div>
-                            <h3 className="text-lg font-semibold mb-4">Platform</h3>
-                            <ul className="space-y-2 text-gray-400">
-                                <li><button className="hover:text-white">Virtual Trading</button></li>
-                                <li><button className="hover:text-white">Stock Analysis</button></li>
-                                <li><button className="hover:text-white">AI Advisor</button></li>
-                                <li><button className="hover:text-white">Learning Center</button></li>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Platform</h3>
+                            <ul className="space-y-3 text-gray-600">
+                                <li><button className="hover:text-gray-900 transition-colors">Virtual Trading</button></li>
+                                <li><button className="hover:text-gray-900 transition-colors">Stock Analysis</button></li>
+                                <li><button className="hover:text-gray-900 transition-colors">AI Advisor</button></li>
+                                <li><button className="hover:text-gray-900 transition-colors">Learning Center</button></li>
+                                <li><button className="hover:text-gray-900 transition-colors">IPO Calendar</button></li>
                             </ul>
                         </div>
 
-                        {/* Support */}
+                        {/* Support Links */}
                         <div>
-                            <h3 className="text-lg font-semibold mb-4">Support</h3>
-                            <ul className="space-y-2 text-gray-400">
-                                <li><button className="hover:text-white">Help Center</button></li>
-                                <li><button className="hover:text-white">Contact Us</button></li>
-                                <li><button className="hover:text-white">Privacy Policy</button></li>
-                                <li><button className="hover:text-white">Terms of Service</button></li>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Support</h3>
+                            <ul className="space-y-3 text-gray-600">
+                                <li><button className="hover:text-gray-900 transition-colors">Help Center</button></li>
+                                <li><button className="hover:text-gray-900 transition-colors">Contact Us</button></li>
+                                <li><button className="hover:text-gray-900 transition-colors">Privacy Policy</button></li>
+                                <li><button className="hover:text-gray-900 transition-colors">Terms of Service</button></li>
                             </ul>
                         </div>
                     </div>
 
-                    <div className="border-t border-gray-800 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-                        <div className="text-gray-400 text-sm">
+                    <div className="border-t border-gray-200 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
+                        <div className="text-gray-500 text-sm">
                             © 2025 SmartStock. All rights reserved. Educational trading platform.
                         </div>
-                        <div className="text-gray-400 text-sm mt-4 md:mt-0">
-                            Made with ❤️ for learning traders
+                        <div className="text-gray-500 text-sm mt-4 md:mt-0">
+                            Made with ❤️ for learning traders in India
                         </div>
                     </div>
                 </div>

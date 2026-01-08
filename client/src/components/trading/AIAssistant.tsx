@@ -67,8 +67,6 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ symbol, marketData }) => {
         socketRef.current = io(API_CONFIG.WEBSOCKET_URL);
 
         socketRef.current.on('connect', () => {
-            console.log('🤖 Connected to AI Assistant');
-            
             // Send welcome message
             const welcomeMessage: Message = {
                 id: Date.now().toString(),
@@ -95,8 +93,6 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ symbol, marketData }) => {
         });
 
         socketRef.current.on('connect_error', () => {
-            console.log('🤖 AI Assistant connection failed, working in offline mode');
-            
             // Add offline message
             const offlineMessage: Message = {
                 id: Date.now().toString(),

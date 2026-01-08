@@ -15,111 +15,14 @@ class ComprehensiveStockService {
 
     async getComprehensiveStockData(symbol) {
         try {
-            console.log(`🔍 Fetching comprehensive data for ${symbol}`);
-            
             // Check cache first
             const cacheKey = `comprehensive_${symbol}`;
             const cached = this.getFromCache(cacheKey);
             if (cached) {
-                console.log(`📦 Using cached data for ${symbol}`);
                 return cached;
             }
 
-            let result = {
-                symbol,
-                // Basic Info
-                name: null,
-                sector: null,
-                industry: null,
-                
-                // Price Information
-                lastTradedPrice: null,
-                oneDayChange: null,
-                oneDayChangePercent: null,
-                fiftyTwoWeekHigh: null,
-                fiftyTwoWeekLow: null,
-                volume: null,
-                avgVolume: null,
-                
-                // Key Metrics
-                marketCap: null,
-                peRatio: null,
-                pegRatio: null,
-                bookValue: null,
-                pbRatio: null,
-                roe: null,
-                roce: null,
-                eps: null,
-                dividendYield: null,
-                debtToEquity: null,
-                currentRatio: null,
-                quickRatio: null,
-                
-                // Profitability
-                grossMargin: null,
-                operatingMargin: null,
-                netMargin: null,
-                
-                // Returns
-                oneMonthReturn: null,
-                threeMonthReturn: null,
-                sixMonthReturn: null,
-                oneYearReturn: null,
-                threeYearReturn: null,
-                fiveYearReturn: null,
-                
-                // Historical Performance
-                threeMonthHigh: null,
-                threeMonthLow: null,
-                oneYearHigh: null,
-                oneYearLow: null,
-                
-                // Financial Statements
-                revenue: null,
-                revenueGrowth: null,
-                grossProfit: null,
-                operatingIncome: null,
-                ebitda: null,
-                netIncome: null,
-                netIncomeGrowth: null,
-                
-                // Balance Sheet
-                totalAssets: null,
-                totalLiabilities: null,
-                shareholderEquity: null,
-                totalDebt: null,
-                cash: null,
-                
-                // Cash Flow
-                operatingCashFlow: null,
-                freeCashFlow: null,
-                capex: null,
-                
-                // Share Holding Pattern (Indian stocks)
-                promoters: null,
-                dii: null,
-                fii: null,
-                public: null,
-                government: null,
-                
-                // Technical Indicators
-                fiftyDMA: null,
-                twoHundredDMA: null,
-                rsi: null,
-                macd: null,
-                beta: null,
-                
-                // Analyst Data
-                targetPrice: null,
-                recommendation: null,
-                analystCount: null,
-                
-                // Additional Info
-                employees: null,
-                founded: null,
-                website: null,
-                description: null
-            };
+            let result = this.getEmptyDataStructure(symbol);
 
             // Determine data source based on symbol
             if (symbol.includes('.NS') || symbol.includes('.BO')) {
@@ -136,12 +39,11 @@ class ComprehensiveStockService {
             // Cache the result
             this.setCache(cacheKey, result);
             
-            console.log(`✅ Comprehensive data fetched for ${symbol}`);
             return result;
 
         } catch (error) {
-            console.error(`❌ Error fetching comprehensive data for ${symbol}:`, error.message);
-            return this.getMockData(symbol);
+            // Return empty structure on error
+            return this.getEmptyDataStructure(symbol);
         }
     }
 
@@ -181,7 +83,6 @@ class ComprehensiveStockService {
             return { ...yahooData, ...result };
 
         } catch (error) {
-            console.error(`Error fetching Indian stock data for ${symbol}:`, error.message);
             return this.getYahooStockData(symbol, result);
         }
     }
@@ -266,7 +167,6 @@ class ComprehensiveStockService {
             return result;
 
         } catch (error) {
-            console.error(`Error fetching Yahoo data for ${symbol}:`, error.message);
             return result;
         }
     }
@@ -275,20 +175,10 @@ class ComprehensiveStockService {
         try {
             const coinId = this.getCoinGeckoId(symbol);
             
-            const [coinData, marketData, historyData] = await Promise.allSettled([
-                axios.get(`${this.coinGeckoURL}/coins/${coinId}`, { timeout: 10000 }),
-                axios.get(`${this.coinGeckoURL}/coins/${coinId}/market_chart`, {
-                    params: { vs_currency: 'inr', days: '365' },
-                    timeout: 10000
-                }),
-                axios.get(`${this.coinGeckoURL}/coins/${coinId}/history`, {
-                    params: { date: this.getDateDaysAgo(30) },
-                    timeout: 10000
-                })
-            ]);
+            const coinData = await axios.get(`${this.coinGeckoURL}/coins/${coinId}`, { timeout: 10000 });
 
-            if (coinData.status === 'fulfilled') {
-                const coin = coinData.value.data;
+            if (coinData.data) {
+                const coin = coinData.data;
                 result.name = coin.name;
                 result.lastTradedPrice = coin.market_data.current_price.usd;
                 result.oneDayChangePercent = coin.market_data.price_change_percentage_24h;
@@ -307,7 +197,6 @@ class ComprehensiveStockService {
             return result;
 
         } catch (error) {
-            console.error(`Error fetching crypto data for ${symbol}:`, error.message);
             return result;
         }
     }
@@ -323,7 +212,6 @@ class ComprehensiveStockService {
 
             return response.data;
         } catch (error) {
-            console.error(`Indian API error for ${symbol}:`, error.message);
             return null;
         }
     }
@@ -344,7 +232,6 @@ class ComprehensiveStockService {
                 fiftyTwoWeekLow: meta.fiftyTwoWeekLow
             };
         } catch (error) {
-            console.error(`Yahoo price data error for ${symbol}:`, error.message);
             return null;
         }
     }
@@ -371,20 +258,17 @@ class ComprehensiveStockService {
 
             const summaryDetail = quoteSummary.summaryDetail || {};
             const financialData = quoteSummary.financialData || {};
-            const keyStats = quoteSummary.defaultKeyStatistics || {};
             const incomeStatement = quoteSummary.incomeStatementHistory?.incomeStatementHistory?.[0] || {};
             const balanceSheet = quoteSummary.balanceSheetHistory?.balanceSheetStatements?.[0] || {};
-            const cashFlow = quoteSummary.cashflowStatementHistory?.cashflowStatements?.[0] || {};
-            const recommendation = quoteSummary.recommendationTrend?.trend?.[0] || {};
 
             return {
                 // Valuation metrics
                 marketCap: summaryDetail.marketCap?.raw,
                 trailingPE: summaryDetail.trailingPE?.raw,
-                pegRatio: keyStats.pegRatio?.raw,
-                bookValue: keyStats.bookValue?.raw,
-                priceToBook: keyStats.priceToBook?.raw,
-                beta: keyStats.beta?.raw,
+                pegRatio: financialData.pegRatio?.raw,
+                bookValue: financialData.bookValue?.raw,
+                priceToBook: financialData.priceToBook?.raw,
+                beta: financialData.beta?.raw,
                 
                 // Profitability
                 returnOnEquity: financialData.returnOnEquity?.raw,
@@ -399,8 +283,8 @@ class ComprehensiveStockService {
                 quickRatio: financialData.quickRatio?.raw,
                 
                 // Per share metrics
-                trailingEps: keyStats.trailingEps?.raw,
-                forwardEps: keyStats.forwardEps?.raw,
+                trailingEps: financialData.trailingEps?.raw,
+                forwardEps: financialData.forwardEps?.raw,
                 dividendYield: summaryDetail.dividendYield?.raw,
                 
                 // Growth metrics
@@ -430,7 +314,6 @@ class ComprehensiveStockService {
                 numberOfAnalystOpinions: financialData.numberOfAnalystOpinions?.raw
             };
         } catch (error) {
-            console.error(`Yahoo fundamentals error for ${symbol}:`, error.message);
             return null;
         }
     }
@@ -455,7 +338,6 @@ class ComprehensiveStockService {
                 averageVolume10days: summaryDetail.averageVolume10days?.raw
             };
         } catch (error) {
-            console.error(`Yahoo statistics error for ${symbol}:`, error.message);
             return null;
         }
     }
@@ -482,7 +364,6 @@ class ComprehensiveStockService {
                 longBusinessSummary: profile.longBusinessSummary
             };
         } catch (error) {
-            console.error(`Yahoo profile error for ${symbol}:`, error.message);
             return null;
         }
     }
@@ -548,34 +429,76 @@ class ComprehensiveStockService {
         });
     }
 
-    getMockData(symbol) {
+    getEmptyDataStructure(symbol) {
         return {
             symbol,
-            name: `${symbol.replace('.NS', '').replace('.BO', '')} Limited`,
-            lastTradedPrice: Math.random() * 1000 + 100,
-            oneDayChange: (Math.random() - 0.5) * 50,
-            oneDayChangePercent: (Math.random() - 0.5) * 10,
-            fiftyTwoWeekHigh: Math.random() * 1200 + 800,
-            fiftyTwoWeekLow: Math.random() * 200 + 50,
-            marketCap: Math.random() * 1000000000000,
-            peRatio: Math.random() * 30 + 5,
-            bookValue: Math.random() * 500 + 50,
-            pbRatio: Math.random() * 5 + 0.5,
-            roe: Math.random() * 0.3 + 0.05,
-            eps: Math.random() * 50 + 5,
-            dividendYield: Math.random() * 0.05 + 0.01,
-            revenue: Math.random() * 100000000000,
-            ebitda: Math.random() * 20000000000,
-            totalAssets: Math.random() * 500000000000,
-            totalLiabilities: Math.random() * 300000000000,
-            fiftyDMA: Math.random() * 1000 + 100,
-            twoHundredDMA: Math.random() * 1000 + 100,
-            rsi: Math.random() * 100,
-            macd: (Math.random() - 0.5) * 10,
-            beta: Math.random() * 2 + 0.5,
-            sector: 'Technology',
-            industry: 'Software',
-            recommendation: 'BUY'
+            name: null,
+            sector: null,
+            industry: null,
+            lastTradedPrice: null,
+            oneDayChange: null,
+            oneDayChangePercent: null,
+            fiftyTwoWeekHigh: null,
+            fiftyTwoWeekLow: null,
+            volume: null,
+            avgVolume: null,
+            marketCap: null,
+            peRatio: null,
+            pegRatio: null,
+            bookValue: null,
+            pbRatio: null,
+            roe: null,
+            roce: null,
+            eps: null,
+            dividendYield: null,
+            debtToEquity: null,
+            currentRatio: null,
+            quickRatio: null,
+            grossMargin: null,
+            operatingMargin: null,
+            netMargin: null,
+            oneMonthReturn: null,
+            threeMonthReturn: null,
+            sixMonthReturn: null,
+            oneYearReturn: null,
+            threeYearReturn: null,
+            fiveYearReturn: null,
+            threeMonthHigh: null,
+            threeMonthLow: null,
+            oneYearHigh: null,
+            oneYearLow: null,
+            revenue: null,
+            revenueGrowth: null,
+            grossProfit: null,
+            operatingIncome: null,
+            ebitda: null,
+            netIncome: null,
+            netIncomeGrowth: null,
+            totalAssets: null,
+            totalLiabilities: null,
+            shareholderEquity: null,
+            totalDebt: null,
+            cash: null,
+            operatingCashFlow: null,
+            freeCashFlow: null,
+            capex: null,
+            promoters: null,
+            dii: null,
+            fii: null,
+            public: null,
+            government: null,
+            fiftyDMA: null,
+            twoHundredDMA: null,
+            rsi: null,
+            macd: null,
+            beta: null,
+            targetPrice: null,
+            recommendation: null,
+            analystCount: null,
+            employees: null,
+            founded: null,
+            website: null,
+            description: null
         };
     }
 }

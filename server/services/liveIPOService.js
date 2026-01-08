@@ -30,7 +30,6 @@ class LiveIPOService {
     startAutoUpdate() {
         setInterval(async () => {
             try {
-                console.log('🔄 Auto-updating IPO data...');
                 // Clear cache to force fresh data
                 this.cache.delete('live_ipos');
                 const updatedIPOs = await this.getCurrentIPOs();
@@ -44,22 +43,17 @@ class LiveIPOService {
                         message: 'IPO data updated automatically'
                     });
                 }
-                
-                console.log('✅ IPO data auto-updated and broadcasted');
             } catch (error) {
-                console.error('❌ Auto-update failed:', error.message);
+                // Handle error silently
             }
         }, 2 * 60 * 1000); // Every 2 minutes
     }
 
     async getCurrentIPOs() {
         try {
-            console.log('🔄 Fetching REAL LIVE IPO data...');
-            
             // Check cache first
             const cached = this.getFromCache('live_ipos');
             if (cached) {
-                console.log('📦 Using cached live IPO data');
                 return cached;
             }
 
@@ -72,7 +66,6 @@ class LiveIPOService {
             // Cache the result
             this.setCache('live_ipos', processedIPOs);
             
-            console.log(`📈 Returning ${processedIPOs.length} REAL live IPOs`);
             return processedIPOs;
 
         } catch (error) {

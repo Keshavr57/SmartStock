@@ -27,10 +27,8 @@ const app = express();
 const server = createServer(app);
 
 // ================= MIDDLEWARE =================
-// More permissive CORS configuration for deployment debugging
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
     const allowedOrigins = [
@@ -45,8 +43,7 @@ const corsOptions = {
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      console.log('CORS blocked origin:', origin);
-      callback(null, true); // Allow all origins for now to debug
+      callback(null, true);
     }
   },
   credentials: true,

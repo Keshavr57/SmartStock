@@ -56,8 +56,6 @@ const RealTimePnL: React.FC = () => {
                 setSocket(socketConnection);
 
                 socketConnection.on('connect', () => {
-                    console.log('🔌 Connected to P&L WebSocket');
-                    
                     // Subscribe to price updates for all positions
                     if (pnlData?.positions) {
                         pnlData.positions.forEach(position => {
@@ -71,10 +69,9 @@ const RealTimePnL: React.FC = () => {
                 });
 
                 socketConnection.on('connect_error', () => {
-                    console.log('🔌 P&L WebSocket connection failed, using polling updates');
                 });
             } catch (wsError) {
-                console.log('🔌 WebSocket not available, using polling updates');
+                // Use polling updates
             }
 
             // Always set up polling as backup
@@ -107,7 +104,6 @@ const RealTimePnL: React.FC = () => {
                 setMarketStatus(result.data.isOpen ? 'open' : 'closed');
             }
         } catch (error) {
-            console.log('Could not fetch market status');
             // Determine market status based on time (simplified)
             const now = new Date();
             const hour = now.getHours();
@@ -149,7 +145,7 @@ const RealTimePnL: React.FC = () => {
                             currentPrice = priceData.data.price;
                         }
                     } catch (error) {
-                        console.log(`Could not fetch real-time price for ${holding.symbol}, using last known price`);
+                        // Use last known price
                     }
 
                     const pnl = (currentPrice - holding.avgPrice) * holding.quantity;
@@ -188,11 +184,9 @@ const RealTimePnL: React.FC = () => {
                 });
 
                 setLastUpdate(new Date());
-                
-                console.log(`💰 P&L Updated: Total P&L: $${totalPnL.toFixed(2)} (${totalPnLPercent.toFixed(2)}%)`);
             }
         } catch (error) {
-            console.error('Error fetching portfolio data:', error);
+            // Handle error silently
         }
     };
 

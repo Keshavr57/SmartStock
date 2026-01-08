@@ -54,9 +54,7 @@ export default function ComprehensiveLearn() {
     const fetchLessons = async () => {
         setLoading(true)
         try {
-            console.log('🔍 Fetching lessons from API...')
             const res = await getLearningList()
-            console.log('📚 Learning API response:', res)
             if (res.status === "success") {
                 const allLessons = [
                     ...(res.data.beginner || []),
@@ -64,12 +62,11 @@ export default function ComprehensiveLearn() {
                     ...(res.data.advanced || []),
                     ...(res.data.expert || [])
                 ]
-                console.log('📖 Total lessons loaded:', allLessons.length)
                 setLessons(allLessons)
                 setFilteredLessons(allLessons)
             }
         } catch (error) {
-            console.error("❌ Failed to fetch lessons:", error)
+            // Handle error silently or show user-friendly message
         } finally {
             setLoading(false)
         }
@@ -78,23 +75,19 @@ export default function ComprehensiveLearn() {
     const fetchLessonContent = async (lessonId: string) => {
         setLessonLoading(true)
         try {
-            console.log('🔍 Fetching lesson content for:', lessonId)
             const res = await getLessonContent(lessonId)
-            console.log('📚 Lesson content response:', res)
             if (res.status === "success") {
                 setCurrentLesson(res.data)
                 setViewMode('lesson')
-                console.log('✅ Lesson loaded successfully:', res.data.title)
             }
         } catch (error) {
-            console.error("❌ Failed to fetch lesson content:", error)
+            // Handle error silently or show user-friendly message
         } finally {
             setLessonLoading(false)
         }
     }
 
     const handleStartLesson = (lessonId: string) => {
-        console.log('🚀 Starting lesson:', lessonId)
         fetchLessonContent(lessonId)
     }
 

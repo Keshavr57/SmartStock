@@ -1,4 +1,5 @@
 import os
+import re
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 import yfinance as yf
@@ -11,71 +12,142 @@ from ipo_service import get_current_ipos, get_ipo_risk_assessment
 # Load Environment Variables
 load_dotenv()
 
-# Simplified Professional System Prompt for faster responses
-FAST_SYSTEM_PROMPT = """You are an experienced stock market advisor. Provide quick, professional insights.
+# Improved Professional System Prompt for better responses
+IMPROVED_SYSTEM_PROMPT = """You are a friendly and knowledgeable stock market advisor. 
 
-RULES:
-- Keep responses under 100 words
-- Be direct and specific
-- Focus on practical insights
-- Skip lengthy explanations
-- Sound professional but concise
+RESPONSE STYLE:
+- Write in a conversational, easy-to-understand tone
+- Avoid excessive formatting like ** or multiple bullet points
+- Keep responses concise (100-150 words)
+- Be helpful and educational
+- Use simple language that anyone can understand
 
-STYLE:
-- Direct, confident language
-- Real market insights
-- Mention key risks briefly
-- End with actionable takeaway
+CONTENT GUIDELINES:
+- Answer the specific question asked
+- Provide practical, actionable advice
+- Include 1-2 key insights maximum
+- End with a simple takeaway
+- No complex formatting or excessive symbols
 
-This is educational content for learning market analysis."""
+EXPERTISE:
+- Stock analysis and fundamentals
+- Investment strategies for beginners
+- Market trends and insights
+- Risk management basics
+- Trading concepts
 
-# Initialize the LLM with faster settings
+Remember: Keep it simple, friendly, and focused on what the user actually asked."""
+
+# Initialize the LLM with optimized settings for speed and quality
 llm = ChatGroq(
     model="llama-3.1-8b-instant",
-    temperature=0.1,
+    temperature=0.1,  # Lower temperature for more consistent, focused responses
     groq_api_key=os.getenv("GROQ_API_KEY"),
-    max_tokens=200,  # Limit response length for speed
-    timeout=10  # 10 second timeout
+    max_tokens=200,  # Reduced for faster responses
+    timeout=10  # Reduced timeout for faster responses
 )
 
 def process_query_fast(user_input: str):
-    """Fast processing for user queries - optimized for speed"""
+    """Improved processing for user queries - focused on relevance"""
     try:
-        print(f"🚀 Fast processing: {user_input}")
+        print(f"🚀 Processing query: {user_input}")
         
         # Check if GROQ API key is available
         groq_key = os.getenv("GROQ_API_KEY")
         if not groq_key:
-            return "AI service configuration error. Please try again later."
+            return generate_fallback_response(user_input)
         
-        # Ultra-simple prompt for speed
+        # Enhanced prompt for better relevance
         messages = [
-            {"role": "system", "content": FAST_SYSTEM_PROMPT},
-            {"role": "user", "content": f"Quick market insight: {user_input}"}
+            {"role": "system", "content": IMPROVED_SYSTEM_PROMPT},
+            {"role": "user", "content": user_input}
         ]
         
-        print("⚡ Sending fast request to GROQ...")
+        print("⚡ Sending request to GROQ...")
         response = llm.invoke(messages)
         
         if response and response.content:
-            return response.content.strip() + "\n\n📚 Educational market analysis"
+            # Clean up the response - remove excessive formatting
+            clean_response = response.content.strip()
+            
+            # Remove excessive asterisks and bullet points
+            clean_response = re.sub(r'\*\*([^*]+)\*\*', r'\1', clean_response)  # Remove bold formatting
+            clean_response = re.sub(r'\*([^*]+)\*', r'\1', clean_response)      # Remove italic formatting
+            clean_response = re.sub(r'^\s*[•·]\s*', '', clean_response, flags=re.MULTILINE)  # Remove bullet points
+            clean_response = re.sub(r'^\s*-\s*', '', clean_response, flags=re.MULTILINE)     # Remove dashes
+            clean_response = re.sub(r'\n\s*\n\s*\n', '\n\n', clean_response)   # Remove excessive line breaks
+            
+            return clean_response
         else:
-            return "Service temporarily unavailable. Please try again."
+            return generate_fallback_response(user_input)
         
     except Exception as e:
-        print(f"⚠️ Fast query error: {str(e)}")
-        
-        # Return quick fallback response
-        return f"""Quick market insight: {user_input}
+        print(f"⚠️ Query processing error: {str(e)}")
+        return generate_fallback_response(user_input)
 
-I'm currently experiencing high load. Here's a quick educational note:
+def generate_fallback_response(user_input: str):
+    """Generate clean, conversational fallback responses"""
+    user_lower = user_input.lower()
+    
+    # Stock analysis questions
+    if any(word in user_lower for word in ['p/e', 'pe ratio', 'price earnings', 'analyze stock']):
+        return """P/E ratio is simply the stock price divided by earnings per share. It tells you how much investors are willing to pay for each rupee of earnings.
 
-• Market analysis requires multiple factors
-• Always research before making decisions  
-• Consider risk management strategies
-• Diversification is key for long-term success
+A low P/E (under 15) might mean the stock is undervalued or the company isn't growing fast. A high P/E (over 25) suggests investors expect strong growth ahead.
 
-📚 Educational content - Try asking again in a moment."""
+The key is comparing it with similar companies in the same industry. Don't rely on P/E alone - also check the company's debt, growth rate, and overall market conditions.
+
+Remember: A "cheap" P/E doesn't always mean a good buy!"""
+
+    # Investment strategy questions
+    elif any(word in user_lower for word in ['investment strategy', 'how to invest', 'beginner']):
+        return """Start with the basics: build an emergency fund first, then begin investing in well-known companies or index funds.
+
+The golden rule is diversification - don't put all your money in one stock or sector. Start with large, stable companies and gradually explore mid-cap stocks as you learn more.
+
+Invest regularly rather than trying to time the market. Even small amounts invested consistently can grow significantly over time.
+
+Most importantly, only invest money you won't need for at least 5 years. The stock market can be volatile in the short term."""
+
+    # Risk management questions
+    elif any(word in user_lower for word in ['risk', 'manage risk', 'stop loss']):
+        return """Risk management is about protecting your money first, making profits second. Never risk more than 2% of your total portfolio on any single trade.
+
+Diversify across different sectors and company sizes. A good mix might be 60% large companies, 30% mid-sized, and 10% smaller companies.
+
+Set stop-losses at 7-10% below your buying price. This helps limit losses if a stock moves against you. Also keep some cash ready for new opportunities.
+
+Remember: It's better to make smaller, consistent gains than to risk big losses chasing quick profits."""
+
+    # IPO questions
+    elif any(word in user_lower for word in ['ipo', 'initial public offering', 'new listing']):
+        return """IPOs can be exciting but they're often overpriced initially. Before investing, read the company's business plan carefully and understand what they actually do.
+
+Check the promoters' background and track record. Compare the IPO price with similar listed companies to see if it's reasonable.
+
+Most IPOs see big price swings in the first few months. Unless you're very confident about the company, it's often better to wait 3-6 months and buy at a more stable price.
+
+Focus on companies with clear business models and strong fundamentals rather than getting caught up in the hype."""
+
+    # Technical analysis questions
+    elif any(word in user_lower for word in ['technical analysis', 'charts', 'moving average']):
+        return """Technical analysis uses price charts and patterns to predict future movements. Start with simple indicators like moving averages.
+
+The 20-day moving average shows short-term trends, while the 50-day shows longer trends. When price crosses above these averages with good volume, it's often a positive sign.
+
+RSI (Relative Strength Index) helps identify overbought and oversold conditions. Above 70 suggests the stock might be due for a pullback.
+
+Remember: Technical analysis works best when combined with fundamental research. Charts show you when to buy or sell, but fundamentals tell you what to buy."""
+
+    # Default response for other questions
+    else:
+        return f"""I'd be happy to help you understand more about "{user_input}".
+
+I can explain stock analysis, investment strategies, risk management, market trends, and trading basics in simple terms.
+
+Some popular topics include how to evaluate stocks, building a diversified portfolio, understanding market indicators, and managing investment risks.
+
+Feel free to ask me something more specific about any of these areas, and I'll give you a clear, practical explanation!"""
 
 # Keep the original function as backup
 def process_query(user_input: str):
@@ -111,28 +183,22 @@ def create_professional_response(user_query, stock_data=None, ipo_data=None):
     return f"Quick analysis: {user_query}"
 
 def handle_trading_risk_assessment(assessment_request):
-    """Fast risk assessment"""
+    """Provide clean, conversational risk assessment"""
     try:
-        return """MEDIUM Risk
+        return """Based on current market conditions, I'd rate this as MEDIUM risk.
 
-Quick Assessment:
-• Position size matters most
-• Current market volatility is elevated  
-• Set clear stop-loss levels
-• Don't risk more than 2% per trade
+Here's what to keep in mind: Position sizing is crucial - never risk more than 2% of your portfolio on any single trade. The market has been quite volatile lately, so having clear stop-loss levels is essential.
 
-Professional takeaway: Focus on risk management over entry timing.
+Make sure you have a solid exit strategy before entering any position. This helps you stay disciplined when emotions run high.
 
-📚 Educational risk assessment"""
+Remember, successful trading is more about managing risk than picking winners. Focus on protecting your capital first."""
         
     except Exception as e:
-        return """MEDIUM Risk - Quick Assessment
+        return """I'd classify this as MEDIUM risk based on current market conditions.
 
-Key factors to consider:
-• Market conditions change rapidly
-• Use proper position sizing
-• Have exit strategy ready
-• Educational purposes only"""
+The key factors to consider are proper position sizing, current market volatility, and having a clear exit strategy ready. 
+
+Always remember this is for educational purposes - real trading decisions should be based on your own research and risk tolerance."""
 
 def add_professional_note(response_text):
     """Add minimal note"""

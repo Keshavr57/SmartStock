@@ -65,7 +65,6 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, height = 50
             socketRef.current = io(API_CONFIG.WEBSOCKET_URL);
 
             socketRef.current.on('connect', () => {
-                console.log('🔌 Connected to trading WebSocket');
                 socketRef.current?.emit('subscribe-price', symbol);
             });
 
@@ -77,10 +76,10 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, height = 50
             });
 
             socketRef.current.on('connect_error', () => {
-                console.log('🔌 WebSocket connection failed, using simulated data');
+                setUseSimulatedData(true);
             });
         } catch (error) {
-            console.error('Error connecting WebSocket:', error);
+            // Handle error silently
         }
     };
 

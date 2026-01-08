@@ -27,7 +27,7 @@ class ChartService {
             });
 
             if (!data || !data.quotes || data.quotes.length === 0) {
-                return this.getMockChartData(symbol, period);
+                return { symbol, error: 'No data available' };
             }
 
             const chartData = {
@@ -63,8 +63,7 @@ class ChartService {
             return chartData;
 
         } catch (error) {
-            console.error(`Chart data error for ${symbol}:`, error.message);
-            return this.getMockChartData(symbol, period);
+            return { symbol, error: 'Chart data unavailable' };
         }
     }
 
@@ -138,8 +137,7 @@ class ChartService {
             return chartData;
 
         } catch (error) {
-            console.error(`Crypto chart error for ${symbol}:`, error.message);
-            return this.getMockCryptoChart(symbol, period);
+            return { symbol, error: 'Crypto chart data unavailable' };
         }
     }
 
@@ -250,185 +248,6 @@ class ChartService {
         return periodMap[period] || 1;
     }
 
-    // Mock data for when APIs fail
-    getMockChartData(symbol, period) {
-        const basePrice = this.getBasePriceForSymbol(symbol);
-        const candles = this.generateMockCandles(basePrice, period);
-        
-        return {
-            symbol: symbol,
-            name: this.getCompanyName(symbol),
-            currentPrice: candles[candles.length - 1].close,
-            previousClose: candles[0].close,
-            change: candles[candles.length - 1].close - candles[0].close,
-            changePercent: ((candles[candles.length - 1].close - candles[0].close) / candles[0].close) * 100,
-            high: Math.max(...candles.map(c => c.high)),
-            low: Math.min(...candles.map(c => c.low)),
-            volume: candles.reduce((sum, c) => sum + c.volume, 0),
-            marketCap: basePrice * 1000000000, // Mock market cap
-            pe: 15 + Math.random() * 20,
-            candles: candles,
-            indicators: {
-                sma20: basePrice * (0.98 + Math.random() * 0.04),
-                sma50: basePrice * (0.96 + Math.random() * 0.08),
-                rsi: 30 + Math.random() * 40,
-                macd: -5 + Math.random() * 10
-            }
-        };
-    }
-
-    getMockCryptoChart(symbol, period) {
-        const basePrice = this.getBaseCryptoPriceForSymbol(symbol);
-        const candles = this.generateMockCandles(basePrice, period, true);
-        
-        return {
-            symbol: symbol,
-            name: this.getCryptoName(symbol),
-            currentPrice: candles[candles.length - 1].close,
-            previousClose: candles[0].close,
-            change: candles[candles.length - 1].close - candles[0].close,
-            changePercent: ((candles[candles.length - 1].close - candles[0].close) / candles[0].close) * 100,
-            high: Math.max(...candles.map(c => c.high)),
-            low: Math.min(...candles.map(c => c.low)),
-            volume: candles.reduce((sum, c) => sum + c.volume, 0),
-            marketCap: basePrice * 21000000, // Mock market cap
-            candles: candles
-        };
-    }
-
-    generateMockCandles(basePrice, period, isCrypto = false) {
-        const intervals = this.getIntervalsForPeriod(period);
-        const candles = [];
-        let currentPrice = basePrice;
-        const now = Date.now();
-        
-        for (let i = 0; i < intervals; i++) {
-            const time = now - (intervals - i) * this.getIntervalMs(period);
-            
-            // Generate realistic price movement
-            const volatility = isCrypto ? 0.05 : 0.02; // Crypto is more volatile
-            const change = (Math.random() - 0.5) * volatility;
-            const open = currentPrice;
-            const close = currentPrice * (1 + change);
-            const high = Math.max(open, close) * (1 + Math.random() * 0.01);
-            const low = Math.min(open, close) * (1 - Math.random() * 0.01);
-            const volume = Math.floor(Math.random() * 1000000) + 100000;
-            
-            candles.push({
-                time: time,
-                open: parseFloat(open.toFixed(2)),
-                high: parseFloat(high.toFixed(2)),
-                low: parseFloat(low.toFixed(2)),
-                close: parseFloat(close.toFixed(2)),
-                volume: volume
-            });
-            
-            currentPrice = close;
-        }
-        
-        return candles;
-    }
-
-    getIntervalsForPeriod(period) {
-        const intervalMap = {
-            '1d': 78,    // 5-minute intervals in a day
-            '5d': 390,   // 5-minute intervals in 5 days
-            '1mo': 120,  // 6-hour intervals in a month
-            '3mo': 90,   // Daily intervals in 3 months
-            '6mo': 180,  // Daily intervals in 6 months
-            '1y': 365,   // Daily intervals in a year
-            '5y': 260    // Weekly intervals in 5 years
-        };
-        
-        return intervalMap[period] || 78;
-    }
-
-    getIntervalMs(period) {
-        const intervalMap = {
-            '1d': 5 * 60 * 1000,        // 5 minutes
-            '5d': 5 * 60 * 1000,        // 5 minutes
-            '1mo': 6 * 60 * 60 * 1000,  // 6 hours
-            '3mo': 24 * 60 * 60 * 1000, // 1 day
-            '6mo': 24 * 60 * 60 * 1000, // 1 day
-            '1y': 24 * 60 * 60 * 1000,  // 1 day
-            '5y': 7 * 24 * 60 * 60 * 1000 // 1 week
-        };
-        
-        return intervalMap[period] || 5 * 60 * 1000;
-    }
-
-    getBasePriceForSymbol(symbol) {
-        const prices = {
-            'RELIANCE': 2850,
-            'TCS': 3280,
-            'HDFCBANK': 1742,
-            'INFY': 1845,
-            'ICICIBANK': 1285,
-            'BHARTIARTL': 1598,
-            'SBIN': 825,
-            'LT': 3650,
-            'WIPRO': 445,
-            'MARUTI': 12500,
-            'AAPL': 195,
-            'GOOGL': 142,
-            'MSFT': 415,
-            'TSLA': 248
-        };
-        
-        return prices[symbol] || 1000;
-    }
-
-    getBaseCryptoPriceForSymbol(symbol) {
-        const prices = {
-            'BTC': 97500,
-            'ETH': 3420,
-            'ADA': 0.89,
-            'DOT': 7.2,
-            'SOL': 185,
-            'MATIC': 0.42,
-            'AVAX': 38.5,
-            'LINK': 22.8
-        };
-        
-        return prices[symbol] || 100;
-    }
-
-    getCompanyName(symbol) {
-        const names = {
-            'RELIANCE': 'Reliance Industries Ltd.',
-            'TCS': 'Tata Consultancy Services Ltd.',
-            'HDFCBANK': 'HDFC Bank Ltd.',
-            'INFY': 'Infosys Ltd.',
-            'ICICIBANK': 'ICICI Bank Ltd.',
-            'BHARTIARTL': 'Bharti Airtel Ltd.',
-            'SBIN': 'State Bank of India',
-            'LT': 'Larsen & Toubro Ltd.',
-            'WIPRO': 'Wipro Ltd.',
-            'MARUTI': 'Maruti Suzuki India Ltd.',
-            'AAPL': 'Apple Inc.',
-            'GOOGL': 'Alphabet Inc.',
-            'MSFT': 'Microsoft Corporation',
-            'TSLA': 'Tesla Inc.'
-        };
-        
-        return names[symbol] || symbol;
-    }
-
-    getCryptoName(symbol) {
-        const names = {
-            'BTC': 'Bitcoin',
-            'ETH': 'Ethereum',
-            'ADA': 'Cardano',
-            'DOT': 'Polkadot',
-            'SOL': 'Solana',
-            'MATIC': 'Polygon',
-            'AVAX': 'Avalanche',
-            'LINK': 'Chainlink'
-        };
-        
-        return names[symbol] || symbol;
-    }
-
     // Get watchlist data
     async getWatchlistData(symbols) {
         const watchlistData = await Promise.all(
@@ -450,7 +269,6 @@ class ChartService {
                         volume: chartData.volume
                     };
                 } catch (error) {
-                    console.error(`Watchlist error for ${symbolData.symbol}:`, error.message);
                     return null;
                 }
             })

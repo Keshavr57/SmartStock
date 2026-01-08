@@ -13,8 +13,6 @@ router.get('/test', (req, res) => {
 
 router.get('/upcoming', async (req, res) => {
     try {
-        console.log("📈 Fetching REAL LIVE IPO data...");
-        
         // Use new live IPO service with real data
         const ipoData = await liveIPOService.getCurrentIPOs();
         
@@ -42,7 +40,6 @@ router.get('/upcoming', async (req, res) => {
 router.get('/analysis/:ipoName', async (req, res) => {
     try {
         const { ipoName } = req.params;
-        console.log(`📊 Fetching IPO analysis for: ${ipoName}`);
         
         const ipoData = await liveIPOService.getCurrentIPOs();
         const ipo = ipoData.find(i => 
@@ -167,8 +164,6 @@ function calculateMinInvestment(priceBand, lotSize) {
 // Force refresh IPO data (clears cache)
 router.get('/refresh', async (req, res) => {
     try {
-        console.log("🔄 Force refreshing IPO data...");
-        
         // Clear cache to get fresh data
         liveIPOService.cache.delete('live_ipos');
         const ipoData = await liveIPOService.getCurrentIPOs();

@@ -52,12 +52,9 @@ class EnhancedIPOService {
 
     async getCurrentIPOs() {
         try {
-            console.log('🔄 Fetching LIVE IPO data from multiple sources...');
-            
             // Check cache first
             const cached = this.getFromCache('live_ipos');
             if (cached) {
-                console.log('📦 Using cached IPO data');
                 return this.filterCurrentIPOs(cached);
             }
 
@@ -66,21 +63,17 @@ class EnhancedIPOService {
             // Try each source with timeout
             for (const source of this.sources) {
                 try {
-                    console.log(`🌐 Fetching from ${source.name}...`);
                     const ipos = await this.fetchFromSourceWithTimeout(source, 8000);
                     if (ipos && ipos.length > 0) {
                         allIPOs = [...allIPOs, ...ipos];
-                        console.log(`✅ Got ${ipos.length} IPOs from ${source.name}`);
                     }
                 } catch (error) {
-                    console.log(`❌ ${source.name} failed:`, error.message);
                     continue;
                 }
             }
 
             // If no live data available, create realistic current IPO data
             if (allIPOs.length === 0) {
-                console.log('📊 Creating realistic current IPO data...');
                 allIPOs = this.createCurrentIPOData();
             }
 
@@ -93,7 +86,6 @@ class EnhancedIPOService {
             // Cache the result
             this.setCache('live_ipos', allIPOs);
             
-            console.log(`📈 Returning ${allIPOs.length} current/upcoming IPOs`);
             return allIPOs;
 
         } catch (error) {

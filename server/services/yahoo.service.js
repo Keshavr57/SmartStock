@@ -78,7 +78,6 @@ export const fetchYahooHistory = async (symbol, range = "1mo") => {
     });
 
     if (!data || !data.quotes) {
-      console.log(`⚠️ No Yahoo data for ${symbol}, using fallback`);
       return generateFallbackHistoryData(symbol);
     }
 
@@ -87,8 +86,6 @@ export const fetchYahooHistory = async (symbol, range = "1mo") => {
       price: q.close
     }));
   } catch (err) {
-    console.error("Yahoo History Error:", err.message);
-    console.log(`⚠️ Yahoo API error for ${symbol}, using fallback data`);
     return generateFallbackHistoryData(symbol);
   }
 };

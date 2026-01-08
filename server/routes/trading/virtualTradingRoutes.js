@@ -1,7 +1,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import virtualTradingService from '../../services/trading/virtualTrading.service.js';
-import robustStockService from '../../services/robustStockService.js';
+import comprehensiveStockService from '../../services/comprehensiveStockService.js';
 import { authenticateToken } from '../authRoutes.js';
 import User from '../../models/User.js';
 import { inMemoryUsers } from '../../utils/userStorage.js';
@@ -115,12 +115,10 @@ router.get('/portfolio/:userId', authenticateToken, async (req, res) => {
                     // Get current price with fallback to avgPrice
                     try {
                         // Try to get real-time price
-                        const stockData = await robustStockService.getComprehensiveStockData(holding.symbol);
+                        const stockData = await comprehensiveStockService.getComprehensiveStockData(holding.symbol);
                         const currentPrice = parseFloat(stockData.lastTradedPrice) || 
                                            parseFloat(stockData.currentPrice) || 
                                            avgPrice; // Fallback to purchase price
-                        
-                        console.log(`Current price for ${holding.symbol}: ${currentPrice}`);
                         
                         if (currentPrice > 0) {
                             const currentValue = currentPrice * quantity;
@@ -230,14 +228,14 @@ router.get('/holdings/:userId', authenticateToken, async (req, res) => {
                     
                     // Try to get real-time data
                     try {
-                        const stockData = await robustStockService.getComprehensiveStockData(holding.symbol);
+                        const stockData = await comprehensiveStockService.getComprehensiveStockData(holding.symbol);
                         currentPrice = parseFloat(stockData.lastTradedPrice) || 
                                      parseFloat(stockData.currentPrice) || 
                                      avgPrice;
                         name = stockData.name || stockData.companyName || name;
                         sector = stockData.sector || sector;
                     } catch (error) {
-                        console.log(`Could not get real-time data for ${holding.symbol}`);
+                        // Use fallback values
                     }
                     
                     // Calculate values with proper validation
@@ -298,7 +296,7 @@ router.post('/order/:userId', authenticateToken, async (req, res) => {
         const { symbol, type, quantity, orderType = 'MARKET' } = orderData;
         
         // Get current market price
-        const stockData = await robustStockService.getComprehensiveStockData(symbol);
+        const stockData = await comprehensiveStockService.getComprehensiveStockData(symbol);
         const currentPrice = stockData.lastTradedPrice || stockData.currentPrice || 100;
 
         if (!currentPrice || currentPrice <= 0) {
@@ -441,7 +439,7 @@ router.get('/watchlist/:userId', authenticateToken, async (req, res) => {
         
         for (const item of user.watchlist) {
             try {
-                const stockData = await robustStockService.getComprehensiveStockData(item.symbol);
+                const stockData = await comprehensiveStockService.getComprehensiveStockData(item.symbol);
                 watchlistData.push({
                     symbol: item.symbol,
                     name: stockData.name || item.symbol,
@@ -574,10 +572,8 @@ router.get('/quote/:symbol', async (req, res) => {
         const { symbol } = req.params;
         const { interval = '1d', range = '1d' } = req.query;
         
-        console.log(`📊 Getting real-time data for ${symbol}`);
-        
         // Get comprehensive stock data
-        const stockData = await robustStockService.getComprehensiveStockData(symbol);
+        const stockData = await comprehensiveStockService.getComprehensiveStockData(symbol);
         
         // Extract real-time price from comprehensive data with proper null handling
         const basePrice = stockData.lastTradedPrice || stockData.currentPrice || 100;
@@ -657,7 +653,7 @@ router.get('/search/:query', async (req, res) => {
         
         // Try to get data for the query as a symbol
         try {
-            const stockData = await robustStockService.getComprehensiveStockData(query.toUpperCase());
+            const stockData = await comprehensiveStockService.getComprehensiveStockData(query.toUpperCase());
             if (stockData && stockData.name) {
                 searchResults.push({
                     symbol: query.toUpperCase(),
@@ -812,35 +808,15 @@ router.get('/chart/:symbol', async (req, res) => {
             }
         }
         
-        // Fallback: generate mock data
-        console.log(`📊 Generating mock chart data for ${symbol}`);
-        const mockData = [];
-        const now = Math.floor(Date.now() / 1000);
-        const basePrice = 100;
-        
-        for (let i = 100; i >= 0; i--) {
-            const time = now - (i * 60); // 1 minute intervals
-            const price = basePrice + Math.sin(i * 0.1) * 10 + Math.random() * 5;
-            
-            mockData.push({
-                time: time,
-                open: price,
-                high: price + Math.random() * 2,
-                low: price - Math.random() * 2,
-                close: price + (Math.random() - 0.5) * 2,
-                volume: Math.random() * 1000000
-            });
-        }
-        
+        // Return empty data if no chart service available
         res.json({
             status: 'success',
-            data: mockData
+            data: []
         });
     } catch (error) {
-        console.error('Chart data error:', error);
         res.status(500).json({
             status: 'error',
-            message: error.message
+            message: 'Chart data unavailable'
         });
     }
 });

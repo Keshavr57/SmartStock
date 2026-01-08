@@ -24,7 +24,6 @@ export default function Compare() {
                 return
             }
             
-            console.log('🔍 Fetching comparison data for:', selectedAssets);
             setLoading(true)
             setComprehensiveLoading(true)
             
@@ -36,24 +35,10 @@ export default function Compare() {
                     getComprehensiveComparison(selectedAssets)
                 ])
 
-                console.log('📊 API Results:', {
-                    basic: basicRes.status,
-                    history: histRes.status,
-                    comprehensive: comprehensiveRes.status
-                });
-
-                // Handle basic comparison data
-                if (basicRes.status === 'fulfilled' && basicRes.value.success) {
-                    console.log('✅ Basic comparison data loaded');
-                }
-
                 // Handle chart data
                 if (histRes.status === 'fulfilled' && histRes.value.success) {
                     const dateMap: { [key: string]: any } = {}
                     const symbols = Object.keys(histRes.value.data)
-
-                    console.log('📈 Processing history for symbols:', symbols);
-                    console.log('📈 Sample data for first symbol:', histRes.value.data[symbols[0]]?.slice(0, 3));
 
                     symbols.forEach(s => {
                         histRes.value.data[s].forEach((point: any) => {
@@ -75,24 +60,18 @@ export default function Compare() {
                             return rest;
                         });
                     
-                    console.log('📊 Chart data processed:', formattedChart.length, 'data points');
-                    console.log('📊 Sample chart data:', formattedChart.slice(0, 3));
                     setChartData(formattedChart)
                 } else {
-                    console.log('⚠️ No chart data available:', histRes);
                     setChartData([]);
                 }
 
                 // Handle comprehensive data
                 if (comprehensiveRes.status === 'fulfilled' && comprehensiveRes.value.success) {
-                    console.log('✅ Comprehensive data loaded:', comprehensiveRes.value.comparison.length, 'items');
                     setComprehensiveData(comprehensiveRes.value.comparison)
-                } else {
-                    console.log('⚠️ No comprehensive data available:', comprehensiveRes);
                 }
 
             } catch (error) {
-                console.error("❌ Failed to fetch comparison data:", error)
+                // Handle error silently or show user-friendly message
             } finally {
                 setLoading(false)
                 setComprehensiveLoading(false)
@@ -108,7 +87,7 @@ export default function Compare() {
     const addAsset = (symbol: string) => {
         let sym = symbol.trim().toUpperCase()
         // Auto-add .NS for Indian stocks if missing
-        if (sym.length >= 3 && !sym.includes('.') && !['BTC', 'ETH', 'SOL', 'USDT'].some(x => sym.includes(x))) {
+        if (sym.length >= 3 && !sym.includes('.')) {
             sym = `${sym}.NS`
         }
         if (sym && selectedAssets.length < 3 && !selectedAssets.includes(sym)) {

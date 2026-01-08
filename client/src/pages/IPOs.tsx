@@ -178,6 +178,74 @@ export default function IPOs() {
                     </CardContent>
                 </Card>
 
+                {/* Educational Risk Assessment Guide */}
+                <Card className="mb-6 bg-blue-50 border-blue-200">
+                    <CardContent className="p-6">
+                        <div className="flex items-start gap-3">
+                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <BarChart3 className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold text-blue-900 mb-3">
+                                    📚 How We Calculate IPO Risk Assessment
+                                </h3>
+                                <p className="text-blue-800 mb-4 text-sm">
+                                    Our educational risk assessment uses 3 key company factors to help you understand IPO investment risks:
+                                </p>
+                                
+                                <div className="grid md:grid-cols-3 gap-4 text-sm">
+                                    <div className="bg-white rounded-lg p-4 border border-blue-200">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Target className="h-4 w-4 text-blue-600" />
+                                            <span className="font-semibold text-blue-900">Promoter Holding</span>
+                                        </div>
+                                        <ul className="text-blue-700 space-y-1">
+                                            <li>• 75%+ = Low Risk 🟢</li>
+                                            <li>• 60-74% = Medium Risk 🟡</li>
+                                            <li>• Below 60% = High Risk 🔴</li>
+                                        </ul>
+                                        <p className="text-xs text-blue-600 mt-2">Higher promoter holding shows management confidence</p>
+                                    </div>
+                                    
+                                    <div className="bg-white rounded-lg p-4 border border-blue-200">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Clock className="h-4 w-4 text-blue-600" />
+                                            <span className="font-semibold text-blue-900">Company Age</span>
+                                        </div>
+                                        <ul className="text-blue-700 space-y-1">
+                                            <li>• 15+ years = Low Risk 🟢</li>
+                                            <li>• 8-14 years = Medium Risk 🟡</li>
+                                            <li>• Below 8 years = High Risk 🔴</li>
+                                        </ul>
+                                        <p className="text-xs text-blue-600 mt-2">Older companies have proven business models</p>
+                                    </div>
+                                    
+                                    <div className="bg-white rounded-lg p-4 border border-blue-200">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <TrendingUp className="h-4 w-4 text-blue-600" />
+                                            <span className="font-semibold text-blue-900">Profit History</span>
+                                        </div>
+                                        <ul className="text-blue-700 space-y-1">
+                                            <li>• 10+ years profit = Low Risk 🟢</li>
+                                            <li>• 3-9 years profit = Medium Risk 🟡</li>
+                                            <li>• Loss-making = High Risk 🔴</li>
+                                        </ul>
+                                        <p className="text-xs text-blue-600 mt-2">Consistent profits indicate financial stability</p>
+                                    </div>
+                                </div>
+                                
+                                <div className="mt-4 p-3 bg-blue-100 rounded-lg border border-blue-300">
+                                    <p className="text-xs text-blue-800">
+                                        <strong>Educational Note:</strong> This risk assessment is for learning purposes only. 
+                                        Always read the company's prospectus, consider your risk tolerance, and consult with a financial advisor before investing. 
+                                        IPO investments carry market risks and past performance doesn't guarantee future results.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
                 {/* IPO Cards */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {loading ? (
@@ -272,14 +340,44 @@ export default function IPOs() {
                     )}
                 </div>
 
-                {/* Disclaimer */}
+                {/* Enhanced Educational Disclaimer */}
                 <Card className="mt-8">
-                    <CardContent className="p-4">
+                    <CardContent className="p-6">
                         <div className="flex items-start gap-3">
-                            <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5" />
+                            <AlertTriangle className="h-6 w-6 text-amber-500 mt-0.5 flex-shrink-0" />
                             <div className="text-sm text-gray-600">
-                                <p className="font-medium text-gray-900 mb-1">Investment Disclaimer</p>
-                                <p>IPO investments are subject to market risks. Please read all scheme-related documents carefully before investing. Past performance is not indicative of future results. GMP (Grey Market Premium) is unofficial and for reference only.</p>
+                                <h4 className="font-semibold text-gray-900 mb-3 text-base">📋 Important Investment Guidelines</h4>
+                                
+                                <div className="grid md:grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <h5 className="font-medium text-gray-900 mb-2">🎯 Before You Invest:</h5>
+                                        <ul className="space-y-1 text-gray-600">
+                                            <li>• Read the company's prospectus thoroughly</li>
+                                            <li>• Understand the business model and sector risks</li>
+                                            <li>• Check promoter background and track record</li>
+                                            <li>• Assess your risk tolerance and investment goals</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div>
+                                        <h5 className="font-medium text-gray-900 mb-2">⚠️ Key Risk Factors:</h5>
+                                        <ul className="space-y-1 text-gray-600">
+                                            <li>• IPO prices can be volatile post-listing</li>
+                                            <li>• Limited trading history for price discovery</li>
+                                            <li>• Market conditions affect listing performance</li>
+                                            <li>• No guarantee of allotment in oversubscribed IPOs</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                    <p className="text-amber-800 text-xs">
+                                        <strong>Educational Platform Disclaimer:</strong> This platform is designed for learning about IPO analysis and investment concepts. 
+                                        Our risk assessments are educational tools based on fundamental factors like promoter holding, company age, and profit history. 
+                                        GMP (Grey Market Premium) data is unofficial and for reference only. Always consult with a SEBI-registered financial advisor 
+                                        before making investment decisions. Past performance is not indicative of future results.
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </CardContent>

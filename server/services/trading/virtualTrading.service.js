@@ -1,5 +1,5 @@
 import VirtualPortfolio from '../../models/VirtualPortfolio.js';
-import robustStockService from '../robustStockService.js';
+import comprehensiveStockService from '../comprehensiveStockService.js';
 import { v4 as uuidv4 } from 'uuid';
 
 class VirtualTradingService {
@@ -43,7 +43,7 @@ class VirtualTradingService {
             console.log(`Executing ${type} order: ${quantity} shares of ${symbol}`);
 
             // Get current market price with fallbacks
-            const stockData = await robustStockService.getComprehensiveStockData(symbol);
+            const stockData = await comprehensiveStockService.getComprehensiveStockData(symbol);
             const currentPrice = stockData.lastTradedPrice || stockData.currentPrice || 100;
 
             if (!currentPrice || currentPrice <= 0) {
@@ -164,7 +164,7 @@ class VirtualTradingService {
             // Update each holding with current market price
             for (const holding of portfolio.holdings) {
                 try {
-                    const stockData = await robustStockService.getComprehensiveStockData(holding.symbol);
+                    const stockData = await comprehensiveStockService.getComprehensiveStockData(holding.symbol);
                     const currentPrice = stockData.lastTradedPrice || holding.avgPrice;
                     
                     holding.currentPrice = currentPrice;
@@ -300,7 +300,7 @@ class VirtualTradingService {
             
             for (const symbol of portfolio.watchlist) {
                 try {
-                    const stockData = await robustStockService.getComprehensiveStockData(symbol);
+                    const stockData = await comprehensiveStockService.getComprehensiveStockData(symbol);
                     watchlistData.push({
                         symbol,
                         name: stockData.name,

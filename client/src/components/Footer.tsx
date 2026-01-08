@@ -29,7 +29,7 @@ export function Footer() {
                         <h4 className="font-semibold mb-4">Market Segments</h4>
                         <ul className="space-y-2 text-sm text-muted-foreground">
                             <li><a href="#" className="hover:text-primary">NSE/BSE Indian Stocks</a></li>
-                            <li><a href="#" className="hover:text-primary">Global Cryptocurrency</a></li>
+                            <li><a href="#" className="hover:text-primary">Global Stock Markets</a></li>
                             <li><a href="#" className="hover:text-primary">Mutual Funds</a></li>
                             <li><a href="#" className="hover:text-primary">IPO Calendar</a></li>
                         </ul>

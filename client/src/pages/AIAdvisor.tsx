@@ -1,48 +1,40 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Bot, Send, User, BookOpen } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Bot, Send, User, Sparkles, TrendingUp, BookOpen, MessageCircle } from 'lucide-react'
 import { processAiQuery } from '../lib/api'
 import { authService } from '../lib/auth'
 
 interface Message {
     role: 'user' | 'assistant'
     content: string
+    timestamp: Date
 }
 
 export default function AIAdvisor() {
-    const [messages, setMessages] = useState<Message[]>([
-        { 
-            role: 'assistant', 
-            content: `**Professional Market Analysis Assistant**
-
-I'm here to provide market insights like an experienced fund manager - direct, practical, and focused on what actually moves prices.
-
-**My approach:**
-• Core insights that professionals care about
-• Market intuition, not textbook definitions  
-• Real risks and uncertainties
-• Human psychology behind market moves
-• Professional takeaways, not disclaimers
-
-**I can analyze:**
-• Stock fundamentals and valuation metrics
-• IPO risk assessments with institutional perspective
-• Portfolio construction and risk management
-• Market trends and sector rotation
-
-**Professional note:** This is educational market analysis to help you think like institutional investors. Always do your own research.
-
-What market question can I help you analyze?` 
-        }
-    ])
+    const [messages, setMessages] = useState<Message[]>([])
     const [input, setInput] = useState('')
     const [isTyping, setIsTyping] = useState(false)
+    const messagesEndRef = useRef<HTMLDivElement>(null)
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    }
+
+    useEffect(() => {
+        scrollToBottom()
+    }, [messages])
 
     const handleSend = async () => {
         if (!input.trim() || isTyping) return
 
-        const userMsg: Message = { role: 'user', content: input }
+        const userMsg: Message = { 
+            role: 'user', 
+            content: input,
+            timestamp: new Date()
+        }
         setMessages(prev => [...prev, userMsg])
         const query = input
         setInput('')
@@ -52,152 +44,174 @@ What market question can I help you analyze?`
             const user = authService.getUser();
             const userId = user?.id || 'anonymous_user';
             const res = await processAiQuery(query, userId);
+            
             if (res.status === 'success') {
-                setMessages(prev => [...prev, { role: 'assistant', content: res.answer }])
+                setMessages(prev => [...prev, { 
+                    role: 'assistant', 
+                    content: res.answer,
+                    timestamp: new Date()
+                }])
             } else {
                 setMessages(prev => [...prev, { 
                     role: 'assistant', 
-                    content: `Service Unavailable
+                    content: `I'm having trouble processing that right now. Let me help you with some common topics:
 
-I'm currently unable to process your request. Here are some educational alternatives:
+How about asking me about stock analysis basics, investment strategies for beginners, or risk management tips? 
 
-• Learning Section: Explore our comprehensive courses on trading and investing
-• Compare Tool: Analyze stocks side-by-side with detailed metrics
-• Market News: Stay updated with the latest market developments
+I can also explain market concepts like P/E ratios, diversification, or how to evaluate IPOs.
 
-Educational Tip: The best investment strategy is education. Consider learning about fundamental analysis to evaluate stocks independently!` 
+What specific area would you like to learn about?`,
+                    timestamp: new Date()
                 }])
             }
         } catch (error) {
             console.error("AI Advisor Error:", error)
             setMessages(prev => [...prev, { 
                 role: 'assistant', 
-                content: `Connection Error
+                content: `Sorry, I'm having connection issues right now. 
 
-Unable to connect to the educational assistant. While I'm offline, here are some learning resources:
+While I get back online, here are some key investing principles: always research before buying, diversify your portfolio, and never invest money you'll need soon.
 
-• Visit our Learning Section for structured courses
-• Use the Compare Tool to analyze stock fundamentals
-• Check Market Data for real-time information
-
-Remember: The goal is to learn how to analyze investments yourself, not to rely on predictions!` 
+Try asking me again in a moment, or ask about specific topics like "how to analyze stocks" or "investment tips for beginners".`,
+                timestamp: new Date()
             }])
         } finally {
             setIsTyping(false)
         }
     }
 
-    const formatMessage = (content: string) => {
-        return content.split('\n').map((line, index) => {
-            if (line.startsWith('• ')) {
-                return <li key={index} className="ml-4 mb-1">{line.substring(2)}</li>
-            }
-            if (line.trim()) {
-                return <p key={index} className="mb-2">{line}</p>
-            }
-            return <br key={index} />
-        })
-    }
-
     const quickQuestions = [
-        "How do I analyze a stock's P/E ratio?",
-        "What should I look for in an IPO?",
-        "Explain market psychology and investor behavior",
-        "How do fund managers build portfolios?"
+        "How do I analyze a stock before buying?",
+        "What should a beginner know about investing?",
+        "How can I manage risk in my portfolio?",
+        "What are the key things to check in an IPO?"
     ]
 
+    const handleQuickQuestion = (question: string) => {
+        setInput(question)
+    }
+
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
-            <div className="max-w-4xl mx-auto">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+            <div className="container mx-auto px-4 py-8 max-w-4xl">
                 {/* Header */}
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">AI Advisor</h1>
-                    <p className="text-gray-600">Learn about markets and investment concepts</p>
+                    <div className="flex items-center justify-center gap-3 mb-4">
+                        <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                            <Bot className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">AI Advisor</h1>
+                    </div>
+                    <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                        Get instant answers about trading, investing, and market analysis. 
+                        Ask questions and learn from AI-powered insights.
+                    </p>
                 </div>
 
                 {/* Quick Questions */}
-                <div className="mb-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Quick Questions</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {quickQuestions.map((question, index) => (
-                            <button
-                                key={index}
-                                onClick={() => setInput(question)}
-                                className="p-3 text-left bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-sm"
-                            >
-                                {question}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                {messages.length === 0 && (
+                    <Card className="mb-6">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Sparkles className="h-5 w-5" />
+                                Quick Questions
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {quickQuestions.map((question, index) => (
+                                    <Button
+                                        key={index}
+                                        variant="outline"
+                                        className="justify-start h-auto p-4 text-left"
+                                        onClick={() => handleQuickQuestion(question)}
+                                    >
+                                        <MessageCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+                                        {question}
+                                    </Button>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
-                {/* Chat Interface */}
-                <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-                    {/* Chat Header */}
-                    <div className="border-b border-gray-200 p-4">
-                        <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                <Bot className="h-5 w-5 text-blue-600" />
-                            </div>
-                            <div>
-                                <h3 className="font-semibold text-gray-900">Market Professional</h3>
-                                <p className="text-sm text-gray-500">Institutional-grade analysis</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    {/* Messages */}
-                    <div className="h-96 overflow-y-auto p-4">
-                        <div className="space-y-4">
-                            {messages.map((m, i) => (
-                                <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`flex space-x-3 max-w-[80%] ${m.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                                            m.role === 'user' 
-                                                ? 'bg-blue-600 text-white' 
-                                                : 'bg-gray-100 text-gray-600'
-                                        }`}>
-                                            {m.role === 'user' ? <User className="h-4 w-4" /> : <BookOpen className="h-4 w-4" />}
-                                        </div>
-                                        <div className={`rounded-lg px-4 py-3 ${
-                                            m.role === 'user' 
-                                                ? 'bg-blue-600 text-white' 
-                                                : 'bg-gray-100 text-gray-900'
-                                        }`}>
-                                            <div className="text-sm">
-                                                {formatMessage(m.content)}
-                                            </div>
-                                        </div>
-                                    </div>
+                {/* Chat Messages */}
+                <Card className="mb-6">
+                    <CardContent className="p-0">
+                        <div className="h-96 overflow-y-auto p-6">
+                            {messages.length === 0 ? (
+                                <div className="text-center py-12">
+                                    <Bot className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                                        Welcome to AI Advisor
+                                    </h3>
+                                    <p className="text-gray-600 dark:text-gray-400">
+                                        Ask me anything about trading, investing, or market analysis
+                                    </p>
                                 </div>
-                            ))}
-                            {isTyping && (
-                                <div className="flex justify-start">
-                                    <div className="flex space-x-3 max-w-[80%]">
-                                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                            <BookOpen className="h-4 w-4 text-gray-600" />
-                                        </div>
-                                        <div className="bg-gray-100 rounded-lg px-4 py-3">
-                                            <div className="flex items-center space-x-2">
-                                                <div className="flex space-x-1">
-                                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                            ) : (
+                                <div className="space-y-6">
+                                    {messages.map((message, index) => (
+                                        <div key={index} className={`flex gap-4 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                                                message.role === 'user' 
+                                                    ? 'bg-blue-600 text-white' 
+                                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                                            }`}>
+                                                {message.role === 'user' ? 
+                                                    <User className="h-4 w-4" /> : 
+                                                    <Bot className="h-4 w-4" />
+                                                }
+                                            </div>
+                                            <div className={`flex-1 max-w-[80%] ${message.role === 'user' ? 'text-right' : ''}`}>
+                                                <div className={`inline-block p-4 rounded-lg ${
+                                                    message.role === 'user'
+                                                        ? 'bg-blue-600 text-white'
+                                                        : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
+                                                }`}>
+                                                    <div className="whitespace-pre-wrap text-sm">
+                                                        {message.content}
+                                                    </div>
                                                 </div>
-                                                <span className="text-sm text-gray-600">Thinking...</span>
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    {message.timestamp.toLocaleTimeString()}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    ))}
+                                    
+                                    {isTyping && (
+                                        <div className="flex gap-4">
+                                            <div className="w-8 h-8 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center flex-shrink-0">
+                                                <Bot className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="inline-block p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="flex gap-1">
+                                                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                                                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                                                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                                                        </div>
+                                                        <span className="text-sm text-gray-600 dark:text-gray-400">Thinking...</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div ref={messagesEndRef} />
                                 </div>
                             )}
                         </div>
-                    </div>
+                    </CardContent>
+                </Card>
 
-                    {/* Input */}
-                    <div className="border-t border-gray-200 p-4">
-                        <div className="flex space-x-3">
+                {/* Input Section */}
+                <Card>
+                    <CardContent className="p-4">
+                        <div className="flex gap-3">
                             <Input
-                                placeholder="Ask about market analysis, stock evaluation, or professional insights..."
+                                placeholder="Ask about stocks, trading, investing, or market analysis..."
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
@@ -207,22 +221,35 @@ Remember: The goal is to learn how to analyze investments yourself, not to rely 
                             <Button 
                                 onClick={handleSend} 
                                 disabled={isTyping || !input.trim()}
-                                className="bg-blue-600 hover:bg-blue-700"
+                                className="px-6"
                             >
                                 <Send className="h-4 w-4" />
                             </Button>
                         </div>
-                        <p className="text-xs text-gray-500 mt-2 text-center">
-                            Professional market analysis • Educational purposes
-                        </p>
-                    </div>
-                </div>
+                        <div className="flex items-center justify-between mt-3">
+                            <p className="text-xs text-gray-500">
+                                AI-powered market insights • Educational purposes only
+                            </p>
+                            <Badge variant="outline" className="text-xs">
+                                <TrendingUp className="h-3 w-3 mr-1" />
+                                Market Analysis
+                            </Badge>
+                        </div>
+                    </CardContent>
+                </Card>
 
-                {/* Disclaimer */}
-                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm text-blue-800">
-                        <strong>Professional Analysis:</strong> This assistant provides institutional-grade market analysis and professional insights for educational purposes. Responses follow fund manager methodology with focus on practical market dynamics.
-                    </p>
+                {/* Educational Note */}
+                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <div className="flex items-start gap-3">
+                        <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                            <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-1">Educational Purpose</h3>
+                            <p className="text-sm text-blue-700 dark:text-blue-300">
+                                This AI advisor provides educational insights about trading and investing. 
+                                Always do your own research and consult financial advisors before making investment decisions.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -1,10 +1,10 @@
 import { MarketTable } from "@/components/MarketTable"
-import { TrendingUp, DollarSign, Activity, BarChart3, ArrowUpRight, Eye, BookOpen, Brain, Newspaper, Star, Target, RefreshCw } from "lucide-react"
+import { TrendingUp, DollarSign, Activity, BarChart3, ArrowUpRight, RefreshCw } from "lucide-react"
 import { useState, useEffect } from "react"
 import { authService } from "../lib/auth"
 import { ENDPOINTS } from "../lib/config"
 import { getMarketCharts } from "../lib/api"
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, ResponsiveContainer } from 'recharts'
 
 interface PortfolioData {
     totalValue: number;
@@ -142,33 +142,6 @@ export default function Home() {
         }
     ]
 
-    const quickActions = [
-        {
-            title: "Virtual Trading",
-            description: "Start trading with virtual money",
-            icon: TrendingUp,
-            color: "bg-blue-600 hover:bg-blue-700"
-        },
-        {
-            title: "AI Advisor",
-            description: "Get smart trading insights",
-            icon: Brain,
-            color: "bg-green-600 hover:bg-green-700"
-        },
-        {
-            title: "Compare Stocks",
-            description: "Analyze stock performance",
-            icon: BarChart3,
-            color: "bg-purple-600 hover:bg-purple-700"
-        },
-        {
-            title: "View Portfolio",
-            description: "Check your holdings",
-            icon: Eye,
-            color: "bg-orange-600 hover:bg-orange-700"
-        }
-    ]
-
     const topPerformers = [
         { symbol: "RELIANCE", price: "₹2,847.50", change: "+1.85%", isPositive: true },
         { symbol: "TCS", price: "₹4,125.30", change: "+2.18%", isPositive: true },
@@ -201,10 +174,6 @@ export default function Home() {
                                 <div className="flex items-center gap-2">
                                     <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                                     <span className="text-gray-600 dark:text-gray-400">BSE: Open</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                                    <span className="text-gray-600 dark:text-gray-400">Crypto: 24/7</span>
                                 </div>
                             </div>
                             <button className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
@@ -264,8 +233,8 @@ export default function Home() {
                     )}
                 </div>
 
-                {/* Market Charts Section */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                {/* Market Charts Section - Clean like IPO cards */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                     {/* NIFTY 50 Chart */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                         <div className="p-6">
@@ -335,180 +304,74 @@ export default function Home() {
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    {/* Bitcoin Chart */}
+                {/* Main Content - Market Overview */}
+                <div className="space-y-6">
                     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                         <div className="p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <div>
-                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Bitcoin</h3>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                                            ${marketCharts?.btc?.currentPrice?.toLocaleString() || '95,000'}
-                                        </span>
-                                        <span className={`text-sm font-medium ${
-                                            (marketCharts?.btc?.change || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                                        }`}>
-                                            {(marketCharts?.btc?.change || 0) >= 0 ? '+' : ''}{(marketCharts?.btc?.change || 1.2).toFixed(2)}%
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                    Market Overview
+                                </h3>
+                                <button 
+                                    onClick={fetchMarketCharts}
+                                    className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                >
+                                    <RefreshCw className="h-4 w-4" />
+                                    <span className="text-sm">Refresh</span>
+                                </button>
                             </div>
-                            <div className="h-32" style={{ width: '100%', height: '128px' }}>
-                                <ResponsiveContainer width="100%" height={128} minWidth={200} minHeight={128}>
-                                    <LineChart data={marketCharts?.btc?.data || []} width={300} height={128}>
-                                        <Line 
-                                            type="monotone" 
-                                            dataKey="value" 
-                                            stroke="#f59e0b" 
-                                            strokeWidth={2}
-                                            dot={false}
-                                        />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
+                            <MarketTable />
                         </div>
                     </div>
-                </div>
 
-                {/* Quick Actions - Simple grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                    {quickActions.map((action, index) => {
-                        const Icon = action.icon;
-                        return (
-                            <button
-                                key={index}
-                                className={`${action.color} text-white p-6 rounded-lg transition-colors text-left hover:shadow-md`}
-                            >
-                                <Icon className="h-8 w-8 mb-3" />
-                                <h3 className="text-lg font-semibold mb-1">{action.title}</h3>
-                                <p className="text-sm opacity-90">{action.description}</p>
-                            </button>
-                        );
-                    })}
-                </div>
-
-                {/* Main Content - Two column layout like Compare page */}
-                <div className="grid lg:grid-cols-3 gap-8">
-                    {/* Left Column - Market Overview */}
-                    <div className="lg:col-span-2 space-y-6">
-                        {/* Market Overview */}
-                        <div className="space-y-4">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                Market Overview
-                            </h3>
-                            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                                <div className="p-6">
-                                    <MarketTable />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Recent Activity */}
-                        <div className="space-y-4">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {/* Recent Activity */}
+                    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div className="p-6">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
                                 Recent Trading Activity
                             </h3>
-                            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                                <div className="p-6">
-                                    {loading ? (
-                                        <div className="text-center py-8">
-                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                                            <p className="text-gray-500 mt-2">Loading transactions...</p>
-                                        </div>
-                                    ) : recentTransactions.length > 0 ? (
-                                        <div className="space-y-4">
-                                            {recentTransactions.map((transaction, index) => (
-                                                <div key={index} className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold ${
-                                                            transaction.type === 'BUY' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                                                        }`}>
-                                                            {transaction.type}
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-semibold text-gray-900 dark:text-white">{transaction.symbol}</p>
-                                                            <p className="text-sm text-gray-500 dark:text-gray-400">{transaction.quantity} shares at {formatCurrency(transaction.price)}</p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                            {new Date(transaction.date).toLocaleDateString()}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="text-center py-8">
-                                            <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                            <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Trading Activity Yet</h4>
-                                            <p className="text-gray-500 dark:text-gray-400 mb-4">
-                                                Start your trading journey with virtual money
-                                            </p>
-                                            <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                                                Start Virtual Trading
-                                            </button>
-                                        </div>
-                                    )}
+                            {loading ? (
+                                <div className="text-center py-8">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                                    <p className="text-gray-500 mt-2">Loading transactions...</p>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Right Column - Sidebar */}
-                    <div className="space-y-6">
-                        {/* Top Performers */}
-                        <div className="space-y-4">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                                <Star className="h-5 w-5 text-yellow-500" />
-                                Top Performers
-                            </h3>
-                            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                                <div className="p-6 space-y-4">
-                                    {topPerformers.map((stock, index) => (
-                                        <div key={index} className="flex items-center justify-between">
-                                            <div>
-                                                <p className="font-semibold text-gray-900 dark:text-white">{stock.symbol}</p>
-                                                <p className="text-sm text-gray-500 dark:text-gray-400">{stock.price}</p>
+                            ) : recentTransactions.length > 0 ? (
+                                <div className="space-y-4">
+                                    {recentTransactions.map((transaction, index) => (
+                                        <div key={index} className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
+                                            <div className="flex items-center gap-4">
+                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold ${
+                                                    transaction.type === 'BUY' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                                }`}>
+                                                    {transaction.type}
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold text-gray-900 dark:text-white">{transaction.symbol}</p>
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400">{transaction.quantity} shares at {formatCurrency(transaction.price)}</p>
+                                                </div>
                                             </div>
-                                            <div className={`text-right font-semibold ${
-                                                stock.isPositive ? 'text-green-600' : 'text-red-600'
-                                            }`}>
-                                                {stock.change}
+                                            <div className="text-right">
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                    {new Date(transaction.date).toLocaleDateString()}
+                                                </p>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
-                            </div>
-                        </div>
-
-                        {/* Quick Links */}
-                        <div className="space-y-4">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                Quick Links
-                            </h3>
-                            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                                <div className="p-6 space-y-2">
-                                    <button className="w-full text-left p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors">
-                                        <Newspaper className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                                        <span className="text-gray-900 dark:text-white">Latest Market News</span>
-                                    </button>
-                                    <button className="w-full text-left p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors">
-                                        <Eye className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                                        <span className="text-gray-900 dark:text-white">Upcoming IPOs</span>
-                                    </button>
-                                    <button className="w-full text-left p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors">
-                                        <BookOpen className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                                        <span className="text-gray-900 dark:text-white">Learning Resources</span>
-                                    </button>
-                                    <button className="w-full text-left p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors">
-                                        <Target className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                                        <span className="text-gray-900 dark:text-white">Set Price Alerts</span>
+                            ) : (
+                                <div className="text-center py-8">
+                                    <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Trading Activity Yet</h4>
+                                    <p className="text-gray-500 dark:text-gray-400 mb-4">
+                                        Start your trading journey with virtual money
+                                    </p>
+                                    <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                                        Start Virtual Trading
                                     </button>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </div>
                 </div>

@@ -60,26 +60,17 @@ const Portfolio: React.FC = () => {
             const currentUser = JSON.parse(userData);
             const userId = currentUser.id;
             
-            console.log('Fetching portfolio for user:', userId);
-            console.log('User data:', currentUser);
-            
             // Fetch portfolio summary
             const summaryResponse = await api.get(`/virtual/portfolio/${userId}`);
             const summaryData = summaryResponse.data;
-            
-            console.log('Portfolio Summary Response:', summaryData);
             
             // Fetch holdings
             const holdingsResponse = await api.get(`/virtual/holdings/${userId}`);
             const holdingsData = holdingsResponse.data;
             
-            console.log('Holdings Response:', holdingsData);
-            
             if (summaryData.status === 'success') {
-                console.log('Setting portfolio summary:', summaryData.data);
                 setPortfolioSummary(summaryData.data);
             } else {
-                console.error('Portfolio summary error:', summaryData);
                 // Set default values if API fails
                 setPortfolioSummary({
                     totalValue: 100000,

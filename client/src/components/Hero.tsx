@@ -9,8 +9,8 @@ const features = [
     },
     {
         icon: Globe,
-        title: "Global Crypto Markets",
-        desc: "Track Bitcoin, Ethereum, and emerging cryptocurrencies"
+        title: "Global Stock Markets",
+        desc: "Track international indices and global market trends"
     },
     {
         icon: Brain,
@@ -37,7 +37,7 @@ export function Hero() {
                     </h1>
 
                     <p className="mx-auto max-w-3xl text-lg text-gray-600 mb-10 leading-relaxed">
-                        India's most comprehensive platform for stock analysis, cryptocurrency tracking, and 
+                        India's most comprehensive platform for stock analysis, global market tracking, and 
                         AI-powered investment insights. Make smarter decisions with real-time NSE/BSE data 
                         and global market intelligence.
                     </p>
