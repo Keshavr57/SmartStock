@@ -203,35 +203,77 @@ class ComprehensiveStockService {
 
     async fetchFromIndianAPI(symbol) {
         try {
-            const cleanSymbol = symbol.replace('.NS', '').replace('.BO', '');
+            // Clean the symbol for Indian API (remove .NS, .BO suffixes)
+            const cleanSymbol = symbol.replace('.NS', '').replace('.BO', '').toUpperCase();
+            console.log(`🇮🇳 Trying Indian API for: ${cleanSymbol}`);
+            
             const response = await axios.get(`${this.indianAPIBaseURL}/stock`, {
                 params: { name: cleanSymbol },
-                headers: { "X-Api-Key": this.indianAPIKey },
-                timeout: 10000
+                headers: { 
+                    "X-Api-Key": this.indianAPIKey,
+                    'User-Agent': 'SmartStock/1.0'
+                },
+                timeout: 8000
             });
 
-            return response.data;
+            if (response.data && response.data.price && response.data.price > 0) {
+                console.log(`✅ Got Indian API data for ${cleanSymbol}: ₹${response.data.price}`);
+                return response.data;
+            } else {
+                console.log(`⚠️ Indian API returned invalid data for ${cleanSymbol}`);
+                return null;
+            }
         } catch (error) {
+            console.log(`❌ Indian API error for ${symbol}:`, error.message);
             return null;
         }
     }
 
     async getYahooPriceData(symbol) {
         try {
-            const response = await axios.get(`${this.yahooBaseURL}${symbol}`, { timeout: 10000 });
-            const result = response.data?.chart?.result?.[0];
-            if (!result) return null;
+            // For Indian stocks, try both .NS and .BO suffixes
+            let symbolsToTry = [symbol];
+            
+            if (!symbol.includes('.NS') && !symbol.includes('.BO')) {
+                symbolsToTry = [`${symbol}.NS`, `${symbol}.BO`, symbol];
+            }
+            
+            for (const testSymbol of symbolsToTry) {
+                try {
+                    console.log(`🔍 Trying Yahoo Finance for: ${testSymbol}`);
+                    const response = await axios.get(`${this.yahooBaseURL}${testSymbol}`, { 
+                        timeout: 8000,
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                        }
+                    });
+                    
+                    const result = response.data?.chart?.result?.[0];
+                    if (!result) continue;
 
-            const meta = result.meta;
-            return {
-                regularMarketPrice: meta.regularMarketPrice,
-                regularMarketChange: meta.regularMarketPrice - meta.previousClose,
-                regularMarketChangePercent: ((meta.regularMarketPrice - meta.previousClose) / meta.previousClose) * 100,
-                regularMarketVolume: meta.regularMarketVolume,
-                fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh,
-                fiftyTwoWeekLow: meta.fiftyTwoWeekLow
-            };
+                    const meta = result.meta;
+                    if (meta && meta.regularMarketPrice && meta.regularMarketPrice > 0) {
+                        console.log(`✅ Got Yahoo Finance data for ${testSymbol}: ₹${meta.regularMarketPrice}`);
+                        return {
+                            regularMarketPrice: meta.regularMarketPrice,
+                            regularMarketChange: meta.regularMarketPrice - (meta.previousClose || meta.regularMarketPrice),
+                            regularMarketChangePercent: meta.previousClose ? 
+                                ((meta.regularMarketPrice - meta.previousClose) / meta.previousClose) * 100 : 0,
+                            regularMarketVolume: meta.regularMarketVolume || 1000000,
+                            fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh,
+                            fiftyTwoWeekLow: meta.fiftyTwoWeekLow,
+                            symbol: testSymbol
+                        };
+                    }
+                } catch (symbolError) {
+                    console.log(`⚠️ Yahoo Finance failed for ${testSymbol}:`, symbolError.message);
+                    continue;
+                }
+            }
+            
+            return null;
         } catch (error) {
+            console.log(`❌ Yahoo Finance API error:`, error.message);
             return null;
         }
     }

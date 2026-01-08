@@ -7,7 +7,13 @@ import User from '../models/User.js';
 
 const router = express.Router();
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+    console.error('❌ CRITICAL: JWT_SECRET environment variable is not set!');
+    console.error('Please set JWT_SECRET in your .env file');
+    process.exit(1);
+}
 
 // Helper function to check database connection and attempt reconnection
 const ensureDatabaseConnection = async () => {
@@ -186,7 +192,7 @@ router.post('/google', async (req, res) => {
         }
 
         // Check if Google client is properly configured
-        if (!process.env.GOOGLE_CLIENT_ID) {
+        if (!import.meta.env.VITE_GOOGLE_CLIENT_ID) {
             console.error('Google Client ID not configured');
             return res.status(500).json({ 
                 success: false,

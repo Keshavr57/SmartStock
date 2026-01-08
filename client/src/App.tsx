@@ -140,7 +140,7 @@ export default function App() {
                     <Button
                         variant="outline"
                         size="sm"
-                        className="absolute top-4 left-4 z-10 md:hidden lg:flex"
+                        className="absolute top-4 left-4 z-10 lg:flex"
                         onClick={() => setShowSidebar(!showSidebar)}
                     >
                         <Menu className="h-4 w-4" />

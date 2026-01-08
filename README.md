@@ -1,247 +1,228 @@
-# 📈 SmartStock - AI-Powered Stock Market Platform
+# 📈 SmartStock - Virtual Trading Platform
 
-A comprehensive stock market analysis platform with AI-powered insights, sentiment analysis, and educational tools for Indian and global markets.
+> **A comprehensive virtual trading platform for learning stock market investing with real Indian market data**
 
-## 🚀 Features
+[![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Latest-brightgreen.svg)](https://mongodb.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://typescriptlang.org/)
 
-### 🤖 AI Advisor
-- **Smart Risk Assessment**: AI-powered analysis with educational disclaimers
-- **IPO Risk Analysis**: 🟢 Low Risk, 🟡 Medium Risk, 🔴 High Risk indicators
-- **Educational Focus**: "This is an educational platform, not investment tips"
-- **Interactive Q&A**: 200+ pre-built educational questions
+## 🎯 What is SmartStock?
 
-### 📊 Stock Comparison
-- **Comprehensive Analysis**: 50+ data points per stock
-- **Real-time Data**: Price, volume, market cap, financial ratios
-- **Technical Indicators**: RSI, MACD, moving averages
-- **Financial Statements**: Income statement, balance sheet, cash flow
+SmartStock is an **educational virtual trading platform** where users can learn stock market investing using **₹1 Lakh virtual money** and **real NSE/BSE market data**. Perfect for beginners to practice trading without financial risk.
 
-### 📰 Smart News System
-- **AI Sentiment Analysis**: 🟢 Positive, 🔴 Negative, 🟡 Neutral classification
-- **Market Impact Filtering**: High/Medium/Low impact news
-- **Trusted Sources**: Economic Times, Reuters, Bloomberg, MoneyControl
-- **Real-time Updates**: Multiple RSS feeds with priority scoring
+## ✨ Key Features
 
-### 🎯 IPO Calendar
-- **2026 IPO Data**: Current and upcoming IPOs with risk assessment
-- **Risk Factors**: Based on promoter holding, company age, profit history
-- **Educational Warnings**: Clear disclaimers about investment risks
-- **Detailed Information**: Price bands, lot sizes, listing dates
+### 💰 **Virtual Trading System**
+- Start with ₹1,00,000 virtual money
+- Real-time NSE/BSE stock prices
+- Complete portfolio tracking with P&L
+- Indian market hours (9:15 AM - 3:30 PM IST)
 
-### 📚 Learning Center
-- **19 Comprehensive Lessons**: Beginner to Expert levels
-- **6 Categories**: Fundamentals, Technical Analysis, Risk Management, etc.
-- **Interactive Content**: Quizzes, examples, practical applications
-- **Progress Tracking**: Difficulty-based learning paths
+### 🤖 **AI-Powered Learning**
+- Smart investment insights and risk analysis
+- Conversational AI advisor (not technical jargon)
+- IPO risk assessment with color-coded indicators
+- Educational focus - learning, not investment advice
 
-## 🛠 Tech Stack
+### 📊 **Market Analysis**
+- Live Indian stock data and charts
+- Stock comparison with 50+ data points
+- Real-time market news and updates
+- Portfolio performance tracking
 
-### Frontend
-- **React 18** with TypeScript
-- **Vite** for fast development
-- **Tailwind CSS** for styling
-- **Shadcn/ui** components
-- **Lucide React** icons
+### 🎓 **Educational Platform**
+- Learn trading concepts safely
+- Comprehensive lessons and tutorials
+- Risk-free environment for beginners
+- Indian market focused content
 
-### Backend
-- **Node.js** with Express
-- **MongoDB** database
-- **Axios** for API calls
-- **RSS Parser** for news feeds
-- **CORS** enabled
+## 🚀 Quick Demo
 
-### AI Service
-- **Python FastAPI**
-- **LangChain** with Groq LLM
-- **yfinance** for stock data
-- **BeautifulSoup** for web scraping
-- **Custom sentiment analysis**
+```bash
+# Clone and setup
+git clone https://github.com/yourusername/SmartStock.git
+cd SmartStock
 
-## 🚀 Quick Start
+# Install dependencies
+npm install
+cd client && npm install
+cd ../server && npm install
+cd ../ai-service && pip install -r requirements.txt
+
+# Setup environment (IMPORTANT!)
+cp server/.env.example server/.env
+cp client/.env.example client/.env
+# Edit .env files with your credentials
+
+# Start all services
+npm run dev
+```
+
+**Access**: http://localhost:5173
+
+## 🛠️ Tech Stack
+
+| Frontend | Backend | AI Service | Database |
+|----------|---------|------------|----------|
+| React 18 + TypeScript | Node.js + Express | Python FastAPI | MongoDB |
+| Tailwind CSS | JWT Authentication | LangChain + Groq | Mongoose ODM |
+| Vite + ShadcnUI | Google OAuth | Stock Analysis | Real-time Data |
+
+## 📱 Platform Screenshots
+
+### Virtual Trading Dashboard
+- **Portfolio Overview**: Total value, P&L, available balance
+- **Live Trading**: Buy/sell with real market prices
+- **Holdings Tracker**: Monitor all investments
+
+### AI Advisor Interface
+- **Smart Insights**: Educational investment guidance
+- **Risk Analysis**: IPO and stock risk assessment
+- **Learning Focus**: Conversational, easy-to-understand responses
+
+### Market Analysis Tools
+- **Stock Comparison**: Side-by-side analysis
+- **Live Charts**: Real-time price movements
+- **News Integration**: Market updates and analysis
+
+## 🔐 Security & Best Practices
+
+✅ **Production Ready Security**
+- No hardcoded secrets (JWT, OAuth)
+- Environment variable configuration
+- Input validation on all endpoints
+- Memory leak fixes applied
+- Secure authentication system
+
+✅ **Code Quality**
+- TypeScript for type safety
+- Comprehensive error handling
+- Clean component architecture
+- Responsive design
+- Performance optimized
+
+## 🎯 Why SmartStock?
+
+### For **Beginners**
+- Learn trading without financial risk
+- Start with virtual ₹1 Lakh
+- Educational AI guidance
+- Real market experience
+
+### For **Developers**
+- Full-stack TypeScript/JavaScript
+- Modern React patterns
+- Secure authentication
+- Real-time data integration
+- AI service integration
+
+### For **Interviewers**
+- Production-ready codebase
+- Security best practices
+- Comprehensive documentation
+- Real-world application
+- Educational impact
+
+## 📊 Project Highlights
+
+| Feature | Implementation | Impact |
+|---------|---------------|---------|
+| **Virtual Trading** | Real NSE/BSE data integration | Risk-free learning environment |
+| **AI Advisor** | LangChain + Groq LLM | Personalized educational guidance |
+| **Security** | JWT + OAuth + Input validation | Production-ready security |
+| **Performance** | Memory leak fixes + optimization | Smooth user experience |
+| **Education** | Indian market focus | Practical learning platform |
+
+## 🚀 Getting Started
 
 ### Prerequisites
 - Node.js 18+
 - Python 3.8+
 - MongoDB
 
-### Installation
-
-1. **Clone the repository**
+### Environment Setup
 ```bash
-git clone https://github.com/Keshavr57/SmartStock.git
-cd SmartStock
+# Generate secure JWT secret
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+# Configure Google OAuth
+# 1. Create Google Cloud Console project
+# 2. Enable Google+ API
+# 3. Create OAuth credentials
+# 4. Add to environment variables
 ```
 
-2. **Install Frontend Dependencies**
+### Run Application
 ```bash
-cd client
-npm install
-```
-
-3. **Install Backend Dependencies**
-```bash
-cd ../server
-npm install
-```
-
-4. **Install AI Service Dependencies**
-```bash
-cd ../ai-service
-pip install -r requirements.txt
-```
-
-5. **Environment Setup**
-
-Create `.env` files in each directory:
-
-**server/.env**
-```env
-MONGODB_URI=mongodb://localhost:27017/smartstock
-PORT=5050
-```
-
-**ai-service/.env**
-```env
-GROQ_API_KEY=your_groq_api_key_here
-```
-
-### Running the Application
-
-1. **Start MongoDB** (if running locally)
-
-2. **Start Backend Server**
-```bash
-cd server
-npm start
-# Server runs on http://localhost:5050
-```
-
-3. **Start AI Service**
-```bash
-cd ai-service
-python main.py
-# AI service runs on http://localhost:8000
-```
-
-4. **Start Frontend**
-```bash
-cd client
+# Start all services concurrently
 npm run dev
-# Frontend runs on http://localhost:3001
+
+# Or individually:
+# Backend: cd server && npm start
+# AI Service: cd ai-service && python main.py  
+# Frontend: cd client && npm run dev
 ```
 
-## 📱 Usage
+## 📈 API Overview
 
-### 🏠 Home Page
-- View trending stocks with real-time data
-- Quick access to all platform features
-- Market overview and highlights
+```javascript
+// Authentication
+POST /api/auth/register
+POST /api/auth/login
+POST /api/auth/google
 
-### 🤖 AI Advisor
-- Ask educational questions about stocks and markets
-- Get risk assessments for IPOs and investments
-- Access 200+ pre-built educational questions
-- Receive AI-powered analysis with disclaimers
+// Virtual Trading
+GET  /api/virtual/portfolio/:userId
+POST /api/virtual/order
+GET  /api/virtual/holdings/:userId
 
-### 📊 Compare Stocks
-- Select multiple stocks for detailed comparison
-- View 50+ data points including financials and technicals
-- Analyze performance across different time periods
-- Export comparison data
+// Market Data
+GET  /api/market/charts
+GET  /api/market/search/:query
+POST /ai/process  // AI advisor
+```
 
-### 📰 News Section
-- Filter news by sentiment (Positive/Negative/Neutral)
-- Filter by market impact (High/Medium/Low)
-- View analytics dashboard
-- Access trusted financial news sources
+## 🎓 Educational Impact
 
-### 🎯 IPO Calendar
-- Browse current and upcoming 2026 IPOs
-- View risk assessments with color-coded indicators
-- Access detailed IPO information
-- Educational content about IPO investing
+**SmartStock teaches:**
+- Stock market fundamentals
+- Risk management principles
+- Portfolio diversification
+- Indian market regulations
+- Trading psychology
 
-### 📚 Learning Center
-- Progress through 19 comprehensive lessons
-- Choose difficulty level (Beginner to Expert)
-- Learn fundamentals, technical analysis, and risk management
-- Track your learning progress
+**Without financial risk:**
+- Virtual money environment
+- Real market data
+- Practical experience
+- Safe learning space
 
-## 🔧 API Endpoints
+## 🏆 Project Achievements
 
-### Stock Data
-- `GET /api/compare` - Compare multiple stocks
-- `GET /api/market/landing-data` - Market highlights
+- ✅ **Full-stack application** with modern tech stack
+- ✅ **Real-time data integration** with Indian markets
+- ✅ **AI-powered features** for educational guidance
+- ✅ **Production-ready security** implementation
+- ✅ **Responsive design** for all devices
+- ✅ **Educational focus** with practical application
 
-### News
-- `GET /api/news/trending` - All news with sentiment analysis
-- `GET /api/news/sentiment/:sentiment` - Filter by sentiment
-- `GET /api/news/impact/:impact` - Filter by market impact
-- `GET /api/news/analytics` - News statistics
+## 📞 Contact & Support
 
-### IPO
-- `GET /api/ipo/upcoming` - Current and upcoming IPOs
-
-### Learning
-- `GET /api/learning/list` - Available lessons
-- `GET /api/learning/lesson/:id` - Specific lesson content
-
-### AI Service
-- `POST /process` - AI analysis and responses
-
-## 🎯 Key Features Explained
-
-### AI-Powered Risk Assessment
-The platform uses advanced algorithms to assess investment risks:
-- **IPO Risk Analysis**: Evaluates promoter holding, company age, and profit history
-- **Sentiment Analysis**: Analyzes news sentiment using 100+ keywords
-- **Market Impact**: Classifies news by potential market impact
-- **Educational Focus**: Always includes disclaimers and educational content
-
-### Smart News Filtering
-- **Sentiment Keywords**: Positive (growth, profit, surge), Negative (crash, decline, loss)
-- **Impact Analysis**: High (RBI, interest rates), Medium (earnings, IPO), Low (appointments)
-- **Source Priority**: Trusted sources get higher priority in rankings
-- **Real-time Updates**: Multiple RSS feeds updated continuously
-
-### Comprehensive Stock Analysis
-- **50+ Data Points**: Price, volume, ratios, financials, technicals
-- **Real-time Data**: Live market data integration
-- **Historical Analysis**: Multi-year performance tracking
-- **Risk Metrics**: Volatility, beta, debt ratios
-
-## 🔒 Educational Disclaimer
-
-**This is an educational platform, not investment tips.** All analysis, recommendations, and content are for educational purposes only. Always:
-- Do your own research
-- Consult qualified financial advisors
-- Consider your risk tolerance
-- Never invest money you can't afford to lose
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- **Groq** for AI/LLM services
-- **yfinance** for stock data
-- **RSS feeds** from trusted financial news sources
-- **Shadcn/ui** for beautiful UI components
-- **Tailwind CSS** for styling
-
-## 📞 Support
-
-For support, email keshavrajput57@gmail.com or create an issue on GitHub.
+**Developer**: Your Name  
+**Email**: your.email@example.com  
+**LinkedIn**: [Your LinkedIn Profile]  
+**GitHub**: [Your GitHub Profile]
 
 ---
 
-**⚠️ Risk Warning**: Trading and investing in financial markets involves substantial risk of loss and is not suitable for all investors. Past performance does not guarantee future results.
+### 🎯 **Perfect for Internship/Job Interviews**
+
+This project demonstrates:
+- **Full-stack development skills**
+- **Real-world application building**
+- **Security best practices**
+- **Educational technology impact**
+- **Modern development practices**
+
+**⚠️ Educational Disclaimer**: This is a virtual trading platform for educational purposes only. No real money is involved.

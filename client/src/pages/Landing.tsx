@@ -46,7 +46,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
         script.onload = () => {
             if (window.google) {
                 window.google.accounts.id.initialize({
-                    client_id: '817549154886-k5r92c4grcvr5usdiqfjtib2se0uc5qv.apps.googleusercontent.com',
+                    client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
                     callback: handleGoogleSignIn,
                     auto_select: false,
                     cancel_on_tap_outside: true,

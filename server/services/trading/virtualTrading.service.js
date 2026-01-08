@@ -40,6 +40,23 @@ class VirtualTradingService {
         try {
             const { symbol, type, quantity, orderType = 'MARKET' } = orderData;
             
+            // Input validation
+            if (!userId || !symbol || !type || !quantity) {
+                throw new Error('Missing required order parameters');
+            }
+            
+            if (!['BUY', 'SELL'].includes(type)) {
+                throw new Error('Invalid order type. Must be BUY or SELL');
+            }
+            
+            if (quantity <= 0 || !Number.isInteger(quantity)) {
+                throw new Error('Quantity must be a positive integer');
+            }
+            
+            if (quantity > 10000) {
+                throw new Error('Maximum order quantity is 10,000 shares');
+            }
+            
             console.log(`Executing ${type} order: ${quantity} shares of ${symbol}`);
 
             // Get current market price with fallbacks

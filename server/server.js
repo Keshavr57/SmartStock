@@ -4,6 +4,9 @@ import cors from "cors";
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 
+// Load environment variables first
+dotenv.config();
+
 // Database connection
 import connectDB from './config/db.js';
 
@@ -20,8 +23,6 @@ import { router as authRoutes } from './routes/authRoutes.js';
 // Services
 import NSEWebSocketService from './services/trading/nseWebSocket.service.js';
 import YahooWebSocketService from './services/trading/yahooWebSocket.service.js';
-
-dotenv.config();
 
 const app = express();
 const server = createServer(app);

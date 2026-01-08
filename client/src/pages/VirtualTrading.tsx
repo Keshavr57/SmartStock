@@ -52,7 +52,9 @@ const VirtualTrading: React.FC = () => {
             fetchMarketStatus();
         }, 30000); // Update every 30 seconds
 
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(interval);
+        };
     }, []);
 
     const fetchPortfolioData = async () => {
@@ -167,7 +169,7 @@ const VirtualTrading: React.FC = () => {
                         <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Search stocks (e.g., RELIANCE, TCS, INFY)"
+                            placeholder="Search any Indian stock (e.g., RELIANCE, TCS, INFY, HDFC, SBI, Zomato, Paytm)"
                             value={searchQuery}
                             onChange={(e) => {
                                 setSearchQuery(e.target.value);
@@ -177,18 +179,70 @@ const VirtualTrading: React.FC = () => {
                         />
                         
                         {/* Search Results */}
-                        {searchResults.length > 0 && (
-                            <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 mt-1">
+                        {searchResults.length > 0 && searchQuery && (
+                            <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 mt-1 max-h-80 overflow-y-auto">
                                 {searchResults.map((stock: any) => (
                                     <button
                                         key={stock.symbol}
                                         onClick={() => handleStockSelect(stock.symbol)}
-                                        className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                                        className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 transition-colors"
                                     >
-                                        <div className="font-medium text-gray-900">{stock.symbol}</div>
-                                        <div className="text-sm text-gray-600">{stock.name}</div>
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <div className="font-medium text-gray-900">{stock.symbol}</div>
+                                                <div className="text-sm text-gray-600">{stock.name}</div>
+                                                {stock.sector && (
+                                                    <div className="text-xs text-gray-500">{stock.sector} • {stock.exchange || 'NSE'}</div>
+                                                )}
+                                            </div>
+                                            {stock.price && (
+                                                <div className="text-right">
+                                                    <div className="font-medium text-gray-900">₹{stock.price}</div>
+                                                    {stock.changePercent && (
+                                                        <div className={`text-sm ${
+                                                            stock.changePercent >= 0 ? 'text-green-600' : 'text-red-600'
+                                                        }`}>
+                                                            {stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                     </button>
                                 ))}
+                            </div>
+                        )}
+                        
+                        {/* Popular Stocks (when no search) */}
+                        {!searchQuery && (
+                            <div className="mt-4">
+                                <h4 className="text-sm font-medium text-gray-700 mb-3">Popular Indian Stocks</h4>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                    {[
+                                        'RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS',
+                                        'SBIN.NS', 'ICICIBANK.NS', 'BHARTIARTL.NS', 'ITC.NS',
+                                        'MARUTI.NS', 'BAJFINANCE.NS', 'ZOMATO.NS', 'PAYTM.NS'
+                                    ].map((symbol) => (
+                                        <button
+                                            key={symbol}
+                                            onClick={() => handleStockSelect(symbol)}
+                                            className="px-3 py-2 text-sm bg-gray-100 hover:bg-blue-100 hover:text-blue-700 rounded-lg transition-colors text-left"
+                                        >
+                                            {symbol.replace('.NS', '')}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        
+                        {/* No Results Message */}
+                        {searchQuery && searchResults.length === 0 && (
+                            <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 mt-1 p-4">
+                                <div className="text-center text-gray-600">
+                                    <Search className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                                    <p className="font-medium">No stocks found for "{searchQuery}"</p>
+                                    <p className="text-sm mt-1">Try searching for popular stocks like RELIANCE, TCS, HDFC, INFY, SBI, etc.</p>
+                                </div>
                             </div>
                         )}
                     </div>

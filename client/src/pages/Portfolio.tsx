@@ -43,7 +43,9 @@ const Portfolio: React.FC = () => {
         
         fetchPortfolioData();
         const interval = setInterval(fetchPortfolioData, 30000); // Update every 30 seconds
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(interval);
+        };
     }, []);
 
     const fetchPortfolioData = async () => {

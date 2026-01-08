@@ -72,7 +72,9 @@ export default function Home() {
         
         const chartInterval = setInterval(fetchMarketCharts, 30000);
         
-        return () => clearInterval(chartInterval);
+        return () => {
+            clearInterval(chartInterval);
+        };
     }, []);
 
     const fetchMarketCharts = async () => {
