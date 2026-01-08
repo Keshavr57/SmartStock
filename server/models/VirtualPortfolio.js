@@ -26,7 +26,7 @@ const holdingSchema = new mongoose.Schema({
 
 const portfolioSchema = new mongoose.Schema({
     userId: { type: String, required: true, unique: true },
-    balance: { type: Number, default: 1000000 }, // Starting with ₹10 Lakh
+    balance: { type: Number, default: 100000 }, // Starting with ₹1 Lakh
     totalInvested: { type: Number, default: 0 },
     currentValue: { type: Number, default: 0 },
     totalPnL: { type: Number, default: 0 },

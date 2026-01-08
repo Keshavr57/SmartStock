@@ -10,6 +10,7 @@ import RealTimePnL from '../components/trading/RealTimePnL';
 import { authService } from '../lib/auth';
 import { api } from '../lib/api';
 import { ENDPOINTS } from '../lib/config';
+import { formatCurrency } from '../lib/currency';
 
 interface PortfolioData {
     balance: number;
@@ -70,7 +71,7 @@ const VirtualTrading: React.FC = () => {
             console.error('Error fetching portfolio:', error);
             // Set default portfolio data to prevent blank screen
             setPortfolioData({
-                balance: 100000,
+                balance: 100000, // ₹1 Lakh starting balance
                 totalValue: 100000,
                 invested: 0,
                 currentValue: 0,
@@ -90,10 +91,16 @@ const VirtualTrading: React.FC = () => {
             }
         } catch (error) {
             console.error('Error fetching market status:', error);
-            // Set default market status
+            // Set default market status with proper IST timing
+            const now = new Date();
+            const istTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
+            const currentHour = istTime.getHours() + istTime.getMinutes() / 60;
+            const isWeekday = istTime.getDay() >= 1 && istTime.getDay() <= 5;
+            const isMarketOpen = isWeekday && currentHour >= 9.25 && currentHour <= 15.5;
+            
             setMarketStatus({
-                isOpen: true,
-                status: 'Market Open (Demo Mode)'
+                isOpen: isMarketOpen,
+                status: isMarketOpen ? 'Market Open (NSE/BSE)' : 'Market Closed'
             });
         }
     };
@@ -228,10 +235,11 @@ const VirtualTrading: React.FC = () => {
                         <div className="bg-white rounded-lg border border-gray-200 p-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-gray-600">Total Value</p>
+                                    <p className="text-sm font-medium text-gray-600">Portfolio Value</p>
                                     <p className="text-2xl font-bold text-gray-900">
-                                        ₹{(portfolioData.totalValue || 0).toLocaleString('en-IN')}
+                                        {formatCurrency(portfolioData.totalValue || 0)}
                                     </p>
+                                    <p className="text-xs text-gray-500 mt-1">Total worth (Cash + Holdings)</p>
                                 </div>
                                 <DollarSign className="h-8 w-8 text-blue-500" />
                             </div>
@@ -240,12 +248,26 @@ const VirtualTrading: React.FC = () => {
                         <div className="bg-white rounded-lg border border-gray-200 p-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-gray-600">Available Balance</p>
+                                    <p className="text-sm font-medium text-gray-600">Cash Balance</p>
                                     <p className="text-2xl font-bold text-gray-900">
-                                        ₹{(portfolioData.balance || 0).toLocaleString('en-IN')}
+                                        {formatCurrency(portfolioData.balance || 0)}
                                     </p>
+                                    <p className="text-xs text-gray-500 mt-1">Available for trading</p>
                                 </div>
                                 <DollarSign className="h-8 w-8 text-green-500" />
+                            </div>
+                        </div>
+                        
+                        <div className="bg-white rounded-lg border border-gray-200 p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-600">Invested Amount</p>
+                                    <p className="text-2xl font-bold text-gray-900">
+                                        {formatCurrency(portfolioData.invested || 0)}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">Money invested in stocks</p>
+                                </div>
+                                <TrendingUp className="h-8 w-8 text-purple-500" />
                             </div>
                         </div>
                         
@@ -256,7 +278,10 @@ const VirtualTrading: React.FC = () => {
                                     <p className={`text-2xl font-bold ${
                                         (portfolioData.totalPnL || 0) >= 0 ? 'text-green-600' : 'text-red-600'
                                     }`}>
-                                        ₹{(portfolioData.totalPnL || 0).toLocaleString('en-IN')}
+                                        {(portfolioData.totalPnL || 0) >= 0 ? '+' : ''}{formatCurrency(portfolioData.totalPnL || 0)}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        {(portfolioData.totalPnLPercent || 0) >= 0 ? '+' : ''}{(portfolioData.totalPnLPercent || 0).toFixed(2)}% overall return
                                     </p>
                                 </div>
                                 {(portfolioData.totalPnL || 0) >= 0 ? (
@@ -264,18 +289,6 @@ const VirtualTrading: React.FC = () => {
                                 ) : (
                                     <TrendingDown className="h-8 w-8 text-red-500" />
                                 )}
-                            </div>
-                        </div>
-                        
-                        <div className="bg-white rounded-lg border border-gray-200 p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Holdings</p>
-                                    <p className="text-2xl font-bold text-gray-900">
-                                        {portfolioData.holdingsCount || 0}
-                                    </p>
-                                </div>
-                                <PieChart className="h-8 w-8 text-purple-500" />
                             </div>
                         </div>
                     </div>
@@ -329,6 +342,17 @@ const VirtualTrading: React.FC = () => {
                     <p className="text-sm text-amber-800">
                         <strong>Virtual Trading:</strong> This is a simulation using real market data. No actual money is involved. Use this platform to practice and learn trading strategies.
                     </p>
+                </div>
+
+                {/* Portfolio Explanation */}
+                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="text-sm font-semibold text-blue-800 mb-2">Understanding Your Portfolio:</h4>
+                    <div className="text-xs text-blue-700 space-y-1">
+                        <p><strong>Portfolio Value:</strong> Your total worth (Cash + Current value of all holdings)</p>
+                        <p><strong>Cash Balance:</strong> Money available for new trades</p>
+                        <p><strong>Invested Amount:</strong> Total money you've spent buying stocks</p>
+                        <p><strong>Total P&L:</strong> Your profit or loss (Current value - Invested amount)</p>
+                    </div>
                 </div>
             </div>
 

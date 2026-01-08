@@ -1,5 +1,6 @@
 import React from 'react';
 import { TrendingUp, TrendingDown, DollarSign, PieChart } from 'lucide-react';
+import { formatCurrency, formatPercentage } from '../../lib/currency';
 
 interface PortfolioSummaryProps {
     data: {
@@ -15,21 +16,7 @@ interface PortfolioSummaryProps {
 }
 
 const PortfolioSummary: React.FC<PortfolioSummaryProps> = ({ data }) => {
-    const formatCurrency = (amount: number) => {
-        // Handle NaN, null, undefined values
-        if (isNaN(amount) || amount === null || amount === undefined) {
-            return '₹0';
-        }
-        
-        return new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: 'INR',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        }).format(amount);
-    };
-
-    const formatPercentage = (percent: number) => {
+    const formatPercentageLocal = (percent: number) => {
         // Handle NaN, null, undefined values
         if (isNaN(percent) || percent === null || percent === undefined) {
             return '0.00';
@@ -122,7 +109,7 @@ const PortfolioSummary: React.FC<PortfolioSummaryProps> = ({ data }) => {
                             <div className={`text-sm ${
                                 safeData.totalPnL >= 0 ? 'text-green-600' : 'text-red-600'
                             }`}>
-                                ({safeData.totalPnL >= 0 ? '+' : ''}{formatPercentage(safeData.totalPnLPercent)}%)
+                                ({safeData.totalPnL >= 0 ? '+' : ''}{formatPercentageLocal(safeData.totalPnLPercent)}%)
                             </div>
                         </div>
                     </div>

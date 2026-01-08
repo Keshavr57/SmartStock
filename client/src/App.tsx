@@ -149,7 +149,7 @@ export default function App() {
                     <div className="flex-1">
                         {renderPage()}
                     </div>
-                    <Footer />
+                    <Footer onPageChange={setCurrentPage} />
                 </main>
             </div>
         </div>

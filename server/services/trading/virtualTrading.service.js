@@ -6,7 +6,7 @@ class VirtualTradingService {
     constructor() {
         this.tradingFees = 0.001; // 0.1% trading fees
         this.marketHours = {
-            start: 9, // 9:15 AM
+            start: 9.25, // 9:15 AM
             end: 15.5 // 3:30 PM
         };
     }
@@ -18,7 +18,7 @@ class VirtualTradingService {
             if (!portfolio) {
                 portfolio = new VirtualPortfolio({
                     userId,
-                    balance: 1000000, // ₹10 Lakh starting balance
+                    balance: 100000, // ₹1 Lakh starting balance
                     holdings: [],
                     transactions: [],
                     watchlist: [
@@ -323,44 +323,63 @@ class VirtualTradingService {
     }
 
     isMarketOpen() {
+        // Get current time in Indian timezone (IST)
         const now = new Date();
-        const currentHour = now.getHours() + now.getMinutes() / 60;
-        const isWeekday = now.getDay() >= 1 && now.getDay() <= 5;
+        const istTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
+        const currentHour = istTime.getHours() + istTime.getMinutes() / 60;
+        const isWeekday = istTime.getDay() >= 1 && istTime.getDay() <= 5;
         
+        // Market is open from 9:15 AM to 3:30 PM IST on weekdays
         return isWeekday && currentHour >= this.marketHours.start && currentHour <= this.marketHours.end;
     }
 
     async getMarketStatus() {
         const isOpen = this.isMarketOpen();
         const now = new Date();
+        const istTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
+        
+        let statusMessage;
+        if (isOpen) {
+            statusMessage = 'Market Open (NSE/BSE)';
+        } else {
+            const currentHour = istTime.getHours();
+            if (istTime.getDay() === 0 || istTime.getDay() === 6) {
+                statusMessage = 'Market Closed (Weekend)';
+            } else if (currentHour < 9) {
+                statusMessage = 'Market Closed (Pre-Market)';
+            } else {
+                statusMessage = 'Market Closed (Post-Market)';
+            }
+        }
         
         return {
             isOpen,
-            status: isOpen ? 'OPEN' : 'CLOSED',
-            timestamp: now,
+            status: statusMessage,
+            timestamp: istTime,
             nextOpen: this.getNextMarketOpen(),
-            message: isOpen ? 'Market is open for trading' : 'Market is closed'
+            message: isOpen ? 'Trading is active' : 'Trading is closed'
         };
     }
 
     getNextMarketOpen() {
         const now = new Date();
-        const nextOpen = new Date();
+        const istTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
+        const nextOpen = new Date(istTime);
         
         // If it's weekend, set to next Monday
-        if (now.getDay() === 0) { // Sunday
-            nextOpen.setDate(now.getDate() + 1);
-        } else if (now.getDay() === 6) { // Saturday
-            nextOpen.setDate(now.getDate() + 2);
+        if (istTime.getDay() === 0) { // Sunday
+            nextOpen.setDate(istTime.getDate() + 1);
+        } else if (istTime.getDay() === 6) { // Saturday
+            nextOpen.setDate(istTime.getDate() + 2);
         } else {
             // If market is closed on weekday, set to next day or same day if before market hours
-            const currentHour = now.getHours() + now.getMinutes() / 60;
+            const currentHour = istTime.getHours() + istTime.getMinutes() / 60;
             if (currentHour > this.marketHours.end) {
-                nextOpen.setDate(now.getDate() + 1);
+                nextOpen.setDate(istTime.getDate() + 1);
             }
         }
         
-        nextOpen.setHours(9, 15, 0, 0); // 9:15 AM
+        nextOpen.setHours(9, 15, 0, 0); // 9:15 AM IST
         return nextOpen;
     }
 }

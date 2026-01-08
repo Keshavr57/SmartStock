@@ -5,6 +5,7 @@ import { authService } from "../lib/auth"
 import { ENDPOINTS } from "../lib/config"
 import { getMarketCharts } from "../lib/api"
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
+import { formatCurrency, formatPercentage } from "../lib/currency"
 
 interface PortfolioData {
     totalValue: number;
@@ -37,22 +38,109 @@ export default function Home() {
         dayPnLPercent: 0
     });
     const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
-    const [marketCharts, setMarketCharts] = useState<any>(null);
+    const [marketCharts, setMarketCharts] = useState<any>({
+        nifty: {
+            name: 'NIFTY 50',
+            currentPrice: 24150,
+            change: 0.5,
+            data: [
+                { name: 'Mon', value: 24052 },
+                { name: 'Tue', value: 24230 },
+                { name: 'Wed', value: 24219 },
+                { name: 'Thu', value: 23966 },
+                { name: 'Fri', value: 24378 }
+            ]
+        },
+        sp500: {
+            name: 'S&P 500',
+            currentPrice: 5900,
+            change: 0.3,
+            data: [
+                { name: 'Mon', value: 5843 },
+                { name: 'Tue', value: 5945 },
+                { name: 'Wed', value: 5882 },
+                { name: 'Thu', value: 5922 },
+                { name: 'Fri', value: 5882 }
+            ]
+        }
+    });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         fetchUserData();
         fetchMarketCharts();
+        
+        const chartInterval = setInterval(fetchMarketCharts, 30000);
+        
+        return () => clearInterval(chartInterval);
     }, []);
 
     const fetchMarketCharts = async () => {
         try {
+            console.log('Fetching market charts...');
             const response = await getMarketCharts();
-            if (response.success) {
+            console.log('Market charts response:', response);
+            
+            if (response.success && response.charts) {
                 setMarketCharts(response.charts);
+                console.log('Market charts set:', response.charts);
+            } else {
+                console.log('No charts data in response');
+                setMarketCharts({
+                    nifty: {
+                        name: 'NIFTY 50',
+                        currentPrice: 24150,
+                        change: 0.5,
+                        data: [
+                            { name: 'Mon', value: 24052 },
+                            { name: 'Tue', value: 24230 },
+                            { name: 'Wed', value: 24219 },
+                            { name: 'Thu', value: 23966 },
+                            { name: 'Fri', value: 24378 }
+                        ]
+                    },
+                    sp500: {
+                        name: 'S&P 500',
+                        currentPrice: 5900,
+                        change: 0.3,
+                        data: [
+                            { name: 'Mon', value: 5843 },
+                            { name: 'Tue', value: 5945 },
+                            { name: 'Wed', value: 5882 },
+                            { name: 'Thu', value: 5922 },
+                            { name: 'Fri', value: 5882 }
+                        ]
+                    }
+                });
             }
         } catch (error) {
             console.error('Error fetching market charts:', error);
+            setMarketCharts({
+                nifty: {
+                    name: 'NIFTY 50',
+                    currentPrice: 24150,
+                    change: 0.5,
+                    data: [
+                        { name: 'Mon', value: 24052 },
+                        { name: 'Tue', value: 24230 },
+                        { name: 'Wed', value: 24219 },
+                        { name: 'Thu', value: 23966 },
+                        { name: 'Fri', value: 24378 }
+                    ]
+                },
+                sp500: {
+                    name: 'S&P 500',
+                    currentPrice: 5900,
+                    change: 0.3,
+                    data: [
+                        { name: 'Mon', value: 5843 },
+                        { name: 'Tue', value: 5945 },
+                        { name: 'Wed', value: 5882 },
+                        { name: 'Thu', value: 5922 },
+                        { name: 'Fri', value: 5882 }
+                    ]
+                }
+            });
         }
     };
 
@@ -61,7 +149,6 @@ export default function Home() {
             const user = authService.getUser();
             if (!user) return;
 
-            // Fetch portfolio data
             const portfolioResponse = await fetch(ENDPOINTS.PORTFOLIO(user.id), {
                 headers: authService.getAuthHeaders()
             });
@@ -71,7 +158,6 @@ export default function Home() {
                 setPortfolioData(portfolioResult.data);
             }
 
-            // Fetch recent transactions
             const transactionsResponse = await fetch(ENDPOINTS.TRANSACTIONS(user.id, 3), {
                 headers: authService.getAuthHeaders()
             });
@@ -86,29 +172,6 @@ export default function Home() {
         } finally {
             setLoading(false);
         }
-    };
-
-    const formatCurrency = (amount: number) => {
-        // Handle NaN, null, undefined values
-        if (isNaN(amount) || amount === null || amount === undefined) {
-            return '₹0';
-        }
-        
-        return new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: 'INR',
-            maximumFractionDigits: 0
-        }).format(amount);
-    };
-
-    const formatPercentage = (percent: number) => {
-        // Handle NaN, null, undefined values
-        if (isNaN(percent) || percent === null || percent === undefined) {
-            return '0.00%';
-        }
-        
-        const sign = percent >= 0 ? '+' : '';
-        return `${sign}${percent.toFixed(2)}%`;
     };
 
     const portfolioStats = [
@@ -142,17 +205,9 @@ export default function Home() {
         }
     ]
 
-    const topPerformers = [
-        { symbol: "RELIANCE", price: "₹2,847.50", change: "+1.85%", isPositive: true },
-        { symbol: "TCS", price: "₹4,125.30", change: "+2.18%", isPositive: true },
-        { symbol: "HDFCBANK", price: "₹1,685.75", change: "+0.95%", isPositive: true },
-        { symbol: "INFY", price: "₹1,892.40", change: "-0.42%", isPositive: false },
-    ]
-
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
             <div className="container mx-auto px-4 py-8">
-                {/* Header - Clean like Compare/IPO pages */}
                 <div className="text-center mb-8">
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                         Trading Dashboard
@@ -162,7 +217,6 @@ export default function Home() {
                     </p>
                 </div>
 
-                {/* Market Status - Simple like IPO page */}
                 <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-6">
                     <div className="p-4">
                         <div className="flex items-center justify-between">
@@ -183,11 +237,8 @@ export default function Home() {
                         </div>
                     </div>
                 </div>
-
-                {/* Portfolio Stats - Clean grid like IPO cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                     {loading ? (
-                        // Loading skeleton
                         Array.from({ length: 4 }).map((_, index) => (
                             <div key={index} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                                 <div className="p-6">
@@ -233,9 +284,7 @@ export default function Home() {
                     )}
                 </div>
 
-                {/* Market Charts Section - Clean like IPO cards */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    {/* NIFTY 50 Chart */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                         <div className="p-6">
                             <div className="flex items-center justify-between mb-4">
@@ -254,9 +303,9 @@ export default function Home() {
                                 </div>
                                 <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                             </div>
-                            <div className="h-32" style={{ width: '100%', height: '128px' }}>
-                                <ResponsiveContainer width="100%" height={128} minWidth={200} minHeight={128}>
-                                    <LineChart data={marketCharts?.nifty?.data || []} width={300} height={128}>
+                            <div className="h-32 w-full">
+                                <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={128}>
+                                    <LineChart data={marketCharts?.nifty?.data || []}>
                                         <Line 
                                             type="monotone" 
                                             dataKey="value" 
@@ -270,7 +319,6 @@ export default function Home() {
                         </div>
                     </div>
 
-                    {/* S&P 500 Chart */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                         <div className="p-6">
                             <div className="flex items-center justify-between mb-4">
@@ -289,9 +337,9 @@ export default function Home() {
                                 </div>
                                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                             </div>
-                            <div className="h-32" style={{ width: '100%', height: '128px' }}>
-                                <ResponsiveContainer width="100%" height={128} minWidth={200} minHeight={128}>
-                                    <LineChart data={marketCharts?.sp500?.data || []} width={300} height={128}>
+                            <div className="h-32 w-full">
+                                <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={128}>
+                                    <LineChart data={marketCharts?.sp500?.data || []}>
                                         <Line 
                                             type="monotone" 
                                             dataKey="value" 
@@ -306,7 +354,6 @@ export default function Home() {
                     </div>
                 </div>
 
-                {/* Main Content - Market Overview */}
                 <div className="space-y-6">
                     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                         <div className="p-6">
@@ -326,7 +373,6 @@ export default function Home() {
                         </div>
                     </div>
 
-                    {/* Recent Activity */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                         <div className="p-6">
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">

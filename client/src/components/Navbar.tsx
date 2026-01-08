@@ -27,8 +27,8 @@ export function Navbar({ isDark, toggleTheme, onPageChange, currentPage, onLogou
             <div className="container mx-auto flex h-16 items-center justify-between px-4">
                 <div className="flex items-center gap-4 md:gap-8">
                     <button onClick={() => onPageChange("Home")} className="flex items-center space-x-2">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black dark:bg-white">
-                            <TrendingUp className="h-5 w-5 text-white dark:text-black" />
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-blue-600 to-purple-600">
+                            <TrendingUp className="h-5 w-5 text-white" />
                         </div>
                         <span className="inline-block font-bold text-xl tracking-tighter">
                             SmartStock

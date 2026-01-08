@@ -60,20 +60,21 @@ router.get('/portfolio/:userId', authenticateToken, async (req, res) => {
         // Handle demo user
         if (req.user.userId === 'demo_user_123') {
             const demoSummary = {
-                totalValue: 111093.6,
-                totalInvested: 11093.6,
-                totalPnL: 52.5,
-                totalPnLPercent: 0.47,
-                availableBalance: 88906.4,
-                holdingsCount: 1,
-                dayPnL: 0,
-                dayPnLPercent: 0,
+                // Clear and consistent demo portfolio
+                totalValue: 101500,        // ₹1,01,500 (cash + holdings)
+                totalInvested: 15000,      // ₹15,000 invested in stocks
+                totalPnL: 500,             // ₹500 profit
+                totalPnLPercent: 3.33,     // 3.33% return
+                availableBalance: 86500,   // ₹86,500 cash available
+                holdingsCount: 2,          // 2 different stocks
+                dayPnL: 150,              // ₹150 today's profit
+                dayPnLPercent: 1.0,       // 1% today's return
                 
                 // Client-compatible fields
-                balance: 88906.4,
-                invested: 11093.6,
-                currentValue: 11146.1,
-                transactionsCount: 1
+                balance: 86500,           // Available cash
+                invested: 15000,          // Money in stocks
+                currentValue: 15500,      // Current value of holdings
+                transactionsCount: 3      // 3 transactions
             };
             
             return res.json({
@@ -92,8 +93,9 @@ router.get('/portfolio/:userId', authenticateToken, async (req, res) => {
         }
 
         // Initialize values with proper defaults
-        let totalValue = parseFloat(user.virtualBalance) || 100000;
+        let availableBalance = parseFloat(user.virtualBalance) || 100000;
         let totalInvested = 0;
+        let currentHoldingsValue = 0;
         let totalPnL = 0;
         let holdingsCount = (user.portfolio && Array.isArray(user.portfolio)) ? user.portfolio.length : 0;
 
@@ -122,15 +124,17 @@ router.get('/portfolio/:userId', authenticateToken, async (req, res) => {
                         
                         if (currentPrice > 0) {
                             const currentValue = currentPrice * quantity;
-                            totalValue = (totalValue - invested) + currentValue; // Adjust total value
+                            currentHoldingsValue += currentValue;
                             totalPnL += (currentValue - invested);
                         } else {
                             // If no valid current price, use invested amount
+                            currentHoldingsValue += invested;
                             console.log(`Using invested amount for ${holding.symbol}: ${invested}`);
                         }
                     } catch (error) {
                         console.log(`Could not get price for ${holding.symbol}, using avgPrice:`, error.message);
                         // Use invested amount as fallback
+                        currentHoldingsValue += invested;
                     }
                 } else {
                     console.log(`Invalid holding data for ${holding.symbol}: avgPrice=${avgPrice}, quantity=${quantity}`);
@@ -140,22 +144,26 @@ router.get('/portfolio/:userId', authenticateToken, async (req, res) => {
             console.log(`No portfolio holdings found for user ${userId}`);
         }
 
+        // Calculate total portfolio value (cash + holdings)
+        const totalPortfolioValue = availableBalance + currentHoldingsValue;
+
         // Ensure all values are valid numbers
         const summary = {
-            totalValue: isNaN(totalValue) ? 100000 : Math.round(totalValue * 100) / 100,
-            totalInvested: isNaN(totalInvested) ? 0 : Math.round(totalInvested * 100) / 100,
-            totalPnL: isNaN(totalPnL) ? 0 : Math.round(totalPnL * 100) / 100,
-            totalPnLPercent: (totalInvested > 0 && !isNaN(totalPnL)) ? 
+            // Main portfolio metrics
+            totalValue: Math.round(totalPortfolioValue * 100) / 100,
+            totalInvested: Math.round(totalInvested * 100) / 100,
+            totalPnL: Math.round(totalPnL * 100) / 100,
+            totalPnLPercent: (totalInvested > 0) ? 
                 Math.round((totalPnL / totalInvested) * 10000) / 100 : 0,
-            availableBalance: isNaN(user.virtualBalance) ? 100000 : Math.round(user.virtualBalance * 100) / 100,
+            availableBalance: Math.round(availableBalance * 100) / 100,
             holdingsCount: holdingsCount,
             dayPnL: 0, // Can be calculated based on daily changes
             dayPnLPercent: 0,
             
-            // Add client-expected field names for compatibility
-            balance: isNaN(user.virtualBalance) ? 100000 : Math.round(user.virtualBalance * 100) / 100,
-            invested: isNaN(totalInvested) ? 0 : Math.round(totalInvested * 100) / 100,
-            currentValue: isNaN(totalValue - (user.virtualBalance || 0)) ? 0 : Math.round((totalValue - (user.virtualBalance || 0)) * 100) / 100,
+            // Client-expected field names for compatibility
+            balance: Math.round(availableBalance * 100) / 100,
+            invested: Math.round(totalInvested * 100) / 100,
+            currentValue: Math.round(currentHoldingsValue * 100) / 100,
             transactionsCount: (user.transactions && Array.isArray(user.transactions)) ? user.transactions.length : 0
         };
         
@@ -185,15 +193,28 @@ router.get('/holdings/:userId', authenticateToken, async (req, res) => {
                 {
                     symbol: 'RELIANCE.NS',
                     name: 'Reliance Industries Limited',
-                    quantity: 7,
-                    avgPrice: 1584.8,
-                    currentPrice: 1592.3,
-                    invested: 11093.6,
-                    currentValue: 11146.1,
-                    pnl: 52.5,
-                    pnlPercent: 0.47,
+                    quantity: 5,
+                    avgPrice: 1500,
+                    currentPrice: 1520,
+                    invested: 7500,
+                    currentValue: 7600,
+                    pnl: 100,
+                    pnlPercent: 1.33,
                     purchaseDate: new Date(),
                     sector: 'Oil & Gas'
+                },
+                {
+                    symbol: 'TCS.NS',
+                    name: 'Tata Consultancy Services Limited',
+                    quantity: 2,
+                    avgPrice: 3750,
+                    currentPrice: 3950,
+                    invested: 7500,
+                    currentValue: 7900,
+                    pnl: 400,
+                    pnlPercent: 5.33,
+                    purchaseDate: new Date(),
+                    sector: 'Information Technology'
                 }
             ];
             
@@ -393,6 +414,50 @@ router.get('/transactions/:userId', authenticateToken, async (req, res) => {
         const { userId } = req.params;
         const { limit } = req.query;
         
+        // Handle demo user
+        if (req.user.userId === 'demo_user_123') {
+            const demoTransactions = [
+                {
+                    type: 'BUY',
+                    symbol: 'RELIANCE.NS',
+                    quantity: 5,
+                    price: 1500,
+                    totalAmount: 7500,
+                    fees: 7.5,
+                    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+                    orderId: 'demo_order_001',
+                    status: 'EXECUTED'
+                },
+                {
+                    type: 'BUY',
+                    symbol: 'TCS.NS',
+                    quantity: 2,
+                    price: 3750,
+                    totalAmount: 7500,
+                    fees: 7.5,
+                    timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+                    orderId: 'demo_order_002',
+                    status: 'EXECUTED'
+                },
+                {
+                    type: 'SELL',
+                    symbol: 'RELIANCE.NS',
+                    quantity: 1,
+                    price: 1520,
+                    totalAmount: 1520,
+                    fees: 1.52,
+                    timestamp: new Date().toISOString(), // Today
+                    orderId: 'demo_order_003',
+                    status: 'EXECUTED'
+                }
+            ];
+            
+            return res.json({
+                status: 'success',
+                data: demoTransactions
+            });
+        }
+        
         // Get user from database
         const user = await User.findById(req.user.userId);
         if (!user) {
@@ -402,10 +467,24 @@ router.get('/transactions/:userId', authenticateToken, async (req, res) => {
             });
         }
 
-        // Return user's actual transactions
-        const transactions = user.transactions
-            .sort((a, b) => new Date(b.date) - new Date(a.date))
-            .slice(0, parseInt(limit) || 50);
+        // Return user's actual transactions with proper null handling
+        const transactions = Array.isArray(user.transactions) ? 
+            user.transactions
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .slice(0, parseInt(limit) || 50)
+                .map(transaction => ({
+                    type: transaction.type,
+                    symbol: transaction.symbol,
+                    quantity: transaction.quantity,
+                    price: transaction.price,
+                    totalAmount: (transaction.quantity * transaction.price) || 0,
+                    fees: ((transaction.quantity * transaction.price) * 0.001) || 0,
+                    timestamp: transaction.date,
+                    orderId: transaction._id || 'unknown',
+                    status: 'EXECUTED'
+                })) : [];
+        
+        console.log(`📊 Transactions for user ${userId}:`, transactions.length, 'transactions');
         
         res.json({
             status: 'success',
@@ -817,6 +896,39 @@ router.get('/chart/:symbol', async (req, res) => {
         res.status(500).json({
             status: 'error',
             message: 'Chart data unavailable'
+        });
+    }
+});
+
+// Reset portfolio for testing (remove existing portfolio to get fresh ₹1 lakh)
+router.post('/reset-portfolio/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        // Delete existing portfolio
+        if (mongoose.connection.readyState === 1) {
+            const VirtualPortfolio = mongoose.model('VirtualPortfolio');
+            await VirtualPortfolio.deleteOne({ userId });
+        }
+        
+        // Create fresh portfolio with ₹1 lakh
+        const newPortfolio = await virtualTradingService.getOrCreatePortfolio(userId);
+        
+        res.json({
+            status: 'success',
+            message: 'Portfolio reset successfully',
+            data: {
+                balance: newPortfolio.balance,
+                totalValue: newPortfolio.balance,
+                message: 'Fresh portfolio created with ₹1,00,000'
+            }
+        });
+        
+    } catch (error) {
+        console.error('Portfolio reset error:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Failed to reset portfolio'
         });
     }
 });
