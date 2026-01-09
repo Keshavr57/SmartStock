@@ -45,13 +45,29 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
 
         script.onload = () => {
             if (window.google) {
-                window.google.accounts.id.initialize({
-                    client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-                    callback: handleGoogleSignIn,
-                    auto_select: false,
-                    cancel_on_tap_outside: true,
-                    use_fedcm_for_prompt: false
+                // Get Google Client ID with multiple fallbacks
+                const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 
+                                document.querySelector('meta[name="google-signin-client_id"]')?.getAttribute('content') ||
+                                '817549154886-k5r92c4grcvr5usdiqfjtib2se0uc5qv.apps.googleusercontent.com';
+                
+                console.log('Google OAuth Debug:', {
+                    envClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+                    metaClientId: document.querySelector('meta[name="google-signin-client_id"]')?.getAttribute('content'),
+                    finalClientId: clientId,
+                    hasGoogle: !!window.google
                 });
+                
+                if (clientId && clientId !== 'undefined') {
+                    window.google.accounts.id.initialize({
+                        client_id: clientId,
+                        callback: handleGoogleSignIn,
+                        auto_select: false,
+                        cancel_on_tap_outside: true,
+                        use_fedcm_for_prompt: false
+                    });
+                } else {
+                    console.error('Google OAuth Client ID not found');
+                }
             }
         };
 
@@ -88,6 +104,30 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
         if (window.google) {
             try {
                 setGoogleLoading(true);
+                
+                // Debug the client ID
+                const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 
+                                document.querySelector('meta[name="google-signin-client_id"]')?.getAttribute('content') ||
+                                '817549154886-k5r92c4grcvr5usdiqfjtib2se0uc5qv.apps.googleusercontent.com';
+                
+                console.log('Google Button Click Debug:', {
+                    clientId,
+                    hasGoogle: !!window.google,
+                    hasAccounts: !!window.google?.accounts,
+                    hasId: !!window.google?.accounts?.id
+                });
+                
+                // Re-initialize if needed
+                if (clientId && clientId !== 'undefined') {
+                    window.google.accounts.id.initialize({
+                        client_id: clientId,
+                        callback: handleGoogleSignIn,
+                        auto_select: false,
+                        cancel_on_tap_outside: true,
+                        use_fedcm_for_prompt: false
+                    });
+                }
+                
                 // Use the renderButton approach which is more reliable
                 const buttonContainer = document.getElementById('google-signin-container');
                 if (buttonContainer) {
@@ -111,6 +151,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                 setError('');
             }
         } else {
+            console.error('Google SDK not loaded');
             setGoogleLoading(false);
         }
     };

@@ -12,16 +12,18 @@
   "routes": [
     {
       "src": "/favicon.ico",
-      "dest": "/favicon.ico",
+      "dest": "/favicon.svg",
       "headers": {
-        "cache-control": "public, max-age=86400"
+        "cache-control": "public, max-age=86400",
+        "content-type": "image/svg+xml"
       }
     },
     {
       "src": "/favicon.svg",
       "dest": "/favicon.svg",
       "headers": {
-        "cache-control": "public, max-age=86400"
+        "cache-control": "public, max-age=86400",
+        "content-type": "image/svg+xml"
       }
     },
     {
@@ -53,6 +55,7 @@
   "env": {
     "VITE_API_BASE_URL": "https://smartstock-lkcx.onrender.com/api",
     "VITE_AI_SERVICE_URL": "https://smartstock-ai-service.onrender.com",
-    "VITE_BACKEND_URL": "https://smartstock-lkcx.onrender.com"
+    "VITE_BACKEND_URL": "https://smartstock-lkcx.onrender.com",
+    "VITE_GOOGLE_CLIENT_ID": "817549154886-k5r92c4grcvr5usdiqfjtib2se0uc5qv.apps.googleusercontent.com"
   }
 }
