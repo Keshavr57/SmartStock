@@ -184,6 +184,12 @@ router.post('/google', async (req, res) => {
     try {
         const { token } = req.body;
         
+        console.log('Google OAuth attempt:', {
+            hasToken: !!token,
+            clientId: process.env.GOOGLE_CLIENT_ID ? 'configured' : 'missing',
+            origin: req.headers.origin
+        });
+        
         if (!token) {
             return res.status(400).json({ 
                 success: false,
@@ -192,7 +198,7 @@ router.post('/google', async (req, res) => {
         }
 
         // Check if Google client is properly configured
-        if (!import.meta.env.VITE_GOOGLE_CLIENT_ID) {
+        if (!process.env.GOOGLE_CLIENT_ID) {
             console.error('Google Client ID not configured');
             return res.status(500).json({ 
                 success: false,
@@ -209,6 +215,8 @@ router.post('/google', async (req, res) => {
         const payload = ticket.getPayload();
         const { sub: googleId, email, name, picture } = payload;
 
+        console.log('Google OAuth payload:', { googleId, email, name });
+
         // Ensure database connection
         await ensureDatabaseConnection();
 
@@ -224,15 +232,18 @@ router.post('/google', async (req, res) => {
                 user.avatar = picture;
                 await user.save();
             }
+            console.log('Existing user found:', user.email);
         } else {
             // Create new user
             user = new User({
                 name,
                 email,
                 googleId,
-                avatar: picture
+                avatar: picture,
+                virtualBalance: 100000 // ₹1 lakh starting balance
             });
             await user.save();
+            console.log('New user created:', user.email);
         }
 
         const jwtToken = jwt.sign(
@@ -248,6 +259,21 @@ router.post('/google', async (req, res) => {
             user: {
                 id: user._id,
                 name: user.name,
+                email: user.email,
+                avatar: user.avatar,
+                virtualBalance: user.virtualBalance
+            }
+        });
+
+    } catch (error) {
+        console.error('Google OAuth error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Google authentication failed',
+            details: error.message
+        });
+    }
+});
                 email: user.email,
                 virtualBalance: user.virtualBalance,
                 avatar: user.avatar
