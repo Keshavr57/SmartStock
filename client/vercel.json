@@ -14,16 +14,14 @@
       "src": "/favicon.ico",
       "dest": "/favicon.svg",
       "headers": {
-        "cache-control": "public, max-age=86400",
-        "content-type": "image/svg+xml"
+        "cache-control": "public, max-age=86400"
       }
     },
     {
       "src": "/favicon.svg",
       "dest": "/favicon.svg",
       "headers": {
-        "cache-control": "public, max-age=86400",
-        "content-type": "image/svg+xml"
+        "cache-control": "public, max-age=86400"
       }
     },
     {
