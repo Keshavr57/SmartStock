@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SmartStock Debug</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%233b82f6' rx='4'/%3E%3Ctext x='16' y='20' font-family='Arial,sans-serif' font-size='14' font-weight='bold' fill='white' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E" />
+</head>
+<body>
+    <h1>SmartStock Debug Page</h1>
+    <p>If you can see the favicon in the browser tab, the favicon fix is working!</p>
+    
+    <h2>Environment Check:</h2>
+    <div id="env-check">
+        <p>Google Client ID: <span id="client-id">Loading...</span></p>
+        <p>API Base URL: <span id="api-url">Loading...</span></p>
+    </div>
+
+    <script>
+        // Check environment variables
+        document.getElementById('client-id').textContent = 
+            '817549154886-k5r92c4grcvr5usdiqfjtib2se0uc5qv.apps.googleusercontent.com';
+        document.getElementById('api-url').textContent = 
+            'https://smartstock-lkcx.onrender.com/api';
+            
+        // Test API connectivity
+        fetch('https://smartstock-lkcx.onrender.com/api/auth/verify', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            console.log('API Status:', response.status);
+            document.body.innerHTML += '<p>API Status: ' + response.status + '</p>';
+        })
+        .catch(error => {
+            console.error('API Error:', error);
+            document.body.innerHTML += '<p>API Error: ' + error.message + '</p>';
+        });
+    </script>
+</body>
+</html>
