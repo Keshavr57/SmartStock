@@ -325,7 +325,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, height = 50
             </div>
 
             {/* Chart Container */}
-            <div className="relative" style={{ height: `${height}px` }}>
+            <div className="relative bg-white rounded-lg border border-gray-200" style={{ height: `${height}px`, minHeight: '400px' }}>
                 {loading && (
                     <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
                         <div className="flex items-center space-x-2">
@@ -350,8 +350,8 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, height = 50
                 )}
 
                 {!loading && !error && chartData.length > 0 && (
-                    <div className="p-4 h-full">
-                        <ResponsiveContainer width="100%" height="100%">
+                    <div className="p-4" style={{ height: '100%', minHeight: '350px' }}>
+                        <ResponsiveContainer width="100%" height="100%" minWidth={300} minHeight={350}>
                             <AreaChart data={chartData}>
                                 <defs>
                                     <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">

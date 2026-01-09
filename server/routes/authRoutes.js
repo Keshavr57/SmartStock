@@ -267,21 +267,6 @@ router.post('/google', async (req, res) => {
 
     } catch (error) {
         console.error('Google OAuth error:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Google authentication failed',
-            details: error.message
-        });
-    }
-});
-                email: user.email,
-                virtualBalance: user.virtualBalance,
-                avatar: user.avatar
-            }
-        });
-
-    } catch (error) {
-        console.error('Google login error:', error);
         
         // More specific error handling
         if (error.message.includes('Token used too early')) {
@@ -298,10 +283,10 @@ router.post('/google', async (req, res) => {
             });
         }
 
-        res.status(500).json({ 
+        res.status(500).json({
             success: false,
-            error: 'Google login failed',
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            error: 'Google authentication failed',
+            details: process.env.NODE_ENV === 'development' ? error.message : 'Authentication error'
         });
     }
 });
