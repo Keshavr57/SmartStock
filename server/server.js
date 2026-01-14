@@ -20,42 +20,70 @@ dotenv.config();
 const app = express();
 const httpServer = createServer(app);
 
-// CORS Configuration
+// CORS Configuration - Enhanced for production
 const allowedOrigins = process.env.ALLOWED_ORIGINS 
-    ? process.env.ALLOWED_ORIGINS.split(',')
+    ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
     : ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001'];
 
 console.log('🌐 CORS Configuration:', {
-    ALLOWED_ORIGINS: allowedOrigins.join(','),
+    ALLOWED_ORIGINS: allowedOrigins,
     NODE_ENV: process.env.NODE_ENV || 'development'
 });
 
+// Enable CORS with proper configuration
 app.use(cors({
-    origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+    origin: function(origin, callback) {
+        // Allow requests with no origin (like mobile apps, curl, Postman)
+        if (!origin) {
+            return callback(null, true);
+        }
+        
+        // Check if origin is in allowed list
+        if (allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
+            console.log('❌ CORS blocked origin:', origin);
+            console.log('✅ Allowed origins:', allowedOrigins);
             callback(new Error('Not allowed by CORS'));
         }
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    maxAge: 86400 // 24 hours
 }));
+
+// Handle preflight requests explicitly
+app.options('*', cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Request logging middleware
+app.use((req, res, next) => {
+    console.log(`📥 ${req.method} ${req.path} - Origin: ${req.headers.origin || 'none'}`);
+    next();
+});
+
 // Connect to Database
 connectDB();
 
-// Socket.IO Setup
+// Socket.IO Setup with enhanced CORS
 const io = new Server(httpServer, {
     cors: {
-        origin: allowedOrigins,
+        origin: function(origin, callback) {
+            if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+                callback(null, true);
+            } else {
+                callback(new Error('Not allowed by CORS'));
+            }
+        },
         methods: ['GET', 'POST'],
-        credentials: true
-    }
+        credentials: true,
+        allowedHeaders: ['Content-Type', 'Authorization']
+    },
+    transports: ['websocket', 'polling']
 });
 
 global.io = io;
