@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, RefreshCw, BarChart3 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import { API_CONFIG } from '@/lib/config';
 
 interface TradingViewChartProps {
     symbol: string;
@@ -55,9 +56,10 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, height = 50
     const fetchRealStockData = async () => {
         try {
             // ALWAYS fetch real data from backend - NO FALLBACK TO MOCK
-            console.log(`Fetching REAL price for ${symbol} from /api/trading/quote/${symbol}`);
+            const apiUrl = `${API_CONFIG.BASE_URL}/trading/quote/${symbol}`;
+            console.log(`Fetching REAL price for ${symbol} from ${apiUrl}`);
             
-            const response = await fetch(`/api/trading/quote/${symbol}`);
+            const response = await fetch(apiUrl);
             const result = await response.json();
             
             console.log(`API Response for ${symbol}:`, result);
