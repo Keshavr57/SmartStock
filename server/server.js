@@ -17,13 +17,26 @@ import chatRoutes from './features/chat/chat.routes.js';
 
 dotenv.config();
 
+// Debug: Log environment variables
+console.log('🔍 Environment Check:', {
+    ALLOWED_ORIGINS_RAW: process.env.ALLOWED_ORIGINS,
+    ALLOWED_ORIGINS_EXISTS: !!process.env.ALLOWED_ORIGINS,
+    NODE_ENV: process.env.NODE_ENV,
+    PORT: process.env.PORT
+});
+
 const app = express();
 const httpServer = createServer(app);
 
 // CORS Configuration - Enhanced for production
 const allowedOrigins = process.env.ALLOWED_ORIGINS 
     ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
-    : ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001'];
+    : [
+        'https://smart-stock-ku3d.vercel.app',
+        'http://localhost:5173', 
+        'http://localhost:3000', 
+        'http://localhost:3001'
+    ];
 
 console.log('🌐 CORS Configuration:', {
     ALLOWED_ORIGINS: allowedOrigins,
