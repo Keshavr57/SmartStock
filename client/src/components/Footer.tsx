@@ -17,7 +17,7 @@ export function Footer({ onPageChange }: FooterProps) {
                 <div className="grid md:grid-cols-4 gap-8 mb-8">
                     <div className="col-span-1 md:col-span-1">
                         <div className="flex items-center space-x-2 mb-4">
-                            <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-r from-blue-600 to-purple-600">
+                            <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-r from-purple-600 to-purple-600">
                                 <TrendingUp className="h-4 w-4 text-white" />
                             </div>
                             <span className="font-bold text-lg tracking-tight text-gray-900 dark:text-white">SmartStock</span>
@@ -33,11 +33,11 @@ export function Footer({ onPageChange }: FooterProps) {
                                 <input 
                                     type="email" 
                                     placeholder="Enter your email"
-                                    className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                                    className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                                 />
                                 <button 
                                     onClick={() => alert('Thank you for your interest! Newsletter feature coming soon.')}
-                                    className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-md hover:from-blue-700 hover:to-purple-700 transition-all duration-200 font-medium"
+                                    className="px-4 py-2 text-sm bg-gradient-to-r from-purple-600 to-purple-600 text-white rounded-md hover:from-blue-700 hover:to-purple-700 transition-all duration-200 font-medium"
                                 >
                                     Subscribe
                                 </button>
@@ -45,13 +45,13 @@ export function Footer({ onPageChange }: FooterProps) {
                         </div>
                         
                         <div className="flex items-center gap-3">
-                            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-blue-500 transition-colors">
+                            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-purple-500 transition-colors">
                                 <Twitter className="h-4 w-4" />
                             </a>
                             <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">
                                 <Github className="h-4 w-4" />
                             </a>
-                            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-blue-600 transition-colors">
+                            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-purple-600 transition-colors">
                                 <Linkedin className="h-4 w-4" />
                             </a>
                             <a href="mailto:support@smartstock.com" className="text-gray-500 hover:text-green-600 transition-colors">
@@ -66,7 +66,7 @@ export function Footer({ onPageChange }: FooterProps) {
                             <li>
                                 <button 
                                     onClick={() => handleNavigation('VirtualTrading')} 
-                                    className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left"
+                                    className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors text-left"
                                 >
                                     Virtual Trading
                                 </button>
@@ -74,7 +74,7 @@ export function Footer({ onPageChange }: FooterProps) {
                             <li>
                                 <button 
                                     onClick={() => handleNavigation('Portfolio')} 
-                                    className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left"
+                                    className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors text-left"
                                 >
                                     Portfolio Tracker
                                 </button>
@@ -82,7 +82,7 @@ export function Footer({ onPageChange }: FooterProps) {
                             <li>
                                 <button 
                                     onClick={() => handleNavigation('Compare')} 
-                                    className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left"
+                                    className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors text-left"
                                 >
                                     Stock Comparison
                                 </button>
@@ -90,7 +90,7 @@ export function Footer({ onPageChange }: FooterProps) {
                             <li>
                                 <button 
                                     onClick={() => handleNavigation('IPOs')} 
-                                    className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left"
+                                    className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors text-left"
                                 >
                                     IPO Analysis
                                 </button>
@@ -104,7 +104,7 @@ export function Footer({ onPageChange }: FooterProps) {
                             <li>
                                 <button 
                                     onClick={() => handleNavigation('AI Advisors')} 
-                                    className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left"
+                                    className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors text-left"
                                 >
                                     AI Trading Advisor
                                 </button>
@@ -112,7 +112,7 @@ export function Footer({ onPageChange }: FooterProps) {
                             <li>
                                 <button 
                                     onClick={() => handleNavigation('Learn')} 
-                                    className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left"
+                                    className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors text-left"
                                 >
                                     Learning Center
                                 </button>
@@ -120,13 +120,13 @@ export function Footer({ onPageChange }: FooterProps) {
                             <li>
                                 <button 
                                     onClick={() => handleNavigation('News')} 
-                                    className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left"
+                                    className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors text-left"
                                 >
                                     Market News
                                 </button>
                             </li>
                             <li>
-                                <a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                                <a href="#" className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
                                     Trading Guide
                                 </a>
                             </li>
@@ -139,7 +139,7 @@ export function Footer({ onPageChange }: FooterProps) {
                             <li>
                                 <a 
                                     href="#help" 
-                                    className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                    className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
                                     onClick={(e) => {
                                         e.preventDefault();
                                         alert('Help Center: Contact us at support@smartstock.com for assistance with virtual trading, account setup, or technical issues.');
@@ -151,7 +151,7 @@ export function Footer({ onPageChange }: FooterProps) {
                             <li>
                                 <a 
                                     href="mailto:support@smartstock.com" 
-                                    className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                    className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
                                 >
                                     Contact Us
                                 </a>
@@ -159,7 +159,7 @@ export function Footer({ onPageChange }: FooterProps) {
                             <li>
                                 <a 
                                     href="#privacy" 
-                                    className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                    className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
                                     onClick={(e) => {
                                         e.preventDefault();
                                         alert('Privacy Policy: We protect your data and use it only for educational trading simulation. No real financial information is stored.');
@@ -171,7 +171,7 @@ export function Footer({ onPageChange }: FooterProps) {
                             <li>
                                 <a 
                                     href="#terms" 
-                                    className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                    className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
                                     onClick={(e) => {
                                         e.preventDefault();
                                         alert('Terms of Service: This is an educational platform for virtual trading. No real money is involved. Use responsibly for learning purposes.');
@@ -192,7 +192,7 @@ export function Footer({ onPageChange }: FooterProps) {
                         </p>
                         <button 
                             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                            className="flex items-center gap-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                            className="flex items-center gap-1 text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 transition-colors"
                             aria-label="Scroll to top"
                         >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
