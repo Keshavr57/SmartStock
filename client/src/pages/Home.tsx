@@ -303,7 +303,7 @@ export default function Home() {
                                         </span>
                                     </div>
                                 </div>
-                                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                                <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
                             </div>
                             <div className="h-32 w-full">
                                 <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={128}>
@@ -382,7 +382,7 @@ export default function Home() {
                             </h3>
                             {loading ? (
                                 <div className="text-center py-8">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
                                     <p className="text-gray-500 mt-2">Loading transactions...</p>
                                 </div>
                             ) : recentTransactions.length > 0 ? (
@@ -415,7 +415,7 @@ export default function Home() {
                                     <p className="text-gray-500 dark:text-gray-400 mb-4">
                                         Start your trading journey with virtual money
                                     </p>
-                                    <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                                    <button className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors">
                                         Start Virtual Trading
                                     </button>
                                 </div>

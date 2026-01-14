@@ -65,7 +65,7 @@
 }
 
 .premium-gradient {
-  @apply bg-gradient-to-r from-[#4F46E5] to-[#7C3AED];
+  @apply bg-gradient-to-r from-purple-600 to-purple-700;
 }
 
 .glass {
