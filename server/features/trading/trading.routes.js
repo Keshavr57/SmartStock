@@ -788,8 +788,8 @@ router.get('/search/:query', async (req, res) => {
         
         console.log(`🔍 Searching for: ${query}`);
         
-        // Import the comprehensive stock database
-        const { searchStocks } = await import('../../data/indianStocks.js');
+        // Import the comprehensive stock database - FIXED PATH
+        const { searchStocks } = await import('../stocks/indianStocks.data.js');
         
         // Use the enhanced search function
         const searchResults = searchStocks(query, 15); // Get up to 15 results
