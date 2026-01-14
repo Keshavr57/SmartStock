@@ -1,8 +1,0 @@
-This file was created to force a new deployment on Vercel.
-
-Timestamp: 2026-01-14 (Context Transfer Session)
-
-If Vercel still shows old UI after setting environment variables:
-1. Delete this file
-2. Git commit and push
-3. This will trigger a fresh deployment
