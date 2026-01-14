@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
-import { X, Plus } from 'lucide-react'
+import { X, Plus, BarChart3 } from 'lucide-react'
 import { compareAssets, getAssetsHistory, getComprehensiveComparison } from '../lib/api'
 import { cn } from '../lib/utils'
 import { Input } from '@/components/ui/input'
@@ -224,7 +224,7 @@ export default function Compare() {
                                 </ResponsiveContainer>
                             ) : (
                                 <div className="h-full flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
-                                    <div className="text-6xl mb-4">📊</div>
+                                    <BarChart3 className="h-16 w-16 mb-4 text-gray-400" />
                                     <div className="text-lg font-medium mb-2">No chart data available</div>
                                     <div className="text-sm text-center max-w-md">
                                         {selectedAssets.length === 0 
@@ -272,19 +272,19 @@ export default function Compare() {
                                                 "font-semibold",
                                                 (asset.oneDayChangePercent || 0) >= 0 ? "text-green-500" : "text-red-500"
                                             )}>
-                                                {(asset.oneDayChangePercent || 0) >= 0 ? '+' : ''}{asset.oneDayChangePercent?.toFixed(2) || 'N/A'}%
+                                                {(asset.oneDayChangePercent || 0) >= 0 ? '+' : ''}{typeof asset.oneDayChangePercent === 'number' ? asset.oneDayChangePercent.toFixed(2) : 'N/A'}%
                                             </div>
                                         </div>
                                         <div>
                                             <div className="text-gray-600 dark:text-gray-400">P/E Ratio</div>
                                             <div className="font-semibold">
-                                                {asset.peRatio?.toFixed(2) || 'N/A'}
+                                                {asset.peRatio && typeof asset.peRatio === 'number' ? asset.peRatio.toFixed(2) : 'N/A'}
                                             </div>
                                         </div>
                                         <div>
                                             <div className="text-gray-600 dark:text-gray-400">EPS</div>
                                             <div className="font-semibold">
-                                                ₹{asset.eps?.toFixed(2) || 'N/A'}
+                                                {asset.eps && typeof asset.eps === 'number' ? `₹${asset.eps.toFixed(2)}` : 'N/A'}
                                             </div>
                                         </div>
                                         {asset.revenue && (
@@ -292,13 +292,13 @@ export default function Compare() {
                                                 <div>
                                                     <div className="text-gray-600 dark:text-gray-400">Revenue</div>
                                                     <div className="font-semibold">
-                                                        ₹{(asset.revenue / 10000000).toFixed(0)}K Cr
+                                                        {asset.revenue && typeof asset.revenue === 'number' ? `₹${(asset.revenue / 10000000).toFixed(0)}K Cr` : 'N/A'}
                                                     </div>
                                                 </div>
                                                 <div>
                                                     <div className="text-gray-600 dark:text-gray-400">ROE</div>
                                                     <div className="font-semibold">
-                                                        {asset.roe?.toFixed(2) || 'N/A'}%
+                                                        {asset.roe && typeof asset.roe === 'number' ? `${asset.roe.toFixed(2)}%` : 'N/A'}
                                                     </div>
                                                 </div>
                                             </>

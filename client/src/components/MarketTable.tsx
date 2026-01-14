@@ -1,7 +1,7 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { getMarketHighlights, getMarketCharts } from "../lib/api"
 import { useState, useEffect } from "react"
-import { ChevronUp, ChevronDown } from "lucide-react"
+import { ChevronUp, ChevronDown, TrendingUp, Globe } from "lucide-react"
 
 export function MarketTable() {
     const [marketData, setMarketData] = useState<any>({ stocks: [] })
@@ -52,8 +52,9 @@ export function MarketTable() {
                 <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
                     <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                                📈 Trending Indian Stocks
+                            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                <TrendingUp className="h-5 w-5 text-green-600" />
+                                Trending Indian Stocks
                             </h3>
                             <span className="text-sm text-green-600 font-medium bg-green-100 px-2 py-1 rounded-full">
                                 Live NSE/BSE
@@ -104,8 +105,9 @@ export function MarketTable() {
                 <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
                     <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                                🌍 Global Stock Markets
+                            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                <Globe className="h-5 w-5 text-blue-600" />
+                                Global Stock Markets
                             </h3>
                             <span className="text-sm text-blue-600 font-medium bg-blue-100 px-2 py-1 rounded-full">
                                 Live Global

@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { TrendingUp, RefreshCw, Calendar, DollarSign, AlertTriangle, Clock, Target, BarChart3 } from "lucide-react"
+import { TrendingUp, RefreshCw, Calendar, DollarSign, AlertTriangle, Clock, Target, BarChart3, BookOpen, FileText } from "lucide-react"
 import { useState, useEffect } from "react"
 import { getUpcomingIPOs } from "../lib/api"
 
@@ -156,11 +156,11 @@ export default function IPOs() {
                                     <span className="text-gray-600">Low Risk</span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <span>🟡</span>
+                                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
                                     <span className="text-gray-600">Medium Risk</span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <span>🔴</span>
+                                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                                     <span className="text-gray-600">High Risk</span>
                                 </div>
                             </div>
@@ -186,8 +186,9 @@ export default function IPOs() {
                                 <BarChart3 className="h-5 w-5 text-blue-600" />
                             </div>
                             <div>
-                                <h3 className="text-lg font-semibold text-blue-900 mb-3">
-                                    📚 How We Calculate IPO Risk Assessment
+                                <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                                    <BookOpen className="h-5 w-5 text-blue-600" />
+                                    How We Calculate IPO Risk Assessment
                                 </h3>
                                 <p className="text-blue-800 mb-4 text-sm">
                                     Our educational risk assessment uses 3 key company factors to help you understand IPO investment risks:
@@ -200,9 +201,18 @@ export default function IPOs() {
                                             <span className="font-semibold text-blue-900">Promoter Holding</span>
                                         </div>
                                         <ul className="text-blue-700 space-y-1">
-                                            <li>• 75%+ = Low Risk 🟢</li>
-                                            <li>• 60-74% = Medium Risk 🟡</li>
-                                            <li>• Below 60% = High Risk 🔴</li>
+                                            <li className="flex items-center gap-2">
+                                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                                <span>75%+ = Low Risk</span>
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                                                <span>60-74% = Medium Risk</span>
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                                <span>Below 60% = High Risk</span>
+                                            </li>
                                         </ul>
                                         <p className="text-xs text-blue-600 mt-2">Higher promoter holding shows management confidence</p>
                                     </div>
@@ -213,9 +223,18 @@ export default function IPOs() {
                                             <span className="font-semibold text-blue-900">Company Age</span>
                                         </div>
                                         <ul className="text-blue-700 space-y-1">
-                                            <li>• 15+ years = Low Risk 🟢</li>
-                                            <li>• 8-14 years = Medium Risk 🟡</li>
-                                            <li>• Below 8 years = High Risk 🔴</li>
+                                            <li className="flex items-center gap-2">
+                                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                                <span>15+ years = Low Risk</span>
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                                                <span>8-14 years = Medium Risk</span>
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                                <span>Below 8 years = High Risk</span>
+                                            </li>
                                         </ul>
                                         <p className="text-xs text-blue-600 mt-2">Older companies have proven business models</p>
                                     </div>
@@ -226,9 +245,18 @@ export default function IPOs() {
                                             <span className="font-semibold text-blue-900">Profit History</span>
                                         </div>
                                         <ul className="text-blue-700 space-y-1">
-                                            <li>• 10+ years profit = Low Risk 🟢</li>
-                                            <li>• 3-9 years profit = Medium Risk 🟡</li>
-                                            <li>• Loss-making = High Risk 🔴</li>
+                                            <li className="flex items-center gap-2">
+                                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                                <span>10+ years profit = Low Risk</span>
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                                                <span>3-9 years profit = Medium Risk</span>
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                                <span>Loss-making = High Risk</span>
+                                            </li>
                                         </ul>
                                         <p className="text-xs text-blue-600 mt-2">Consistent profits indicate financial stability</p>
                                     </div>
@@ -346,11 +374,17 @@ export default function IPOs() {
                         <div className="flex items-start gap-3">
                             <AlertTriangle className="h-6 w-6 text-amber-500 mt-0.5 flex-shrink-0" />
                             <div className="text-sm text-gray-600">
-                                <h4 className="font-semibold text-gray-900 mb-3 text-base">📋 Important Investment Guidelines</h4>
+                                <h4 className="font-semibold text-gray-900 mb-3 text-base flex items-center gap-2">
+                                    <FileText className="h-5 w-5 text-amber-600" />
+                                    Important Investment Guidelines
+                                </h4>
                                 
                                 <div className="grid md:grid-cols-2 gap-4 mb-4">
                                     <div>
-                                        <h5 className="font-medium text-gray-900 mb-2">🎯 Before You Invest:</h5>
+                                        <h5 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                                            <Target className="h-4 w-4 text-blue-600" />
+                                            Before You Invest:
+                                        </h5>
                                         <ul className="space-y-1 text-gray-600">
                                             <li>• Read the company's prospectus thoroughly</li>
                                             <li>• Understand the business model and sector risks</li>
@@ -360,7 +394,10 @@ export default function IPOs() {
                                     </div>
                                     
                                     <div>
-                                        <h5 className="font-medium text-gray-900 mb-2">⚠️ Key Risk Factors:</h5>
+                                        <h5 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                                            <AlertTriangle className="h-4 w-4 text-amber-600" />
+                                            Key Risk Factors:
+                                        </h5>
                                         <ul className="space-y-1 text-gray-600">
                                             <li>• IPO prices can be volatile post-listing</li>
                                             <li>• Limited trading history for price discovery</li>

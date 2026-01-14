@@ -11,7 +11,11 @@ import {
     RefreshCw,
     ArrowLeft,
     CheckCircle,
-    ExternalLink
+    ExternalLink,
+    BarChart3,
+    TrendingUp,
+    Briefcase,
+    FileText
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { getLearningList, getLessonContent } from "../lib/api"
@@ -132,12 +136,12 @@ export default function ComprehensiveLearn() {
 
     const getCategoryIcon = (category: string) => {
         switch (category.toLowerCase()) {
-            case 'basics': return '📚'
-            case 'analysis': return '📊'
-            case 'trading': return '💹'
-            case 'portfolio management': return '💼'
-            case 'derivatives': return '🔄'
-            default: return '📖'
+            case 'basics': return <BookOpen className="h-5 w-5" />
+            case 'analysis': return <BarChart3 className="h-5 w-5" />
+            case 'trading': return <TrendingUp className="h-5 w-5" />
+            case 'portfolio management': return <Briefcase className="h-5 w-5" />
+            case 'derivatives': return <RefreshCw className="h-5 w-5" />
+            default: return <FileText className="h-5 w-5" />
         }
     }
 

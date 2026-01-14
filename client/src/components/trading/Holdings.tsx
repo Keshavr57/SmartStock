@@ -36,7 +36,7 @@ const Holdings: React.FC = () => {
                 return;
             }
 
-            const response = await api.get(`/virtual/holdings/${user.id}`);
+            const response = await api.get(`/trading/holdings/${user.id}`);
             
             if (response.data.status === 'success') {
                 setHoldings(response.data.data);

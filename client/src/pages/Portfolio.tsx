@@ -63,11 +63,11 @@ const Portfolio: React.FC = () => {
             const userId = currentUser.id;
             
             // Fetch portfolio summary
-            const summaryResponse = await api.get(`/virtual/portfolio/${userId}`);
+            const summaryResponse = await api.get(`/trading/portfolio/${userId}`);
             const summaryData = summaryResponse.data;
             
             // Fetch holdings
-            const holdingsResponse = await api.get(`/virtual/holdings/${userId}`);
+            const holdingsResponse = await api.get(`/trading/holdings/${userId}`);
             const holdingsData = holdingsResponse.data;
             
             if (summaryData.status === 'success') {

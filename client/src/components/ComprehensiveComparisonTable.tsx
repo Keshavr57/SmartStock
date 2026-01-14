@@ -69,14 +69,14 @@ interface ComprehensiveComparisonTableProps {
 
 export default function ComprehensiveComparisonTable({ data, loading }: ComprehensiveComparisonTableProps) {
   const formatCurrency = (value: number | null, symbol?: string) => {
-    if (value === null || value === undefined) return 'N/A';
+    if (value === null || value === undefined || typeof value !== 'number') return 'N/A';
     const isIndian = symbol?.includes('.NS') || symbol?.includes('.BO');
     const prefix = isIndian ? '₹' : '$';
     return `${prefix}${value.toLocaleString()}`;
   };
 
   const formatLargeCurrency = (value: number | null, symbol?: string) => {
-    if (value === null || value === undefined) return 'N/A';
+    if (value === null || value === undefined || typeof value !== 'number') return 'N/A';
     const isIndian = symbol?.includes('.NS') || symbol?.includes('.BO');
     const prefix = isIndian ? '₹' : '$';
     
@@ -88,12 +88,12 @@ export default function ComprehensiveComparisonTable({ data, loading }: Comprehe
   };
 
   const formatPercentage = (value: number | null) => {
-    if (value === null || value === undefined) return 'N/A';
+    if (value === null || value === undefined || typeof value !== 'number') return 'N/A';
     return `${value.toFixed(2)}%`;
   };
 
   const formatNumber = (value: number | null, _symbol?: string, decimals: number = 2) => {
-    if (value === null || value === undefined) return 'N/A';
+    if (value === null || value === undefined || typeof value !== 'number') return 'N/A';
     return value.toFixed(decimals);
   };
 

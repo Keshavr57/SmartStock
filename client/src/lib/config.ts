@@ -9,19 +9,19 @@ export const API_CONFIG = {
 // API Endpoints
 export const ENDPOINTS = {
   // Virtual Trading
-  PORTFOLIO: (userId: string) => `${API_CONFIG.BASE_URL}/virtual/portfolio/${userId}`,
-  HOLDINGS: (userId: string) => `${API_CONFIG.BASE_URL}/virtual/holdings/${userId}`,
+  PORTFOLIO: (userId: string) => `${API_CONFIG.BASE_URL}/trading/portfolio/${userId}`,
+  HOLDINGS: (userId: string) => `${API_CONFIG.BASE_URL}/trading/holdings/${userId}`,
   TRANSACTIONS: (userId: string, limit?: number) => 
-    `${API_CONFIG.BASE_URL}/virtual/transactions/${userId}${limit ? `?limit=${limit}` : ''}`,
-  WATCHLIST: (userId: string) => `${API_CONFIG.BASE_URL}/virtual/watchlist/${userId}`,
+    `${API_CONFIG.BASE_URL}/trading/transactions/${userId}${limit ? `?limit=${limit}` : ''}`,
+  WATCHLIST: (userId: string) => `${API_CONFIG.BASE_URL}/trading/watchlist/${userId}`,
   WATCHLIST_ITEM: (userId: string, symbol: string) => 
-    `${API_CONFIG.BASE_URL}/virtual/watchlist/${userId}/${symbol}`,
-  ORDER: (userId: string) => `${API_CONFIG.BASE_URL}/virtual/order/${userId}`,
-  QUOTE: (symbol: string) => `${API_CONFIG.BASE_URL}/virtual/quote/${symbol}`,
-  SEARCH: (query: string) => `${API_CONFIG.BASE_URL}/virtual/search/${query}`,
-  MARKET_STATUS: `${API_CONFIG.BASE_URL}/virtual/market-status`,
+    `${API_CONFIG.BASE_URL}/trading/watchlist/${userId}/${symbol}`,
+  ORDER: (userId: string) => `${API_CONFIG.BASE_URL}/trading/order/${userId}`,
+  QUOTE: (symbol: string) => `${API_CONFIG.BASE_URL}/trading/quote/${symbol}`,
+  SEARCH: (query: string) => `${API_CONFIG.BASE_URL}/trading/search/${query}`,
+  MARKET_STATUS: `${API_CONFIG.BASE_URL}/trading/market-status`,
   CHART: (symbol: string, interval?: string) => 
-    `${API_CONFIG.BASE_URL}/virtual/chart/${symbol}${interval ? `?interval=${interval}` : ''}`,
+    `${API_CONFIG.BASE_URL}/trading/chart/${symbol}${interval ? `?interval=${interval}` : ''}`,
   
   // Authentication
   AUTH: {

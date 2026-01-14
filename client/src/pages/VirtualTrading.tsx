@@ -65,7 +65,7 @@ const VirtualTrading: React.FC = () => {
                 return;
             }
 
-            const response = await api.get(`/virtual/portfolio/${user.id}`);
+            const response = await api.get(`/trading/portfolio/${user.id}`);
             if (response.data.status === 'success') {
                 setPortfolioData(response.data.data);
             }
@@ -87,7 +87,7 @@ const VirtualTrading: React.FC = () => {
 
     const fetchMarketStatus = async () => {
         try {
-            const response = await api.get('/virtual/market-status');
+            const response = await api.get('/trading/market-status');
             if (response.data.status === 'success') {
                 setMarketStatus(response.data.data);
             }
@@ -114,7 +114,7 @@ const VirtualTrading: React.FC = () => {
         }
 
         try {
-            const response = await api.get(`/virtual/search/${query}`);
+            const response = await api.get(`/trading/search/${query}`);
             if (response.data.status === 'success') {
                 setSearchResults(response.data.data);
             }

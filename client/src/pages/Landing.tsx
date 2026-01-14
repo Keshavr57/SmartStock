@@ -217,7 +217,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                     <div className="flex justify-between items-center h-16">
                         {/* Logo */}
                         <div className="flex items-center space-x-2">
-                            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                            <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-purple-600 rounded-lg flex items-center justify-center">
                                 <TrendingUp className="h-5 w-5 text-white" />
                             </div>
                             <span className="text-xl font-bold text-gray-900">SmartStock</span>
@@ -261,7 +261,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                             </button>
                             <button 
                                 onClick={() => setShowSignupModal(true)}
-                                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-medium"
+                                className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 font-medium"
                             >
                                 Sign Up
                             </button>
@@ -296,7 +296,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                                 </button>
                                 <button 
                                     onClick={() => setShowSignupModal(true)}
-                                    className="block w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium"
+                                    className="block w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-medium"
                                 >
                                     Sign Up
                                 </button>
@@ -313,7 +313,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                         Learn Trading with
                     </h1>
                     <h2 className="text-5xl md:text-6xl font-bold mb-8">
-                        <span className="text-blue-600">Smart AI Insights</span>
+                        <span className="text-purple-600">Smart AI Insights</span>
                     </h2>
                     <p className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto">
                         India's most comprehensive platform for virtual trading, stock analysis, and 
@@ -322,7 +322,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
                         <button 
                             onClick={() => setShowSignupModal(true)}
-                            className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 font-semibold text-lg"
+                            className="bg-purple-600 text-white px-8 py-4 rounded-lg hover:bg-purple-700 font-semibold text-lg"
                         >
                             Start Learning Free
                         </button>
@@ -362,8 +362,8 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                         </div>
                         
                         <div className="text-center p-6 bg-white rounded-lg border border-gray-200 hover:shadow-sm transition-shadow">
-                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                                <BookOpen className="h-6 w-6 text-blue-600" />
+                            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                                <BookOpen className="h-6 w-6 text-purple-600" />
                             </div>
                             <h3 className="text-lg font-semibold text-gray-900 mb-2">Educational Platform</h3>
                             <p className="text-gray-600 text-sm">Learn trading concepts with comprehensive resources</p>
@@ -410,7 +410,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                                 
                                 <div className="p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors" onClick={showLoginRequired}>
                                     <div className="flex items-center space-x-2 mb-2">
-                                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-bold">Markets</span>
+                                        <span className="bg-purple-600 text-white px-2 py-1 rounded text-xs font-bold">Markets</span>
                                         <span className="text-sm text-gray-500">5 hours ago</span>
                                     </div>
                                     <h4 className="font-semibold text-gray-900 mb-1">Nifty 50 Hits New All-Time High as IT Stocks Rally</h4>
@@ -423,7 +423,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                         <div className="bg-white rounded-lg p-6 border border-gray-200">
                             <div className="flex items-center justify-between mb-6">
                                 <h3 className="text-xl font-semibold text-gray-900">Global Markets</h3>
-                                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">International</span>
+                                <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">International</span>
                             </div>
                             <div className="space-y-4">
                                 <div className="p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors" onClick={showLoginRequired}>
@@ -460,17 +460,17 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                     <div className="bg-white rounded-lg p-8 border border-gray-200">
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center space-x-3">
-                                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                    <Bot className="h-6 w-6 text-blue-600" />
+                                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                                    <Bot className="h-6 w-6 text-purple-600" />
                                 </div>
                                 <span className="text-lg font-semibold text-gray-900">SmartStock AI</span>
                             </div>
                             <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">Online</span>
                         </div>
                         
-                        <div className="bg-blue-50 rounded-lg p-4 mb-6 border border-blue-100">
+                        <div className="bg-purple-50 rounded-lg p-4 mb-6 border border-purple-100">
                             <div className="flex items-start space-x-3">
-                                <Bot className="h-6 w-6 text-blue-600 mt-1 flex-shrink-0" />
+                                <Bot className="h-6 w-6 text-purple-600 mt-1 flex-shrink-0" />
                                 <div>
                                     <p className="text-gray-900">Hello! I'm your AI trading assistant. I can help you analyze Indian stocks, provide investment insights, and guide your trading decisions. What would you like to know?</p>
                                 </div>
@@ -480,10 +480,10 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                         <div className="mb-6">
                             <p className="text-sm text-gray-600 mb-3">Popular questions:</p>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                <button onClick={showLoginRequired} className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-sm hover:bg-blue-100 transition-colors text-left border border-blue-200">What's the outlook for RELIANCE?</button>
-                                <button onClick={showLoginRequired} className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-sm hover:bg-blue-100 transition-colors text-left border border-blue-200">Should I invest in TCS?</button>
-                                <button onClick={showLoginRequired} className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-sm hover:bg-blue-100 transition-colors text-left border border-blue-200">Analyze HDFC Bank performance</button>
-                                <button onClick={showLoginRequired} className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-sm hover:bg-blue-100 transition-colors text-left border border-blue-200">Best IPOs this month?</button>
+                                <button onClick={showLoginRequired} className="bg-purple-50 text-purple-700 px-4 py-2 rounded-lg text-sm hover:bg-purple-100 transition-colors text-left border border-purple-200">What's the outlook for RELIANCE?</button>
+                                <button onClick={showLoginRequired} className="bg-purple-50 text-purple-700 px-4 py-2 rounded-lg text-sm hover:bg-purple-100 transition-colors text-left border border-purple-200">Should I invest in TCS?</button>
+                                <button onClick={showLoginRequired} className="bg-purple-50 text-purple-700 px-4 py-2 rounded-lg text-sm hover:bg-purple-100 transition-colors text-left border border-purple-200">Analyze HDFC Bank performance</button>
+                                <button onClick={showLoginRequired} className="bg-purple-50 text-purple-700 px-4 py-2 rounded-lg text-sm hover:bg-purple-100 transition-colors text-left border border-purple-200">Best IPOs this month?</button>
                             </div>
                         </div>
                         
@@ -491,13 +491,13 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                             <input 
                                 type="text" 
                                 placeholder="Ask me about Indian stocks, IPOs, or trading strategies..."
-                                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
+                                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-50"
                                 onClick={showLoginRequired}
                                 readOnly
                             />
                             <button 
                                 onClick={showLoginRequired}
-                                className="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-colors"
+                                className="bg-purple-600 text-white p-3 rounded-lg hover:bg-purple-700 transition-colors"
                             >
                                 <MessageCircle className="h-5 w-5" />
                             </button>
@@ -513,7 +513,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                         {/* Logo & Description */}
                         <div className="md:col-span-2">
                             <div className="flex items-center space-x-2 mb-4">
-                                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                                <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-purple-600 rounded-lg flex items-center justify-center">
                                     <TrendingUp className="h-5 w-5 text-white" />
                                 </div>
                                 <span className="text-xl font-bold text-gray-900">SmartStock</span>
@@ -527,7 +527,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                                     href="https://twitter.com/smartstock" 
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className="text-gray-400 hover:text-blue-500 transition-colors"
+                                    className="text-gray-400 hover:text-purple-500 transition-colors"
                                     aria-label="Follow us on Twitter"
                                 >
                                     <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
@@ -549,7 +549,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                                     href="https://linkedin.com/company/smartstock" 
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className="text-gray-400 hover:text-blue-600 transition-colors"
+                                    className="text-gray-400 hover:text-purple-600 transition-colors"
                                     aria-label="Connect on LinkedIn"
                                 >
                                     <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
@@ -577,7 +577,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                                         onClick={() => {
                                             setShowLoginModal(true);
                                         }}
-                                        className="hover:text-blue-600 transition-colors text-left"
+                                        className="hover:text-purple-600 transition-colors text-left"
                                     >
                                         Virtual Trading
                                     </button>
@@ -587,7 +587,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                                         onClick={() => {
                                             setShowLoginModal(true);
                                         }}
-                                        className="hover:text-blue-600 transition-colors text-left"
+                                        className="hover:text-purple-600 transition-colors text-left"
                                     >
                                         Stock Comparison
                                     </button>
@@ -597,7 +597,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                                         onClick={() => {
                                             setShowLoginModal(true);
                                         }}
-                                        className="hover:text-blue-600 transition-colors text-left"
+                                        className="hover:text-purple-600 transition-colors text-left"
                                     >
                                         AI Trading Advisor
                                     </button>
@@ -607,7 +607,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                                         onClick={() => {
                                             setShowLoginModal(true);
                                         }}
-                                        className="hover:text-blue-600 transition-colors text-left"
+                                        className="hover:text-purple-600 transition-colors text-left"
                                     >
                                         IPO Analysis
                                     </button>
@@ -617,7 +617,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                                         onClick={() => {
                                             setShowLoginModal(true);
                                         }}
-                                        className="hover:text-blue-600 transition-colors text-left"
+                                        className="hover:text-purple-600 transition-colors text-left"
                                     >
                                         Portfolio Tracker
                                     </button>
@@ -632,7 +632,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                                 <li>
                                     <a 
                                         href="#help" 
-                                        className="hover:text-blue-600 transition-colors"
+                                        className="hover:text-purple-600 transition-colors"
                                         onClick={(e) => {
                                             e.preventDefault();
                                             alert('Help Center: Contact us at support@smartstock.com for assistance with virtual trading, account setup, or technical issues.');
@@ -644,7 +644,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                                 <li>
                                     <a 
                                         href="mailto:support@smartstock.com"
-                                        className="hover:text-blue-600 transition-colors"
+                                        className="hover:text-purple-600 transition-colors"
                                     >
                                         Contact Us
                                     </a>
@@ -652,7 +652,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                                 <li>
                                     <a 
                                         href="#privacy" 
-                                        className="hover:text-blue-600 transition-colors"
+                                        className="hover:text-purple-600 transition-colors"
                                         onClick={(e) => {
                                             e.preventDefault();
                                             alert('Privacy Policy: We protect your data and use it only for educational trading simulation. No real financial information is stored.');
@@ -664,7 +664,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                                 <li>
                                     <a 
                                         href="#terms" 
-                                        className="hover:text-blue-600 transition-colors"
+                                        className="hover:text-purple-600 transition-colors"
                                         onClick={(e) => {
                                             e.preventDefault();
                                             alert('Terms of Service: This is an educational platform for virtual trading. No real money is involved. Use responsibly for learning purposes.');
@@ -684,12 +684,14 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                         <div className="text-gray-500 text-sm mt-4 md:mt-0 flex items-center gap-4">
                             <div className="flex items-center">
                                 <span className="mr-2">Made with</span>
-                                <span className="text-red-500 mx-1">❤️</span>
+                                <svg className="h-4 w-4 text-red-500 mx-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                                </svg>
                                 <span>for learning traders in India</span>
                             </div>
                             <button 
                                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                                className="flex items-center gap-1 text-blue-600 hover:text-blue-700 transition-colors ml-4"
+                                className="flex items-center gap-1 text-purple-600 hover:text-purple-700 transition-colors ml-4"
                                 aria-label="Scroll to top"
                             >
                                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -730,7 +732,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                             <div>
                                 <input 
                                     type="email" 
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                     placeholder="Email address"
                                     value={loginForm.email}
                                     onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
@@ -741,7 +743,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                             <div>
                                 <input 
                                     type="password" 
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                     placeholder="Password"
                                     value={loginForm.password}
                                     onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
@@ -752,7 +754,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                             <button 
                                 type="submit"
                                 disabled={loading}
-                                className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {loading ? 'Logging in...' : 'Login'}
                             </button>
@@ -791,7 +793,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                                     setShowSignupModal(true);
                                     setError('');
                                 }}
-                                className="text-blue-600 hover:underline ml-1"
+                                className="text-purple-600 hover:underline ml-1"
                             >
                                 Sign up free
                             </button>
@@ -828,7 +830,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                             <div>
                                 <input 
                                     type="text" 
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                     placeholder="Full name"
                                     value={signupForm.name}
                                     onChange={(e) => setSignupForm({ ...signupForm, name: e.target.value })}
@@ -839,7 +841,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                             <div>
                                 <input 
                                     type="email" 
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                     placeholder="Email address"
                                     value={signupForm.email}
                                     onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
@@ -850,7 +852,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                             <div>
                                 <input 
                                     type="password" 
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                     placeholder="Create password (min 6 characters)"
                                     value={signupForm.password}
                                     onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
@@ -862,7 +864,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                             <button 
                                 type="submit"
                                 disabled={loading}
-                                className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {loading ? 'Creating Account...' : 'Create Account'}
                             </button>
@@ -901,7 +903,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                                     setShowLoginModal(true);
                                     setError('');
                                 }}
-                                className="text-blue-600 hover:underline ml-1"
+                                className="text-purple-600 hover:underline ml-1"
                             >
                                 Login
                             </button>
