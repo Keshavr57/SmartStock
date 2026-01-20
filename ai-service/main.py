@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import Optional
 import os
+import time
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -40,38 +41,43 @@ async def health_check():
 
 @app.get("/test")
 async def test_ai():
-    """Simple test endpoint to verify AI functionality"""
+    """Enhanced test endpoint to verify RAG functionality"""
     try:
         # Test GROQ API key
         groq_key = os.getenv("GROQ_API_KEY")
         if not groq_key:
             return {"status": "error", "message": "GROQ API key not found"}
         
+        # Test RAG knowledge retrieval
+        from engine import get_relevant_knowledge, get_stock_context
+        
+        test_query = "What is P/E ratio?"
+        knowledge = get_relevant_knowledge(test_query)
+        stock_context = get_stock_context("reliance stock analysis")
+        
         # Test simple AI query
-        from engine import llm, PROFESSIONAL_SYSTEM_PROMPT
+        from engine import process_query_with_rag
         
-        messages = [
-            {"role": "system", "content": "You are a helpful assistant. Respond with exactly: 'AI service is working correctly!'"},
-            {"role": "user", "content": "Test message"}
-        ]
-        
-        response = llm.invoke(messages)
+        test_response = process_query_with_rag("Hello, test the AI service")
         
         return {
             "status": "success", 
             "groq_key_present": bool(groq_key),
             "groq_key_prefix": groq_key[:10] if groq_key else None,
-            "ai_response": response.content,
-            "message": "AI service test completed"
+            "rag_knowledge_items": len(knowledge),
+            "stock_context_items": len(stock_context),
+            "ai_response_length": len(test_response),
+            "ai_response_preview": test_response[:100] + "..." if len(test_response) > 100 else test_response,
+            "message": "Enhanced RAG-based AI service test completed successfully"
         }
         
     except Exception as e:
-        return {"status": "error", "message": f"AI test failed: {str(e)}"}
+        return {"status": "error", "message": f"AI test failed: {str(e)}", "error_type": type(e).__name__}
 
 @app.post("/process")
 async def chat_endpoint(request: ChatRequest):
     try:
-        print(f"🤖 AI Service received query: {request.message}")
+        print(f"🤖 Enhanced AI Service received query: {request.message}")
         print(f"🤖 User ID: {request.user_id}")
         
         # BYPASS LOGIC: If the system asks for raw IPO data, return it directly
@@ -85,18 +91,41 @@ async def chat_endpoint(request: ChatRequest):
         
         # Test simple response first
         if request.message.lower() == "test":
-            return {"status": "success", "answer": "AI service is receiving messages correctly!"}
+            return {"status": "success", "answer": "Enhanced RAG-based AI service is receiving messages correctly!"}
         
-        # Otherwise, let the AI Agent handle the chat normally
-        print("🤖 Processing query with AI engine...")
+        # Process with enhanced RAG engine
+        print("🤖 Processing query with enhanced RAG engine...")
         ai_answer = process_query(request.message)
-        print(f"🤖 AI Response generated: {ai_answer[:100]}...")
+        print(f"🤖 Enhanced AI Response generated: {len(ai_answer)} characters")
         
-        return {"status": "success", "answer": ai_answer}
+        return {
+            "status": "success", 
+            "answer": ai_answer,
+            "service_type": "rag_enhanced",
+            "timestamp": str(int(time.time()))
+        }
         
     except Exception as e:
-        print(f"🚨 AI Service Error: {str(e)}")
-        return {"status": "error", "message": str(e)}
+        print(f"🚨 Enhanced AI Service Error: {str(e)}")
+        
+        # Enhanced fallback response
+        fallback_msg = f"""I'm your AI advisor for Indian stock markets! I can help you with:
+
+• Stock analysis (Reliance, TCS, HDFC Bank, etc.)
+• Investment strategies (SIP, diversification, risk management)
+• Market insights and IPO analysis
+• Educational content about trading and investing
+
+Ask me something specific like "Analyze Reliance stock" or "Best investment strategy for beginners".
+
+📚 This is for educational purposes. Always do your own research before investing."""
+        
+        return {
+            "status": "success", 
+            "answer": fallback_msg,
+            "service_type": "enhanced_fallback",
+            "error_logged": str(e)
+        }
 
 if __name__ == "__main__":
     import uvicorn

@@ -32,7 +32,7 @@ const Holdings: React.FC = () => {
         try {
             const user = authService.getUser();
             if (!user) {
-                console.error('No authenticated user found');
+
                 return;
             }
 
@@ -42,7 +42,7 @@ const Holdings: React.FC = () => {
                 setHoldings(response.data.data);
             }
         } catch (error) {
-            console.error('Error fetching holdings:', error);
+
         } finally {
             setLoading(false);
         }

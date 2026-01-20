@@ -50,13 +50,6 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                                 document.querySelector('meta[name="google-signin-client_id"]')?.getAttribute('content') ||
                                 '817549154886-k5r92c4grcvr5usdiqfjtib2se0uc5qv.apps.googleusercontent.com';
                 
-                console.log('Google OAuth Debug:', {
-                    envClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-                    metaClientId: document.querySelector('meta[name="google-signin-client_id"]')?.getAttribute('content'),
-                    finalClientId: clientId,
-                    hasGoogle: !!window.google
-                });
-                
                 if (clientId && clientId !== 'undefined') {
                     window.google.accounts.id.initialize({
                         client_id: clientId,
@@ -66,7 +59,7 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                         use_fedcm_for_prompt: false
                     });
                 } else {
-                    console.error('Google OAuth Client ID not found');
+                    // Google OAuth Client ID not found
                 }
             }
         };
@@ -110,13 +103,6 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                                 document.querySelector('meta[name="google-signin-client_id"]')?.getAttribute('content') ||
                                 '817549154886-k5r92c4grcvr5usdiqfjtib2se0uc5qv.apps.googleusercontent.com';
                 
-                console.log('Google Button Click Debug:', {
-                    clientId,
-                    hasGoogle: !!window.google,
-                    hasAccounts: !!window.google?.accounts,
-                    hasId: !!window.google?.accounts?.id
-                });
-                
                 // Re-initialize if needed
                 if (clientId && clientId !== 'undefined') {
                     window.google.accounts.id.initialize({
@@ -145,13 +131,12 @@ const Landing: React.FC<LandingProps> = ({ onLogin }) => {
                 }
                 setGoogleLoading(false);
             } catch (error) {
-                console.error('Google Sign-In error:', error);
                 // Don't show error for Google OAuth issues, just hide the button
                 setGoogleLoading(false);
                 setError('');
             }
         } else {
-            console.error('Google SDK not loaded');
+            // Google SDK not loaded
             setGoogleLoading(false);
         }
     };

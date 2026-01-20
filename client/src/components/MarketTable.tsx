@@ -26,7 +26,7 @@ export function MarketTable() {
                     setChartsData(chartsRes.charts)
                 }
             } catch (error) {
-                console.error("Failed to fetch market data:", error)
+                // Silent error handling
             } finally {
                 setLoading(false)
             }

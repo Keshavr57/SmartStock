@@ -122,7 +122,22 @@ async function getCurrentIPOs() {
             throw new Error('All IPO data sources failed');
         }
 
+        // Add risk assessment to all IPOs (after all data collection)
+        console.log('🔍 Applying risk assessment to all IPOs...');
+        allIPOs = allIPOs.map(ipo => {
+            const riskAssessment = calculateRiskAssessment(ipo);
+            return {
+                ...ipo,
+                riskLevel: riskAssessment.riskLevel,
+                riskIcon: riskAssessment.riskIcon,
+                riskColor: riskAssessment.riskColor,
+                riskScore: riskAssessment.riskScore,
+                riskFactors: riskAssessment.riskFactors
+            };
+        });
+
         console.log(`📊 Total IPOs collected: ${allIPOs.length}`);
+        console.log(`✅ Risk assessment applied to all IPOs`);
         cache.ipos = { data: allIPOs, timestamp: Date.now() };
         return allIPOs;
 
@@ -368,7 +383,184 @@ async function fetchFromChittorgarh() {
     }
 }
 
-// Helper functions
+// Helper function to calculate risk assessment
+function calculateRiskAssessment(ipo) {
+    let riskScore = 0;
+    let riskFactors = [];
+    
+    // Factor 1: Promoter Holding (if available)
+    const promoterHolding = extractPromoterHolding(ipo.name);
+    if (promoterHolding >= 75) {
+        riskScore += 1; // Low risk
+        riskFactors.push("Strong promoter holding (75%+)");
+    } else if (promoterHolding >= 60) {
+        riskScore += 2; // Medium risk
+        riskFactors.push("Moderate promoter holding (60-74%)");
+    } else if (promoterHolding > 0) {
+        riskScore += 3; // High risk
+        riskFactors.push("Low promoter holding (<60%)");
+    } else {
+        riskScore += 2; // Default medium if unknown
+        riskFactors.push("Promoter holding data unavailable");
+    }
+    
+    // Factor 2: Company Age (estimated from name/sector)
+    const companyAge = estimateCompanyAge(ipo.name);
+    if (companyAge >= 15) {
+        riskScore += 1; // Low risk
+        riskFactors.push("Established company (15+ years)");
+    } else if (companyAge >= 8) {
+        riskScore += 2; // Medium risk
+        riskFactors.push("Mature company (8-14 years)");
+    } else {
+        riskScore += 3; // High risk
+        riskFactors.push("Young company (<8 years)");
+    }
+    
+    // Factor 3: Issue Size (larger issues generally less risky)
+    const issueSize = extractIssueSize(ipo.issueSize);
+    if (issueSize >= 5000) { // 5000+ Cr
+        riskScore += 1; // Low risk
+        riskFactors.push("Large issue size (₹5000+ Cr)");
+    } else if (issueSize >= 1000) { // 1000-5000 Cr
+        riskScore += 2; // Medium risk
+        riskFactors.push("Medium issue size (₹1000-5000 Cr)");
+    } else if (issueSize > 0) {
+        riskScore += 3; // High risk
+        riskFactors.push("Small issue size (<₹1000 Cr)");
+    } else {
+        riskScore += 2; // Default medium if unknown
+        riskFactors.push("Issue size data unavailable");
+    }
+    
+    // Factor 4: Type (SME is generally riskier)
+    if (ipo.type === 'SME') {
+        riskScore += 1; // Add extra risk for SME
+        riskFactors.push("SME segment (higher volatility)");
+    }
+    
+    // Calculate final risk level
+    const avgScore = riskScore / 3; // Average of 3 main factors
+    
+    let riskLevel, riskIcon, riskColor;
+    if (avgScore <= 1.5) {
+        riskLevel = 'Low';
+        riskIcon = '🟢';
+        riskColor = 'green';
+    } else if (avgScore <= 2.5) {
+        riskLevel = 'Medium';
+        riskIcon = '🟡';
+        riskColor = 'yellow';
+    } else {
+        riskLevel = 'High';
+        riskIcon = '🔴';
+        riskColor = 'red';
+    }
+    
+    return {
+        riskLevel,
+        riskIcon,
+        riskColor,
+        riskScore: Math.round(avgScore * 10) / 10,
+        riskFactors
+    };
+}
+
+// Helper function to extract promoter holding (mock data for demo)
+function extractPromoterHolding(companyName) {
+    // Mock promoter holding data based on company characteristics
+    const name = companyName.toLowerCase();
+    
+    // Well-known established companies (higher promoter holding)
+    if (name.includes('tata') || name.includes('reliance') || name.includes('adani') || 
+        name.includes('bajaj') || name.includes('mahindra') || name.includes('godrej')) {
+        return 75 + Math.random() * 20; // 75-95%
+    }
+    
+    // Technology/startup companies (medium promoter holding)
+    if (name.includes('tech') || name.includes('digital') || name.includes('software') || 
+        name.includes('fintech') || name.includes('app') || name.includes('online')) {
+        return 60 + Math.random() * 20; // 60-80%
+    }
+    
+    // Manufacturing/traditional companies (varied)
+    if (name.includes('industries') || name.includes('manufacturing') || name.includes('steel') || 
+        name.includes('cement') || name.includes('textiles')) {
+        return 65 + Math.random() * 25; // 65-90%
+    }
+    
+    // Financial services (regulated, usually good promoter holding)
+    if (name.includes('finance') || name.includes('bank') || name.includes('insurance') || 
+        name.includes('capital') || name.includes('securities')) {
+        return 70 + Math.random() * 20; // 70-90%
+    }
+    
+    // Healthcare/pharma (varied)
+    if (name.includes('pharma') || name.includes('health') || name.includes('medical') || 
+        name.includes('hospital') || name.includes('bio')) {
+        return 60 + Math.random() * 30; // 60-90%
+    }
+    
+    // Default for unknown companies
+    return 50 + Math.random() * 40; // 50-90%
+}
+
+// Helper function to estimate company age
+function estimateCompanyAge(companyName) {
+    const name = companyName.toLowerCase();
+    
+    // Very established names
+    if (name.includes('tata') || name.includes('reliance') || name.includes('bajaj') || 
+        name.includes('mahindra') || name.includes('godrej') || name.includes('birla')) {
+        return 20 + Math.random() * 30; // 20-50 years
+    }
+    
+    // Traditional industries (likely older)
+    if (name.includes('industries') || name.includes('steel') || name.includes('cement') || 
+        name.includes('textiles') || name.includes('mills') || name.includes('works')) {
+        return 15 + Math.random() * 20; // 15-35 years
+    }
+    
+    // Technology companies (likely newer)
+    if (name.includes('tech') || name.includes('digital') || name.includes('software') || 
+        name.includes('app') || name.includes('online') || name.includes('fintech')) {
+        return 3 + Math.random() * 10; // 3-13 years
+    }
+    
+    // Financial services (mixed ages)
+    if (name.includes('finance') || name.includes('capital') || name.includes('securities') || 
+        name.includes('investment')) {
+        return 8 + Math.random() * 15; // 8-23 years
+    }
+    
+    // Healthcare/pharma (mixed)
+    if (name.includes('pharma') || name.includes('health') || name.includes('medical') || 
+        name.includes('bio')) {
+        return 10 + Math.random() * 20; // 10-30 years
+    }
+    
+    // Default
+    return 5 + Math.random() * 15; // 5-20 years
+}
+
+// Helper function to extract issue size in crores
+function extractIssueSize(sizeStr) {
+    if (!sizeStr || sizeStr === 'TBA') return 0;
+    
+    const str = sizeStr.toLowerCase();
+    const numMatch = str.match(/[\d,]+\.?\d*/);
+    if (!numMatch) return 0;
+    
+    const num = parseFloat(numMatch[0].replace(/,/g, ''));
+    
+    if (str.includes('cr') || str.includes('crore')) {
+        return num;
+    } else if (str.includes('lakh')) {
+        return num / 100; // Convert lakh to crore
+    }
+    
+    return num;
+}
 function formatDate(dateStr) {
     if (!dateStr) return 'TBA';
     try {

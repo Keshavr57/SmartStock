@@ -34,7 +34,7 @@ const Watchlist: React.FC<WatchlistProps> = ({ onStockSelect }) => {
         try {
             const user = authService.getUser();
             if (!user) {
-                console.error('No authenticated user found');
+
                 return;
             }
 
@@ -47,7 +47,7 @@ const Watchlist: React.FC<WatchlistProps> = ({ onStockSelect }) => {
                 setWatchlist(data.data);
             }
         } catch (error) {
-            console.error('Error fetching watchlist:', error);
+
         } finally {
             setLoading(false);
         }
@@ -66,7 +66,7 @@ const Watchlist: React.FC<WatchlistProps> = ({ onStockSelect }) => {
                 setSearchResults(data.data);
             }
         } catch (error) {
-            console.error('Error searching stocks:', error);
+
         }
     };
 
@@ -74,7 +74,7 @@ const Watchlist: React.FC<WatchlistProps> = ({ onStockSelect }) => {
         try {
             const user = authService.getUser();
             if (!user) {
-                console.error('No authenticated user found');
+
                 return;
             }
 
@@ -91,7 +91,7 @@ const Watchlist: React.FC<WatchlistProps> = ({ onStockSelect }) => {
                 fetchWatchlist();
             }
         } catch (error) {
-            console.error('Error adding to watchlist:', error);
+
         }
     };
 
@@ -99,7 +99,7 @@ const Watchlist: React.FC<WatchlistProps> = ({ onStockSelect }) => {
         try {
             const user = authService.getUser();
             if (!user) {
-                console.error('No authenticated user found');
+
                 return;
             }
 
@@ -112,7 +112,7 @@ const Watchlist: React.FC<WatchlistProps> = ({ onStockSelect }) => {
                 fetchWatchlist();
             }
         } catch (error) {
-            console.error('Error removing from watchlist:', error);
+
         }
     };
 

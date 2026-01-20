@@ -46,7 +46,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, height = 50
             await fetchRealStockData();
             
         } catch (error) {
-            console.error('Error loading chart data:', error);
+
             setError('Failed to load real-time price data');
         } finally {
             setLoading(false);
@@ -57,18 +57,13 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, height = 50
         try {
             // ALWAYS fetch real data from backend - NO FALLBACK TO MOCK
             const apiUrl = `${API_CONFIG.BASE_URL}/trading/quote/${symbol}`;
-            console.log(`Fetching REAL price for ${symbol} from ${apiUrl}`);
-            
+
             const response = await fetch(apiUrl);
             const result = await response.json();
-            
-            console.log(`API Response for ${symbol}:`, result);
-            
+
             if (result.status === 'success' && result.data && result.data.price && result.data.price > 0) {
                 const stockData = result.data;
-                
-                console.log(`Got REAL price for ${symbol}: ₹${stockData.price}`);
-                
+
                 // Use the EXACT same price that buy functionality uses
                 setStockInfo({
                     price: stockData.price,
@@ -82,13 +77,13 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, height = 50
 
                 // Generate realistic chart data based on the EXACT same price as buy functionality
                 generateRealisticChartData(stockData.price);
-                console.log(`Chart displaying REAL price: ₹${stockData.price}`);
+
             } else {
-                console.error(`❌ Invalid API response for ${symbol}:`, result);
+
                 setError(`Unable to fetch real price for ${symbol}`);
             }
         } catch (error) {
-            console.error(`❌ Error fetching real stock data for ${symbol}:`, error);
+
             setError(`Failed to load price data for ${symbol}`);
         }
     };
@@ -97,9 +92,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, height = 50
         const data: ChartDataPoint[] = [];
         const now = new Date();
         let basePrice = realPrice;
-        
-        console.log(`Generating chart data around real price: ₹${realPrice}`);
-        
+
         // Generate data points for the last 24 hours based on EXACT real current price
         for (let i = 100; i >= 0; i--) {
             const time = new Date(now.getTime() - i * 15 * 60 * 1000); // 15-minute intervals
@@ -131,7 +124,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, height = 50
         }
 
         setChartData(data);
-        console.log(`Chart data generated with ${data.length} points, ending at ₹${realPrice}`);
+
     };
 
     const generateMockChartData = () => {
@@ -177,9 +170,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, height = 50
         else if (symbol.includes('PAYTM')) basePrice = 985;
         else if (symbol.includes('NAUKRI')) basePrice = 4850;
         else if (symbol.includes('DMART')) basePrice = 3685;
-        
-        console.log(`Using fallback price for ${symbol}: ₹${basePrice} (same as buy functionality)`);
-        
+
         // Generate data points for the last 24 hours
         for (let i = 100; i >= 0; i--) {
             const time = new Date(now.getTime() - i * 15 * 60 * 1000); // 15-minute intervals
@@ -226,8 +217,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, height = 50
             low: Math.min(...data.map(d => d.price)),
             open: data[0]?.price || basePrice
         });
-        
-        console.log(`Chart fallback data generated for ${symbol} at ₹${currentPrice}`);
+
     };
 
     const timeframes = [

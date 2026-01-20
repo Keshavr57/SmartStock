@@ -32,7 +32,7 @@ const TransactionHistory: React.FC = () => {
             setError(null);
             const user = authService.getUser();
             if (!user) {
-                console.error('No authenticated user found');
+
                 setTransactions([]);
                 setLoading(false);
                 return;
@@ -46,11 +46,11 @@ const TransactionHistory: React.FC = () => {
             if (data.status === 'success' && Array.isArray(data.data)) {
                 setTransactions(data.data);
             } else {
-                console.log('No transaction data or invalid format:', data);
+
                 setTransactions([]);
             }
         } catch (error) {
-            console.error('Error fetching transactions:', error);
+
             setError('Failed to load transactions');
             setTransactions([]);
         } finally {

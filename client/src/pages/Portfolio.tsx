@@ -55,7 +55,7 @@ const Portfolio: React.FC = () => {
             // Get user from localStorage
             const userData = localStorage.getItem('user');
             if (!userData) {
-                console.error('No user data found');
+
                 return;
             }
             
@@ -116,7 +116,7 @@ const Portfolio: React.FC = () => {
                 setHoldings(transformedHoldings);
             }
         } catch (error) {
-            console.error('Error fetching portfolio data:', error);
+
             // Set default values to prevent blank screen
             setPortfolioSummary({
                 totalValue: 0,

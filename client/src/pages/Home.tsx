@@ -79,15 +79,11 @@ export default function Home() {
 
     const fetchMarketCharts = async () => {
         try {
-            console.log('Fetching market charts...');
             const response = await getMarketCharts();
-            console.log('Market charts response:', response);
             
             if (response.success && response.charts) {
                 setMarketCharts(response.charts);
-                console.log('Market charts set:', response.charts);
             } else {
-                console.log('No charts data in response');
                 setMarketCharts({
                     nifty: {
                         name: 'NIFTY 50',
@@ -116,7 +112,6 @@ export default function Home() {
                 });
             }
         } catch (error) {
-            console.error('Error fetching market charts:', error);
             setMarketCharts({
                 nifty: {
                     name: 'NIFTY 50',
@@ -170,7 +165,7 @@ export default function Home() {
             }
 
         } catch (error) {
-            console.error('Error fetching user data:', error);
+            // Silent error handling
         } finally {
             setLoading(false);
         }

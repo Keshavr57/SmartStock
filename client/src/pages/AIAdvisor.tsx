@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,14 +18,27 @@ export default function AIAdvisor() {
     const [input, setInput] = useState('')
     const [isTyping, setIsTyping] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
+    const messagesContainerRef = useRef<HTMLDivElement>(null)
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-    }
+    const scrollToBottom = useCallback(() => {
+        if (messagesEndRef.current && messagesContainerRef.current) {
+            // Use requestAnimationFrame to ensure DOM is fully updated
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    const container = messagesContainerRef.current
+                    if (container) {
+                        // Scroll to the very bottom
+                        container.scrollTop = container.scrollHeight
+                    }
+                }, 50)
+            })
+        }
+    }, [])
 
+    // Scroll to bottom when messages change or typing status changes
     useEffect(() => {
         scrollToBottom()
-    }, [messages])
+    }, [messages, isTyping, scrollToBottom])
 
     const handleSend = async () => {
         if (!input.trim() || isTyping) return
@@ -35,10 +48,16 @@ export default function AIAdvisor() {
             content: input,
             timestamp: new Date()
         }
-        setMessages(prev => [...prev, userMsg])
+        
         const query = input
         setInput('')
+        
+        // Add user message and scroll immediately
+        setMessages(prev => [...prev, userMsg])
         setIsTyping(true)
+        
+        // Ensure scroll happens after state update
+        setTimeout(() => scrollToBottom(), 50)
 
         try {
             const user = authService.getUser();
@@ -46,13 +65,14 @@ export default function AIAdvisor() {
             const res = await processAiQuery(query, userId);
             
             if (res.status === 'success') {
-                setMessages(prev => [...prev, { 
+                const assistantMsg: Message = { 
                     role: 'assistant', 
                     content: res.answer,
                     timestamp: new Date()
-                }])
+                }
+                setMessages(prev => [...prev, assistantMsg])
             } else {
-                setMessages(prev => [...prev, { 
+                const fallbackMsg: Message = { 
                     role: 'assistant', 
                     content: `I'm having trouble processing that right now. Let me help you with some common topics:
 
@@ -62,11 +82,11 @@ I can also explain market concepts like P/E ratios, diversification, or how to e
 
 What specific area would you like to learn about?`,
                     timestamp: new Date()
-                }])
+                }
+                setMessages(prev => [...prev, fallbackMsg])
             }
         } catch (error) {
-            console.error("AI Advisor Error:", error)
-            setMessages(prev => [...prev, { 
+            const errorMsg: Message = { 
                 role: 'assistant', 
                 content: `Sorry, I'm having connection issues right now. 
 
@@ -74,7 +94,8 @@ While I get back online, here are some key investing principles: always research
 
 Try asking me again in a moment, or ask about specific topics like "how to analyze stocks" or "investment tips for beginners".`,
                 timestamp: new Date()
-            }])
+            }
+            setMessages(prev => [...prev, errorMsg])
         } finally {
             setIsTyping(false)
         }
@@ -89,6 +110,11 @@ Try asking me again in a moment, or ask about specific topics like "how to analy
 
     const handleQuickQuestion = (question: string) => {
         setInput(question)
+        // Focus the input after setting the question
+        setTimeout(() => {
+            const inputElement = document.querySelector('input[placeholder*="Ask about stocks"]') as HTMLInputElement
+            inputElement?.focus()
+        }, 100)
     }
 
     return (
@@ -138,7 +164,10 @@ Try asking me again in a moment, or ask about specific topics like "how to analy
                 {/* Chat Messages */}
                 <Card className="mb-6">
                     <CardContent className="p-0">
-                        <div className="h-96 overflow-y-auto p-6">
+                        <div 
+                            ref={messagesContainerRef}
+                            className="h-[500px] overflow-y-auto p-6 chat-container"
+                        >
                             {messages.length === 0 ? (
                                 <div className="text-center py-12">
                                     <Bot className="h-12 w-12 mx-auto mb-4 text-gray-400" />
@@ -152,7 +181,7 @@ Try asking me again in a moment, or ask about specific topics like "how to analy
                             ) : (
                                 <div className="space-y-6">
                                     {messages.map((message, index) => (
-                                        <div key={index} className={`flex gap-4 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                                        <div key={`${message.role}-${index}-${message.timestamp.getTime()}`} className={`flex gap-4 message-enter ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
                                             <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                                                 message.role === 'user' 
                                                     ? 'bg-blue-600 text-white' 
@@ -169,7 +198,7 @@ Try asking me again in a moment, or ask about specific topics like "how to analy
                                                         ? 'bg-blue-600 text-white'
                                                         : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
                                                 }`}>
-                                                    <div className="whitespace-pre-wrap text-sm">
+                                                    <div className="whitespace-pre-wrap text-sm leading-relaxed">
                                                         {message.content}
                                                     </div>
                                                 </div>
@@ -181,7 +210,7 @@ Try asking me again in a moment, or ask about specific topics like "how to analy
                                     ))}
                                     
                                     {isTyping && (
-                                        <div className="flex gap-4">
+                                        <div className="flex gap-4 message-enter">
                                             <div className="w-8 h-8 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center flex-shrink-0">
                                                 <Bot className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                                             </div>
@@ -199,7 +228,8 @@ Try asking me again in a moment, or ask about specific topics like "how to analy
                                             </div>
                                         </div>
                                     )}
-                                    <div ref={messagesEndRef} />
+                                    {/* Scroll anchor - this ensures we always scroll to the bottom */}
+                                    <div ref={messagesEndRef} className="h-1" />
                                 </div>
                             )}
                         </div>
@@ -209,23 +239,27 @@ Try asking me again in a moment, or ask about specific topics like "how to analy
                 {/* Input Section */}
                 <Card>
                     <CardContent className="p-4">
-                        <div className="flex gap-3">
+                        <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-3">
                             <Input
                                 placeholder="Ask about stocks, trading, investing, or market analysis..."
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                                 className="flex-1"
                                 disabled={isTyping}
+                                autoComplete="off"
                             />
                             <Button 
-                                onClick={handleSend} 
+                                type="submit"
                                 disabled={isTyping || !input.trim()}
                                 className="px-6"
                             >
-                                <Send className="h-4 w-4" />
+                                {isTyping ? (
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                    <Send className="h-4 w-4" />
+                                )}
                             </Button>
-                        </div>
+                        </form>
                         <div className="flex items-center justify-between mt-3">
                             <p className="text-xs text-gray-500">
                                 AI-powered market insights • Educational purposes only

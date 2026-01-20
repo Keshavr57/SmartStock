@@ -51,8 +51,6 @@ export default function News() {
                 setNews(res.data)
             }
         } catch (error) {
-            console.error("Failed to fetch news:", error)
-        } finally {
             setLoading(false)
         }
     }

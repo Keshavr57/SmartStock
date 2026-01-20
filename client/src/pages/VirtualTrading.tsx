@@ -61,7 +61,7 @@ const VirtualTrading: React.FC = () => {
         try {
             const user = authService.getUser();
             if (!user) {
-                console.error('No authenticated user found');
+
                 return;
             }
 
@@ -70,7 +70,7 @@ const VirtualTrading: React.FC = () => {
                 setPortfolioData(response.data.data);
             }
         } catch (error) {
-            console.error('Error fetching portfolio:', error);
+
             // Set default portfolio data to prevent blank screen
             setPortfolioData({
                 balance: 100000, // ₹1 Lakh starting balance
@@ -92,7 +92,7 @@ const VirtualTrading: React.FC = () => {
                 setMarketStatus(response.data.data);
             }
         } catch (error) {
-            console.error('Error fetching market status:', error);
+
             // Set default market status with proper IST timing
             const now = new Date();
             const istTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
@@ -119,7 +119,7 @@ const VirtualTrading: React.FC = () => {
                 setSearchResults(response.data.data);
             }
         } catch (error) {
-            console.error('Error searching stocks:', error);
+
         }
     };
 

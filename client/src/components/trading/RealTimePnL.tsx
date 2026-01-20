@@ -89,7 +89,7 @@ const RealTimePnL: React.FC = () => {
             };
 
         } catch (error) {
-            console.error('Error initializing real-time P&L:', error);
+
         } finally {
             setLoading(false);
         }
@@ -121,7 +121,7 @@ const RealTimePnL: React.FC = () => {
         try {
             const user = authService.getUser();
             if (!user) {
-                console.error('No authenticated user found');
+
                 return;
             }
 

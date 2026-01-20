@@ -1,6 +1,8 @@
 // server/controllers/chat.controller.js
 import axios from 'axios';
 
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'https://smartstock-ai-service.onrender.com';
+
 export const getAIChatResponse = async (req, res) => {
     try {
         const { message, userId } = req.body;
@@ -14,20 +16,50 @@ export const getAIChatResponse = async (req, res) => {
 
         console.log(`💬 AI Query from ${userId}: ${message}`);
 
-        // Generate contextual response immediately (AI service is unreliable)
+        // Try AI service first
+        try {
+            console.log(`🤖 Calling AI service at: ${AI_SERVICE_URL}/process`);
+            
+            const aiResponse = await axios.post(`${AI_SERVICE_URL}/process`, {
+                message: message,
+                user_id: userId
+            }, {
+                timeout: 15000, // 15 second timeout
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (aiResponse.data && aiResponse.data.status === 'success' && aiResponse.data.answer) {
+                console.log(`✅ AI service responded successfully`);
+                return res.status(200).json({
+                    status: "success",
+                    answer: aiResponse.data.answer,
+                    source: "ai_service"
+                });
+            }
+        } catch (aiError) {
+            console.error("AI Service Error:", aiError.message);
+            // Fall back to contextual response if AI service fails
+        }
+
+        // Fallback to contextual response
+        console.log(`🔄 Using fallback response for: ${message}`);
         const fallbackResponse = generateContextualFallback(message);
         
         res.status(200).json({
             status: "success",
-            answer: fallbackResponse
+            answer: fallbackResponse,
+            source: "fallback"
         });
 
     } catch (error) {
-        console.error("AI Service Error:", error.message);
+        console.error("Chat Controller Error:", error.message);
         
         res.status(200).json({
             status: "success",
-            answer: "I'm here to help! Ask me about stocks, investing, IPOs, or market analysis."
+            answer: "I'm here to help! Ask me about stocks, investing, IPOs, or market analysis.",
+            source: "error_fallback"
         });
     }
 };

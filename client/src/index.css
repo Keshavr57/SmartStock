@@ -83,3 +83,41 @@
 ::-webkit-scrollbar-thumb {
   @apply bg-zinc-300 dark:bg-zinc-800 rounded-full hover:bg-zinc-400 dark:hover:bg-zinc-700;
 }
+/* Chat-specific smooth scrolling improvements */
+.chat-container {
+  scroll-behavior: smooth;
+  overflow-anchor: none;
+}
+
+.chat-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-container::-webkit-scrollbar-thumb {
+  @apply bg-zinc-200 dark:bg-zinc-700 rounded-full;
+}
+
+.chat-container::-webkit-scrollbar-thumb:hover {
+  @apply bg-zinc-300 dark:bg-zinc-600;
+}
+
+/* Smooth message animations */
+.message-enter {
+  animation: messageSlideIn 0.3s ease-out;
+}
+
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ensure smooth scrolling globally */
+html {
+  scroll-behavior: smooth;
+}

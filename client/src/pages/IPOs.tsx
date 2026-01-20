@@ -9,6 +9,7 @@ export default function IPOs() {
     const [ipos, setIpos] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [lastUpdated, setLastUpdated] = useState<string>('')
+    const [showRiskGuide, setShowRiskGuide] = useState(false)
 
     const fetchIPOs = async () => {
         setLoading(true)
@@ -25,6 +26,9 @@ export default function IPOs() {
                     size: item.issueSize || "TBA",
                     riskLevel: item.riskLevel || "Medium",
                     riskIcon: item.riskIcon || "🟡",
+                    riskColor: item.riskColor || "yellow",
+                    riskScore: item.riskScore || 2.0,
+                    riskFactors: item.riskFactors || [],
                     lotSize: item.lotSize || "TBA",
                     type: item.type || item.category || "Mainboard",
                     sector: item.sector || "General",
@@ -36,8 +40,6 @@ export default function IPOs() {
                 setLastUpdated(res.lastUpdated || new Date().toLocaleString())
             }
         } catch (error) {
-            console.error("Failed to fetch IPOs:", error)
-        } finally {
             setLoading(false)
         }
     }
@@ -163,6 +165,15 @@ export default function IPOs() {
                                     <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                                     <span className="text-gray-600">High Risk</span>
                                 </div>
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => setShowRiskGuide(!showRiskGuide)}
+                                    className="ml-4 text-blue-600 hover:text-blue-800"
+                                >
+                                    <BookOpen className="h-4 w-4 mr-1" />
+                                    {showRiskGuide ? 'Hide' : 'Show'} Risk Guide
+                                </Button>
                             </div>
                             <Button 
                                 variant="outline" 
@@ -178,101 +189,101 @@ export default function IPOs() {
                     </CardContent>
                 </Card>
 
-                {/* Educational Risk Assessment Guide */}
-                <Card className="mb-6 bg-blue-50 border-blue-200">
-                    <CardContent className="p-6">
-                        <div className="flex items-start gap-3">
-                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                <BarChart3 className="h-5 w-5 text-blue-600" />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
-                                    <BookOpen className="h-5 w-5 text-blue-600" />
-                                    How We Calculate IPO Risk Assessment
-                                </h3>
-                                <p className="text-blue-800 mb-4 text-sm">
-                                    Our educational risk assessment uses 3 key company factors to help you understand IPO investment risks:
-                                </p>
-                                
-                                <div className="grid md:grid-cols-3 gap-4 text-sm">
-                                    <div className="bg-white rounded-lg p-4 border border-blue-200">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <Target className="h-4 w-4 text-blue-600" />
-                                            <span className="font-semibold text-blue-900">Promoter Holding</span>
-                                        </div>
-                                        <ul className="text-blue-700 space-y-1">
-                                            <li className="flex items-center gap-2">
-                                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                                <span>75%+ = Low Risk</span>
-                                            </li>
-                                            <li className="flex items-center gap-2">
-                                                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                                                <span>60-74% = Medium Risk</span>
-                                            </li>
-                                            <li className="flex items-center gap-2">
-                                                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                                                <span>Below 60% = High Risk</span>
-                                            </li>
-                                        </ul>
-                                        <p className="text-xs text-blue-600 mt-2">Higher promoter holding shows management confidence</p>
-                                    </div>
-                                    
-                                    <div className="bg-white rounded-lg p-4 border border-blue-200">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <Clock className="h-4 w-4 text-blue-600" />
-                                            <span className="font-semibold text-blue-900">Company Age</span>
-                                        </div>
-                                        <ul className="text-blue-700 space-y-1">
-                                            <li className="flex items-center gap-2">
-                                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                                <span>15+ years = Low Risk</span>
-                                            </li>
-                                            <li className="flex items-center gap-2">
-                                                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                                                <span>8-14 years = Medium Risk</span>
-                                            </li>
-                                            <li className="flex items-center gap-2">
-                                                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                                                <span>Below 8 years = High Risk</span>
-                                            </li>
-                                        </ul>
-                                        <p className="text-xs text-blue-600 mt-2">Older companies have proven business models</p>
-                                    </div>
-                                    
-                                    <div className="bg-white rounded-lg p-4 border border-blue-200">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <TrendingUp className="h-4 w-4 text-blue-600" />
-                                            <span className="font-semibold text-blue-900">Profit History</span>
-                                        </div>
-                                        <ul className="text-blue-700 space-y-1">
-                                            <li className="flex items-center gap-2">
-                                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                                <span>10+ years profit = Low Risk</span>
-                                            </li>
-                                            <li className="flex items-center gap-2">
-                                                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                                                <span>3-9 years profit = Medium Risk</span>
-                                            </li>
-                                            <li className="flex items-center gap-2">
-                                                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                                                <span>Loss-making = High Risk</span>
-                                            </li>
-                                        </ul>
-                                        <p className="text-xs text-blue-600 mt-2">Consistent profits indicate financial stability</p>
-                                    </div>
+                {/* Collapsible Risk Assessment Guide */}
+                {showRiskGuide && (
+                    <Card className="mb-6 bg-blue-50 border-blue-200">
+                        <CardContent className="p-6">
+                            <div className="flex items-start gap-3">
+                                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <BarChart3 className="h-5 w-5 text-blue-600" />
                                 </div>
-                                
-                                <div className="mt-4 p-3 bg-blue-100 rounded-lg border border-blue-300">
-                                    <p className="text-xs text-blue-800">
-                                        <strong>Educational Note:</strong> This risk assessment is for learning purposes only. 
-                                        Always read the company's prospectus, consider your risk tolerance, and consult with a financial advisor before investing. 
-                                        IPO investments carry market risks and past performance doesn't guarantee future results.
+                                <div>
+                                    <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                                        How We Calculate IPO Risk Assessment
+                                    </h3>
+                                    <p className="text-blue-800 mb-4 text-sm">
+                                        Our educational risk assessment analyzes 3 key factors to help you understand IPO investment risks:
                                     </p>
+                                    
+                                    <div className="grid md:grid-cols-3 gap-4 text-sm">
+                                        <div className="bg-white rounded-lg p-4 border border-blue-200">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Target className="h-4 w-4 text-blue-600" />
+                                                <span className="font-semibold text-blue-900">Promoter Holding</span>
+                                            </div>
+                                            <ul className="text-blue-700 space-y-1">
+                                                <li className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                                    <span>75%+ = Low Risk</span>
+                                                </li>
+                                                <li className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                                                    <span>60-74% = Medium Risk</span>
+                                                </li>
+                                                <li className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                                    <span>Below 60% = High Risk</span>
+                                                </li>
+                                            </ul>
+                                            <p className="text-xs text-blue-600 mt-2">Higher holding shows management confidence</p>
+                                        </div>
+                                        
+                                        <div className="bg-white rounded-lg p-4 border border-blue-200">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Clock className="h-4 w-4 text-blue-600" />
+                                                <span className="font-semibold text-blue-900">Company Age</span>
+                                            </div>
+                                            <ul className="text-blue-700 space-y-1">
+                                                <li className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                                    <span>15+ years = Low Risk</span>
+                                                </li>
+                                                <li className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                                                    <span>8-14 years = Medium Risk</span>
+                                                </li>
+                                                <li className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                                    <span>Below 8 years = High Risk</span>
+                                                </li>
+                                            </ul>
+                                            <p className="text-xs text-blue-600 mt-2">Established companies have proven track records</p>
+                                        </div>
+                                        
+                                        <div className="bg-white rounded-lg p-4 border border-blue-200">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <DollarSign className="h-4 w-4 text-blue-600" />
+                                                <span className="font-semibold text-blue-900">Issue Size</span>
+                                            </div>
+                                            <ul className="text-blue-700 space-y-1">
+                                                <li className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                                    <span>₹5000+ Cr = Low Risk</span>
+                                                </li>
+                                                <li className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                                                    <span>₹1000-5000 Cr = Medium Risk</span>
+                                                </li>
+                                                <li className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                                    <span>Below ₹1000 Cr = High Risk</span>
+                                                </li>
+                                            </ul>
+                                            <p className="text-xs text-blue-600 mt-2">Larger issues typically have better liquidity</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="mt-4 p-3 bg-blue-100 rounded-lg border border-blue-300">
+                                        <p className="text-xs text-blue-800">
+                                            <strong>Educational Note:</strong> This assessment is for learning purposes only. 
+                                            Always read the prospectus, consider your risk tolerance, and consult a financial advisor before investing.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* IPO Cards */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -310,7 +321,10 @@ export default function IPOs() {
                                                 <Badge className={getTypeColor(ipo.type)}>
                                                     {ipo.type}
                                                 </Badge>
-                                                <span className="text-lg">{ipo.riskIcon}</span>
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-lg">{ipo.riskIcon}</span>
+                                                    <span className="text-xs text-gray-600">{ipo.riskLevel} Risk</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -362,13 +376,36 @@ export default function IPOs() {
                                             <p className="text-sm text-gray-500">Expected Listing: <span className="font-medium text-gray-900">{ipo.listingDate}</span></p>
                                         </div>
                                     )}
+
+                                    {/* Risk Factors (if available) */}
+                                    {ipo.riskFactors && ipo.riskFactors.length > 0 && (
+                                        <div className="mt-4 pt-4 border-t border-gray-100">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <AlertTriangle className="h-4 w-4 text-gray-500" />
+                                                <span className="text-sm font-medium text-gray-700">Risk Assessment Factors:</span>
+                                            </div>
+                                            <ul className="text-xs text-gray-600 space-y-1">
+                                                {ipo.riskFactors.slice(0, 3).map((factor: string, idx: number) => (
+                                                    <li key={idx} className="flex items-start gap-2">
+                                                        <div className="w-1 h-1 bg-gray-400 rounded-full mt-2 flex-shrink-0"></div>
+                                                        <span>{factor}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                            {ipo.riskScore && (
+                                                <p className="text-xs text-gray-500 mt-2">
+                                                    Risk Score: {ipo.riskScore}/3.0
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
                         ))
                     )}
                 </div>
 
-                {/* Enhanced Educational Disclaimer */}
+                {/* Simplified Educational Disclaimer */}
                 <Card className="mt-8">
                     <CardContent className="p-6">
                         <div className="flex items-start gap-3">
@@ -376,43 +413,36 @@ export default function IPOs() {
                             <div className="text-sm text-gray-600">
                                 <h4 className="font-semibold text-gray-900 mb-3 text-base flex items-center gap-2">
                                     <FileText className="h-5 w-5 text-amber-600" />
-                                    Important Investment Guidelines
+                                    Investment Guidelines
                                 </h4>
                                 
-                                <div className="grid md:grid-cols-2 gap-4 mb-4">
+                                <div className="grid md:grid-cols-2 gap-6 mb-4">
                                     <div>
-                                        <h5 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
-                                            <Target className="h-4 w-4 text-blue-600" />
-                                            Before You Invest:
-                                        </h5>
-                                        <ul className="space-y-1 text-gray-600">
-                                            <li>• Read the company's prospectus thoroughly</li>
-                                            <li>• Understand the business model and sector risks</li>
+                                        <h5 className="font-medium text-gray-900 mb-2">Before Investing:</h5>
+                                        <ul className="space-y-1 text-gray-600 text-sm">
+                                            <li>• Read the company prospectus thoroughly</li>
                                             <li>• Check promoter background and track record</li>
                                             <li>• Assess your risk tolerance and investment goals</li>
+                                            <li>• Consider market conditions and sector outlook</li>
                                         </ul>
                                     </div>
                                     
                                     <div>
-                                        <h5 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
-                                            <AlertTriangle className="h-4 w-4 text-amber-600" />
-                                            Key Risk Factors:
-                                        </h5>
-                                        <ul className="space-y-1 text-gray-600">
+                                        <h5 className="font-medium text-gray-900 mb-2">Key Risks:</h5>
+                                        <ul className="space-y-1 text-gray-600 text-sm">
                                             <li>• IPO prices can be volatile post-listing</li>
                                             <li>• Limited trading history for price discovery</li>
-                                            <li>• Market conditions affect listing performance</li>
                                             <li>• No guarantee of allotment in oversubscribed IPOs</li>
+                                            <li>• Market conditions affect listing performance</li>
                                         </ul>
                                     </div>
                                 </div>
                                 
-                                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                                    <p className="text-amber-800 text-xs">
-                                        <strong>Educational Platform Disclaimer:</strong> This platform is designed for learning about IPO analysis and investment concepts. 
-                                        Our risk assessments are educational tools based on fundamental factors like promoter holding, company age, and profit history. 
-                                        GMP (Grey Market Premium) data is unofficial and for reference only. Always consult with a SEBI-registered financial advisor 
-                                        before making investment decisions. Past performance is not indicative of future results.
+                                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                                    <p className="text-amber-800 text-sm">
+                                        <strong>Educational Platform:</strong> Our risk assessments are educational tools based on fundamental factors. 
+                                        GMP data is unofficial and for reference only. Always consult a SEBI-registered financial advisor before investing. 
+                                        Past performance doesn't guarantee future results.
                                     </p>
                                 </div>
                             </div>

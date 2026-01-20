@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import { OAuth2Client } from 'google-auth-library';
 import User from '../../models/User.js';
+import { ensureConnection } from '../../config/db.js';
 
 const router = express.Router();
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -19,29 +20,13 @@ const getJWTSecret = () => {
     return JWT_SECRET;
 };
 
-// Helper function to check database connection and attempt reconnection
+// Optimized database connection check
 const ensureDatabaseConnection = async () => {
-    if (mongoose.connection.readyState === 1) {
-        return true; // Already connected
-    }
-    
-    console.log('⚠️ Database not connected, attempting to reconnect...');
-    try {
-        await mongoose.connect(process.env.MONGO_URI, {
-            dbName: "SmartStock",
-            serverSelectionTimeoutMS: 10000,
-            socketTimeoutMS: 45000,
-            maxPoolSize: 10,
-            retryWrites: true,
-            w: 'majority'
-        });
-        console.log('✅ Database reconnected successfully');
-        return true;
-    } catch (reconnectError) {
-        console.error('❌ Database reconnection failed:', reconnectError.message);
-        // Don't fallback to in-memory, throw error instead
+    const isConnected = await ensureConnection();
+    if (!isConnected) {
         throw new Error('Database connection required for authentication');
     }
+    return true;
 };
 
 // Middleware to verify JWT token
@@ -292,6 +277,44 @@ router.post('/google', async (req, res) => {
             error: 'Google authentication failed',
             details: process.env.NODE_ENV === 'development' ? error.message : 'Authentication error'
         });
+    }
+});
+
+// Refresh token
+router.post('/refresh', authenticateToken, async (req, res) => {
+    try {
+        // Ensure database connection
+        await ensureDatabaseConnection();
+
+        const user = await User.findById(req.user.userId).select('-password');
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Generate new token with extended expiry
+        const newToken = jwt.sign(
+            { userId: user._id, email: user.email },
+            getJWTSecret(),
+            { expiresIn: '7d' }
+        );
+
+        console.log(`✅ Token refreshed for user: ${user.email}`);
+
+        res.json({
+            success: true,
+            message: 'Token refreshed successfully',
+            token: newToken,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                virtualBalance: user.virtualBalance,
+                avatar: user.avatar
+            }
+        });
+    } catch (error) {
+        console.error('Token refresh error:', error);
+        res.status(500).json({ error: 'Token refresh failed' });
     }
 });
 

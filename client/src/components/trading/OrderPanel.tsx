@@ -50,7 +50,7 @@ const OrderPanel: React.FC<OrderPanelProps> = ({ symbol, type, onClose, onOrderC
                 }
             }
         } catch (error) {
-            console.error('Error fetching quote:', error);
+
             // Set fallback data on error
             setStockQuote({
                 price: 100,
