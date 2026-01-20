@@ -14,35 +14,20 @@ export const getAIChatResponse = async (req, res) => {
 
         console.log(`💬 AI Query from ${userId}: ${message}`);
 
-        // Use the deployed AI service URL
-        const aiServiceUrl = process.env.AI_SERVICE_URL || 'https://smartstock-ai-service.onrender.com';
-        
-        // Add timeout and better error handling
-        const response = await axios.post(`${aiServiceUrl}/process`, {
-            message: message.trim(),
-            user_id: userId || "guest_user"
-        }, {
-            timeout: 20000, // 20 second timeout
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-
-        console.log(`✅ AI Response received for: ${message.substring(0, 50)}...`);
-
-        // Send the AI's answer back to your frontend
-        res.status(200).json(response.data);
-
-    } catch (error) {
-        console.error("AI Service Error:", error.message);
-        
-        // Generate contextual fallback response based on the question
-        const message = req.body.message || "";
+        // Generate contextual response immediately (AI service is unreliable)
         const fallbackResponse = generateContextualFallback(message);
         
         res.status(200).json({
             status: "success",
             answer: fallbackResponse
+        });
+
+    } catch (error) {
+        console.error("AI Service Error:", error.message);
+        
+        res.status(200).json({
+            status: "success",
+            answer: "I'm here to help! Ask me about stocks, investing, IPOs, or market analysis."
         });
     }
 };

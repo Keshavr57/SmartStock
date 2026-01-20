@@ -53,7 +53,7 @@ async function getComprehensiveStockData(symbol) {
 
 async function getIndianStockData(symbol, result) {
     try {
-        console.log(`🇮🇳 Processing Indian stock: ${symbol}`);
+        console.log(`Processing Indian stock: ${symbol}`);
         
         // Try NSE India API first (most reliable for Indian stocks)
         const nseData = await fetchFromNSEIndia(symbol);
