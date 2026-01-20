@@ -29,7 +29,7 @@ let cookies = '';
 // Initialize session with NSE
 async function initNSESession() {
     try {
-        console.log('🔄 Initializing NSE session...');
+        console.log('Initializing NSE session...');
         const response = await axios.get(`${config.nseBaseURL}/market-data/all-upcoming-issues-ipo`, {
             headers: {
                 'User-Agent': config.headers['User-Agent'],
@@ -48,7 +48,7 @@ async function initNSESession() {
         
         return true;
     } catch (error) {
-        console.log('⚠️ NSE session init failed:', error.message);
+        console.log('NSE session init failed:', error.message);
         return false;
     }
 }
@@ -58,11 +58,11 @@ async function getCurrentIPOs() {
     try {
         // Check cache
         if (cache.ipos && Date.now() - cache.ipos.timestamp < config.cacheTimeout) {
-            console.log('📦 Using cached IPO data');
+            console.log('Using cached IPO data');
             return cache.ipos.data;
         }
 
-        console.log('🔍 Fetching REAL IPO data from NSE...');
+        console.log('Fetching REAL IPO data from NSE...');
         
         // Initialize session if needed
         if (!cookies) {
