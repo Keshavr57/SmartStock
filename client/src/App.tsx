@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom"
 import { Navbar } from "@/components/Navbar"
 import { Sidebar } from "@/components/Sidebar"
 import Home from "@/pages/Home"
@@ -15,12 +16,42 @@ import { Button } from "@/components/ui/button"
 import { Menu } from "lucide-react"
 import { authService } from "./lib/auth"
 
-export default function App() {
+// Main App Content Component (inside Router)
+function AppContent() {
     const [isDark, setIsDark] = useState(false)
-    const [currentPage, setCurrentPage] = useState("Home")
     const [showSidebar, setShowSidebar] = useState(true)
     const [isAuthenticated, setIsAuthenticated] = useState(false)
     const [loading, setLoading] = useState(true)
+    const location = useLocation()
+    const navigate = useNavigate()
+
+    // Get current page from URL
+    const getCurrentPage = () => {
+        const path = location.pathname
+        switch (path) {
+            case '/':
+            case '/home':
+                return 'Home'
+            case '/compare':
+                return 'Compare'
+            case '/ipos':
+                return 'IPOs'
+            case '/learn':
+                return 'Learn'
+            case '/ai-advisor':
+                return 'AI Advisors'
+            case '/news':
+                return 'News'
+            case '/virtual-trading':
+                return 'VirtualTrading'
+            case '/portfolio':
+                return 'Portfolio'
+            default:
+                return 'Home'
+        }
+    }
+
+    const currentPage = getCurrentPage()
 
     useEffect(() => {
         if (isDark) {
@@ -62,7 +93,7 @@ export default function App() {
                 const user = await authService.getProfile();
                 if (user) {
                     setIsAuthenticated(true);
-                    setCurrentPage("Home");
+                    navigate('/home');
                 } else {
                     setIsAuthenticated(false);
                 }
@@ -75,7 +106,26 @@ export default function App() {
     const handleLogout = () => {
         authService.logout()
         setIsAuthenticated(false)
-        setCurrentPage("Home")
+        navigate('/home')
+    }
+
+    const handlePageChange = (page: string) => {
+        const routes = {
+            'Home': '/home',
+            'Compare': '/compare',
+            'IPOs': '/ipos',
+            'Learn': '/learn',
+            'Learning': '/learn',
+            'AI Advisors': '/ai-advisor',
+            'AI': '/ai-advisor',
+            'News': '/news',
+            'VirtualTrading': '/virtual-trading',
+            'Virtual Trading': '/virtual-trading',
+            'Portfolio': '/portfolio'
+        }
+        
+        const route = routes[page as keyof typeof routes] || '/home'
+        navigate(route)
     }
 
     // Show loading spinner while checking authentication
@@ -95,45 +145,18 @@ export default function App() {
         return <Landing onLogin={handleLogin} />
     }
 
-    const renderPage = () => {
-        switch (currentPage) {
-            case "Compare":
-                return <Compare />
-            case "IPOs":
-                return <IPOs />
-            case "Learn":
-            case "Learning":
-                return <Learn />
-            case "AI Advisors":
-            case "AI":
-                return <AIAdvisor />
-            case "News":
-                return <News />
-            case "VirtualTrading":
-            case "Virtual Trading":
-                return <VirtualTrading />
-            case "Portfolio":
-                return <Portfolio />
-            case "Home":
-            case "Dashboard":
-                return <Home />
-            default:
-                return <Home />
-        }
-    }
-
     return (
         <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-950 dark:text-white font-sans selection:bg-black/10 dark:selection:bg-white/10">
             <Navbar
                 isDark={isDark}
                 toggleTheme={() => setIsDark(!isDark)}
-                onPageChange={setCurrentPage}
+                onPageChange={handlePageChange}
                 currentPage={currentPage}
                 onLogout={handleLogout}
             />
 
             <div className="flex">
-                {showSidebar && <Sidebar onPageChange={setCurrentPage} currentPage={currentPage} />}
+                {showSidebar && <Sidebar onPageChange={handlePageChange} currentPage={currentPage} />}
                 
                 <main className="flex-1 min-h-[calc(100vh-64px)] flex flex-col relative">
                     {/* Toggle Sidebar Button */}
@@ -147,11 +170,31 @@ export default function App() {
                     </Button>
                     
                     <div className="flex-1">
-                        {renderPage()}
+                        <Routes>
+                            <Route path="/" element={<Navigate to="/home" replace />} />
+                            <Route path="/home" element={<Home />} />
+                            <Route path="/compare" element={<Compare />} />
+                            <Route path="/ipos" element={<IPOs />} />
+                            <Route path="/learn" element={<Learn />} />
+                            <Route path="/ai-advisor" element={<AIAdvisor />} />
+                            <Route path="/news" element={<News />} />
+                            <Route path="/virtual-trading" element={<VirtualTrading />} />
+                            <Route path="/portfolio" element={<Portfolio />} />
+                            {/* Catch all route - redirect to home */}
+                            <Route path="*" element={<Navigate to="/home" replace />} />
+                        </Routes>
                     </div>
-                    <Footer onPageChange={setCurrentPage} />
+                    <Footer onPageChange={handlePageChange} />
                 </main>
             </div>
         </div>
+    )
+}
+
+export default function App() {
+    return (
+        <Router>
+            <AppContent />
+        </Router>
     )
 }

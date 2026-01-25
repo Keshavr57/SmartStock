@@ -1,27 +1,52 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { TrendingUp, RefreshCw, Calendar, DollarSign, AlertTriangle, Clock, Target, BarChart3, BookOpen, FileText } from "lucide-react"
+import { TrendingUp, RefreshCw, Calendar, DollarSign, AlertTriangle, Clock, Target, BarChart3, BookOpen, FileText, Filter } from "lucide-react"
 import { useState, useEffect } from "react"
 import { getUpcomingIPOs } from "../lib/api"
 
+interface IPO {
+    company: string;
+    openDate: string;
+    closeDate: string;
+    date: string;
+    price: string;
+    status: string;
+    size: string;
+    riskLevel: string;
+    riskIcon: string;
+    riskColor: string;
+    riskScore: number;
+    riskFactors: string[];
+    lotSize: string;
+    type: string;
+    sector: string;
+    gmp: string;
+    subscription: string;
+    listingDate: string;
+}
+
+type FilterType = 'All' | 'Open' | 'Upcoming' | 'Closed';
+type TypeFilterType = 'All Types' | 'Mainboard' | 'SME';
+
 export default function IPOs() {
-    const [ipos, setIpos] = useState<any[]>([])
+    const [ipos, setIpos] = useState<IPO[]>([])
+    const [filteredIpos, setFilteredIpos] = useState<IPO[]>([])
     const [loading, setLoading] = useState(true)
     const [lastUpdated, setLastUpdated] = useState<string>('')
     const [showRiskGuide, setShowRiskGuide] = useState(false)
+    const [activeFilter, setActiveFilter] = useState<FilterType>('All')
+    const [activeTypeFilter, setActiveTypeFilter] = useState<TypeFilterType>('All Types')
+
+    const filterOptions: FilterType[] = ['All', 'Open', 'Upcoming', 'Closed']
+    const typeFilterOptions: TypeFilterType[] = ['All Types', 'Mainboard', 'SME']
 
     const fetchIPOs = async (fastMode = false, forceRefresh = false) => {
         setLoading(true)
         try {
-            // Add cache busting and refresh parameters
-            const url = forceRefresh 
-                ? `${fastMode ? '?fast=true&refresh=true&clear=true' : '?refresh=true&clear=true'}&t=${Date.now()}`
-                : `${fastMode ? '?fast=true' : ''}${fastMode ? '&' : '?'}t=${Date.now()}`;
-            
             const res = await getUpcomingIPOs(fastMode, forceRefresh)
             if (res && res.status === "success" && Array.isArray(res.data)) {
-                const mappedData = res.data.map((item: any) => ({
+                const mappedData: IPO[] = res.data.map((item: any) => ({
                     company: item.name || "Unknown Company",
                     openDate: item.openDate || "TBA",
                     closeDate: item.closeDate || "TBA",
@@ -48,7 +73,8 @@ export default function IPOs() {
                     return !ipo.date.includes('2024') || ipo.date.includes('2025') || ipo.date.includes(year.toString());
                 });
                 
-                setIpos(current2025Data.length > 0 ? current2025Data : mappedData)
+                const finalData = current2025Data.length > 0 ? current2025Data : mappedData;
+                setIpos(finalData)
                 setLastUpdated(res.lastUpdated || new Date().toLocaleString())
                 
                 console.log(`✅ IPO data loaded: ${mappedData.length} total, ${current2025Data.length} current`)
@@ -60,6 +86,29 @@ export default function IPOs() {
             setLoading(false)
         }
     }
+
+    // Filter IPOs based on active filters
+    useEffect(() => {
+        let filtered = ipos;
+        
+        // Apply status filter
+        if (activeFilter !== 'All') {
+            filtered = filtered.filter(ipo => ipo.status === activeFilter);
+        }
+        
+        // Apply type filter
+        if (activeTypeFilter !== 'All Types') {
+            filtered = filtered.filter(ipo => {
+                if (activeTypeFilter === 'Mainboard') {
+                    return ipo.type === 'Mainboard' || ipo.type === 'Main Board';
+                } else {
+                    return ipo.type === 'SME';
+                }
+            });
+        }
+        
+        setFilteredIpos(filtered);
+    }, [ipos, activeFilter, activeTypeFilter])
 
     useEffect(() => {
         // Force refresh to get current 2025 data
@@ -84,6 +133,57 @@ export default function IPOs() {
         return type === 'Mainboard' || type === 'Main Board' 
             ? 'bg-purple-100 text-purple-800 border-purple-200'
             : 'bg-orange-100 text-orange-800 border-orange-200'
+    }
+
+    const getFilterButtonStyle = (filter: FilterType) => {
+        const isActive = activeFilter === filter
+        const baseStyle = "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+        
+        if (isActive) {
+            switch (filter) {
+                case 'Open':
+                    return `${baseStyle} bg-green-600 text-white shadow-md`
+                case 'Upcoming':
+                    return `${baseStyle} bg-blue-600 text-white shadow-md`
+                case 'Closed':
+                    return `${baseStyle} bg-gray-600 text-white shadow-md`
+                default:
+                    return `${baseStyle} bg-purple-600 text-white shadow-md`
+            }
+        } else {
+            return `${baseStyle} bg-white text-gray-700 border border-gray-300 hover:bg-gray-50`
+        }
+    }
+
+    const getFilterCount = (filter: FilterType) => {
+        if (filter === 'All') return ipos.length
+        return ipos.filter(ipo => ipo.status === filter).length
+    }
+
+    const getTypeFilterCount = (filter: TypeFilterType) => {
+        if (filter === 'All Types') return ipos.length
+        if (filter === 'Mainboard') {
+            return ipos.filter(ipo => ipo.type === 'Mainboard' || ipo.type === 'Main Board').length
+        }
+        return ipos.filter(ipo => ipo.type === 'SME').length
+    }
+
+    const getTypeFilterButtonStyle = (filter: TypeFilterType) => {
+        const isActive = activeTypeFilter === filter
+        const baseStyle = "px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200"
+        
+        if (isActive) {
+            switch (filter) {
+                case 'Mainboard':
+                    return `${baseStyle} bg-purple-600 text-white shadow-sm`
+                case 'SME':
+                    return `${baseStyle} bg-orange-600 text-white shadow-sm`
+                default:
+                    return `${baseStyle} bg-gray-600 text-white shadow-sm`
+            }
+        } else {
+            return `${baseStyle} bg-gray-100 text-gray-700 hover:bg-gray-200`
+        }
     }
 
     return (
@@ -171,6 +271,56 @@ export default function IPOs() {
                     </Card>
                 </div>
 
+                {/* Filter Buttons */}
+                <Card className="mb-6">
+                    <CardContent className="p-4">
+                        <div className="flex items-center justify-between flex-wrap gap-4">
+                            <div className="flex items-center gap-2">
+                                <Filter className="h-5 w-5 text-gray-600" />
+                                <span className="text-sm font-medium text-gray-700">Filter IPOs:</span>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 flex-wrap">
+                                {filterOptions.map((filter) => (
+                                    <button
+                                        key={filter}
+                                        onClick={() => setActiveFilter(filter)}
+                                        className={getFilterButtonStyle(filter)}
+                                    >
+                                        <span>{filter}</span>
+                                        <span className="ml-2 px-2 py-0.5 bg-black/10 rounded-full text-xs">
+                                            {getFilterCount(filter)}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                            
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => fetchIPOs(false, true)} // Force refresh with cache clear
+                                disabled={loading}
+                                className="ml-auto"
+                            >
+                                {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                                Refresh
+                            </Button>
+                        </div>
+                        
+                        {/* Active Filter Info */}
+                        {activeFilter !== 'All' && (
+                            <div className="mt-3 pt-3 border-t border-gray-200">
+                                <p className="text-sm text-gray-600">
+                                    Showing <span className="font-semibold text-gray-900">{filteredIpos.length}</span> {activeFilter.toLowerCase()} IPOs
+                                    {filteredIpos.length === 0 && (
+                                        <span className="text-gray-500"> - No {activeFilter.toLowerCase()} IPOs available at the moment</span>
+                                    )}
+                                </p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
                 {/* Risk Guide */}
                 <Card className="mb-6">
                     <CardContent className="p-4">
@@ -188,25 +338,15 @@ export default function IPOs() {
                                     <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                                     <span className="text-gray-600">High Risk</span>
                                 </div>
-                                <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    onClick={() => setShowRiskGuide(!showRiskGuide)}
-                                    className="ml-4 text-blue-600 hover:text-blue-800"
-                                >
-                                    <BookOpen className="h-4 w-4 mr-1" />
-                                    {showRiskGuide ? 'Hide' : 'Show'} Risk Guide
-                                </Button>
                             </div>
                             <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => fetchIPOs(false, true)} // Force refresh with cache clear
-                                disabled={loading}
-                                className="ml-auto"
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => setShowRiskGuide(!showRiskGuide)}
+                                className="text-blue-600 hover:text-blue-800"
                             >
-                                {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                                Refresh Current Data
+                                <BookOpen className="h-4 w-4 mr-1" />
+                                {showRiskGuide ? 'Hide' : 'Show'} Risk Guide
                             </Button>
                         </div>
                     </CardContent>
@@ -321,14 +461,31 @@ export default function IPOs() {
                                 </CardContent>
                             </Card>
                         ))
-                    ) : ipos.length === 0 ? (
+                    ) : filteredIpos.length === 0 ? (
                         <div className="col-span-full text-center py-12">
                             <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">No IPOs Available</h3>
-                            <p className="text-gray-500">Check back later for new IPO listings.</p>
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                {activeFilter === 'All' ? 'No IPOs Available' : `No ${activeFilter} IPOs Available`}
+                            </h3>
+                            <p className="text-gray-500">
+                                {activeFilter === 'All' 
+                                    ? 'Check back later for new IPO listings.' 
+                                    : `There are currently no ${activeFilter.toLowerCase()} IPOs. Try a different filter or check back later.`
+                                }
+                            </p>
+                            {activeFilter !== 'All' && (
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => setActiveFilter('All')}
+                                    className="mt-4"
+                                >
+                                    Show All IPOs
+                                </Button>
+                            )}
                         </div>
                     ) : (
-                        ipos.map((ipo, index) => (
+                        filteredIpos.map((ipo, index) => (
                             <Card key={index} className="hover:shadow-lg transition-shadow">
                                 <CardContent className="p-6">
                                     <div className="flex items-start justify-between mb-4">

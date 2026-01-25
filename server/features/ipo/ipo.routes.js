@@ -3,83 +3,111 @@ import realIPOService from './ipo.service.js';
 
 const router = express.Router();
 
-router.get('/test', (req, res) => {
+// Simple health check without DB dependency
+router.get('/health', (req, res) => {
     res.json({
         status: "success",
-        message: "IPO endpoint is working with REAL LIVE data from NSE",
-        timestamp: new Date()
+        message: "IPO service is healthy",
+        timestamp: new Date(),
+        service: "Real Live IPO Data",
+        version: "2.0"
     });
+});
+
+router.get('/test', async (req, res) => {
+    try {
+        console.log('🧪 Testing IPO service...');
+        
+        // Test fast data first
+        const fastData = await realIPOService.fetchFastIPOData();
+        console.log(`✅ Fast data: ${fastData.length} IPOs`);
+        
+        // Test full service
+        const fullData = await realIPOService.getCurrentIPOs();
+        console.log(`✅ Full data: ${fullData.length} IPOs`);
+        
+        res.json({
+            status: "success",
+            message: "IPO service is working perfectly",
+            timestamp: new Date(),
+            tests: {
+                fastData: {
+                    count: fastData.length,
+                    status: "✅ Working"
+                },
+                fullData: {
+                    count: fullData.length,
+                    status: "✅ Working"
+                }
+            },
+            sampleData: fastData.slice(0, 2)
+        });
+    } catch (error) {
+        console.error('❌ Test failed:', error.message);
+        res.status(500).json({
+            status: "error",
+            message: error.message,
+            stack: error.stack
+        });
+    }
 });
 
 router.get('/upcoming', async (req, res) => {
     try {
-        // Clear cache if requested or if showing old data
+        console.log('🔥 IPO endpoint called with params:', req.query);
+        
+        // Clear cache if requested
         if (req.query.refresh === 'true' || req.query.clear === 'true') {
-            console.log('🔄 Clearing IPO cache for fresh current 2025 data...');
+            console.log('🔄 Clearing IPO cache for fresh data...');
             realIPOService.clearCache();
         }
         
-        // Set timeout for faster response
-        const timeout = req.query.fast === 'true' ? 5000 : 15000;
+        let ipoData;
         
-        // Use REAL IPO service only with timeout
-        const ipoData = await Promise.race([
-            realIPOService.getCurrentIPOs(),
-            new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Request timeout')), timeout)
-            )
-        ]);
+        // Use fast data for quick response
+        if (req.query.fast === 'true') {
+            console.log('⚡ Using fast IPO data...');
+            ipoData = await realIPOService.fetchFastIPOData();
+        } else {
+            console.log('🔥 Fetching comprehensive IPO data...');
+            // Set a reasonable timeout
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Request timeout')), 10000)
+            );
+            
+            ipoData = await Promise.race([
+                realIPOService.getCurrentIPOs(),
+                timeoutPromise
+            ]);
+        }
         
-        // Ensure we're returning current 2025 data
-        console.log(`📊 Returning ${ipoData.length} IPOs (prioritizing 2025 data)`);
+        console.log(`📊 Returning ${ipoData.length} IPOs`);
         
         res.json({
             status: "success",
             timestamp: new Date(),
             count: ipoData.length,
             data: ipoData,
-            message: `Found ${ipoData.length} COMPREHENSIVE IPOs - Open, Upcoming & Recent`,
-            dataSource: "LIVE Market Data: Economic Times + IPOWatch + Chittorgarh",
+            message: `Found ${ipoData.length} current IPOs`,
+            dataSource: "Live Market Data",
             categories: {
                 open: ipoData.filter(ipo => ipo.status === 'Open').length,
                 upcoming: ipoData.filter(ipo => ipo.status === 'Upcoming').length,
-                closing: ipoData.filter(ipo => ipo.status === 'Closing').length,
-                recent: ipoData.filter(ipo => ipo.status === 'Listed' || ipo.status === 'Closed').length
+                closed: ipoData.filter(ipo => ipo.status === 'Closed').length
             },
-            lastUpdated: new Date().toLocaleString('en-IN'),
-            note: "Comprehensive IPO data matching live market sources"
+            lastUpdated: new Date().toLocaleString('en-IN')
         });
         
     } catch (error) {
         console.error("❌ IPO Route Error:", error.message);
+        console.error("❌ Stack:", error.stack);
         
-        // Return fallback data on timeout or error
-        if (error.message === 'Request timeout') {
-            try {
-                const fallbackData = await realIPOService.fetchFastIPOData();
-                res.json({
-                    status: "success",
-                    timestamp: new Date(),
-                    count: fallbackData.length,
-                    data: fallbackData,
-                    message: `Fallback: ${fallbackData.length} current 2025 IPOs`,
-                    dataSource: "Current 2025 Fast Cache",
-                    lastUpdated: new Date().toLocaleString('en-IN')
-                });
-            } catch (fallbackError) {
-                res.status(500).json({ 
-                    status: "error", 
-                    message: "Service temporarily unavailable",
-                    data: []
-                });
-            }
-        } else {
-            res.status(500).json({ 
-                status: "error", 
-                message: error.message,
-                data: []
-            });
-        }
+        // No fallback - return error
+        res.status(500).json({ 
+            status: "error", 
+            message: error.message,
+            data: []
+        });
     }
 });
 
@@ -208,7 +236,7 @@ function calculateMinInvestment(priceBand, lotSize) {
     }
 }
 
-// Force refresh IPO data (clears cache)
+// Force refresh IPO data (clears cache) - NO FALLBACK
 router.get('/refresh', async (req, res) => {
     try {
         console.log('🔥 FORCE REFRESH: Getting fresh LIVE IPO data...');
@@ -216,16 +244,10 @@ router.get('/refresh', async (req, res) => {
         // Clear all cache
         realIPOService.clearCache();
         
-        // Reinitialize NSE session
-        await realIPOService.initNSESession();
-        
-        // Get fresh live data
+        // Get fresh live data only
         const ipoData = await realIPOService.getCurrentIPOs();
         
-        // Also try to get additional live data
-        const liveAPIData = await realIPOService.fetchLiveIPOData();
-        
-        console.log(`🔥 Refreshed: ${ipoData.length} IPOs, ${liveAPIData.length} from live APIs`);
+        console.log(`🔥 Refreshed: ${ipoData.length} LIVE IPOs`);
         
         // Broadcast updates via WebSocket
         if (global.io) {
@@ -242,9 +264,8 @@ router.get('/refresh', async (req, res) => {
             timestamp: new Date(),
             count: ipoData.length,
             data: ipoData,
-            liveAPICount: liveAPIData.length,
             message: `🔥 FORCE REFRESHED: ${ipoData.length} LIVE IPOs from real market APIs`,
-            dataSource: "LIVE REFRESH: NSE + BSE + Chittorgarh + Market APIs",
+            dataSource: "LIVE REFRESH: IPOWatch + Chittorgarh + Market APIs",
             lastUpdated: new Date().toLocaleString('en-IN'),
             note: "Fresh live data fetched from all market sources"
         });

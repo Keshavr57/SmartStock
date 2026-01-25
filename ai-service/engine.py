@@ -142,18 +142,23 @@ def get_stock_context(user_query):
     return stock_data
 
 def process_query_with_rag(user_input: str):
-    """Enhanced query processing with RAG and conversation memory"""
+    """Enhanced query processing with RAG - NO FALLBACK"""
     try:
         print(f"🚀 Processing RAG query: {user_input}")
         
         # Check GROQ API key
         groq_key = os.getenv("GROQ_API_KEY")
         if not groq_key:
-            return generate_enhanced_fallback(user_input)
+            raise Exception("GROQ API key not found in environment")
+        
+        print(f"✅ GROQ API key found: {groq_key[:10]}...")
         
         # Get relevant knowledge from RAG
         relevant_knowledge = get_relevant_knowledge(user_input)
         stock_context = get_stock_context(user_input)
+        
+        print(f"📚 RAG knowledge items: {len(relevant_knowledge)}")
+        print(f"📊 Stock context items: {len(stock_context)}")
         
         # Build enhanced context
         context_parts = []
@@ -179,8 +184,9 @@ def process_query_with_rag(user_input: str):
             HumanMessage(content=enhanced_query)
         ]
         
-        print("⚡ Sending enhanced request to GROQ...")
+        print("⚡ Sending request to GROQ...")
         response = llm.invoke(messages)
+        print(f"✅ GROQ response received: {len(response.content) if response and response.content else 0} characters")
         
         if response and response.content:
             # Clean and format response
@@ -191,11 +197,11 @@ def process_query_with_rag(user_input: str):
             
             return clean_response
         else:
-            return generate_enhanced_fallback(user_input)
+            raise Exception("GROQ returned empty response")
         
     except Exception as e:
         print(f"⚠️ RAG processing error: {str(e)}")
-        return generate_enhanced_fallback(user_input)
+        raise e  # No fallback - let it fail
 
 def clean_ai_response(response_text):
     """Clean and format AI response"""
@@ -207,73 +213,7 @@ def clean_ai_response(response_text):
     
     return clean_text.strip()
 
-def generate_enhanced_fallback(user_input):
-    """Enhanced fallback with more specific responses"""
-    user_lower = user_input.lower()
-    
-    # Specific stock queries
-    if 'reliance' in user_lower:
-        return """Reliance Industries (RIL) is India's largest private sector company with interests in oil refining, petrochemicals, and retail.
-
-Key strengths: Strong cash flows, diversified business model, and growing digital (Jio) and retail segments. The company has been reducing debt and improving margins.
-
-Investment perspective: RIL trades at reasonable valuations compared to its historical averages. The retail and digital businesses are showing strong growth potential.
-
-Consider: Check latest quarterly results, oil price trends, and retail expansion plans before investing. RIL is suitable for long-term investors seeking exposure to India's consumption story."""
-
-    elif any(word in user_lower for word in ['tcs', 'infosys', 'it stocks']):
-        return """Indian IT stocks like TCS and Infosys are global leaders in software services with strong fundamentals.
-
-Key advantages: Consistent revenue growth, high profit margins (20%+), strong balance sheets, and regular dividends. They benefit from digital transformation globally.
-
-Current scenario: IT stocks have corrected from highs, making valuations more attractive. Dollar strength also helps their revenues.
-
-Investment approach: These are quality stocks suitable for long-term portfolios. Consider buying on dips and holding for 3-5 years. TCS has better margins, while Infosys offers higher growth potential."""
-
-    elif any(word in user_lower for word in ['hdfc', 'banking', 'bank stocks']):
-        return """HDFC Bank is India's largest private sector bank with excellent asset quality and consistent performance.
-
-Strengths: Strong deposit franchise, superior technology, low NPAs, and consistent ROE above 17%. The bank has weathered multiple economic cycles well.
-
-Recent developments: Merger with HDFC Ltd completed, creating India's largest mortgage lender. This brings scale but also integration challenges.
-
-Investment view: HDFC Bank is a core holding for long-term investors. Current valuations are reasonable after recent corrections. Suitable for SIP investments over 5+ years."""
-
-    elif any(word in user_lower for word in ['sip', 'systematic investment']):
-        return """SIP (Systematic Investment Plan) is the best way for regular investors to build wealth in Indian markets.
-
-How it works: Invest fixed amount monthly in mutual funds or stocks. This averages out market volatility and reduces timing risk.
-
-Recommended approach: Start with Nifty 50 index funds (₹5,000-10,000 monthly), then add mid-cap funds as you gain experience.
-
-Key benefits: Rupee cost averaging, disciplined investing, and power of compounding. Even ₹5,000 monthly can grow to ₹50+ lakhs in 15 years at 12% returns.
-
-Start today: Don't wait for market corrections. Time in market beats timing the market."""
-
-    elif any(word in user_lower for word in ['ipo', 'new listing']):
-        return """IPO investing requires careful analysis of company fundamentals and valuation.
-
-Key checks: Read the DRHP document, understand the business model, check promoter background, and compare valuations with listed peers.
-
-Red flags: Avoid IPOs where promoters are selling large stakes, unclear business models, or excessive valuations compared to competitors.
-
-Strategy: Most IPOs are overpriced initially. Consider waiting 3-6 months post-listing for price stabilization unless you're very confident about the company.
-
-Current IPOs: Check our IPO section for detailed analysis of upcoming and current offerings with risk assessments."""
-
-    else:
-        return """I'm your AI advisor for Indian stock markets and investments!
-
-I can help you with:
-• Stock analysis (Reliance, TCS, HDFC Bank, etc.)
-• Investment strategies (SIP, value investing, growth stocks)
-• Risk management and portfolio building
-• IPO analysis and recommendations
-• Market insights and timing
-
-Popular topics: "Analyze Reliance stock", "Best SIP strategy", "How to evaluate IPOs", "Banking stocks outlook"
-
-Ask me anything specific about Indian stocks, mutual funds, or investment strategies. I'll provide practical, actionable advice tailored to Indian markets!"""
+# Removed generate_enhanced_fallback function - NO FALLBACKS ALLOWED
 
 # Update main process_query function to use RAG
 def process_query(user_input: str):

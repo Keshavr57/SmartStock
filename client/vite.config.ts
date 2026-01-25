@@ -18,6 +18,7 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
+    historyApiFallback: true, // Enable client-side routing
     proxy: {
       '/api': {
         target: 'http://localhost:5050',

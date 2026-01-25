@@ -77,8 +77,15 @@ async def test_ai():
 @app.post("/process")
 async def chat_endpoint(request: ChatRequest):
     try:
-        print(f"🤖 Enhanced AI Service received query: {request.message}")
+        print(f"🤖 AI Service received query: {request.message}")
         print(f"🤖 User ID: {request.user_id}")
+        
+        # Test GROQ API key first
+        groq_key = os.getenv("GROQ_API_KEY")
+        if not groq_key:
+            raise Exception("GROQ API key not found")
+        
+        print(f"🤖 GROQ API key present: {groq_key[:10]}...")
         
         # BYPASS LOGIC: If the system asks for raw IPO data, return it directly
         if request.message == "FETCH_LIVE_IPOS_NOW":
@@ -91,12 +98,15 @@ async def chat_endpoint(request: ChatRequest):
         
         # Test simple response first
         if request.message.lower() == "test":
-            return {"status": "success", "answer": "Enhanced RAG-based AI service is receiving messages correctly!"}
+            return {"status": "success", "answer": "AI service is receiving messages correctly and GROQ API is working!"}
         
-        # Process with enhanced RAG engine
-        print("🤖 Processing query with enhanced RAG engine...")
+        # Process with RAG engine - NO FALLBACK
+        print("🤖 Processing query with RAG engine...")
         ai_answer = process_query(request.message)
-        print(f"🤖 Enhanced AI Response generated: {len(ai_answer)} characters")
+        print(f"🤖 AI Response generated: {len(ai_answer)} characters")
+        
+        if not ai_answer or len(ai_answer.strip()) == 0:
+            raise Exception("AI service returned empty response")
         
         return {
             "status": "success", 
@@ -106,25 +116,14 @@ async def chat_endpoint(request: ChatRequest):
         }
         
     except Exception as e:
-        print(f"🚨 Enhanced AI Service Error: {str(e)}")
+        print(f"🚨 AI Service Error: {str(e)}")
+        print(f"🚨 Error type: {type(e).__name__}")
         
-        # Enhanced fallback response
-        fallback_msg = f"""I'm your AI advisor for Indian stock markets! I can help you with:
-
-• Stock analysis (Reliance, TCS, HDFC Bank, etc.)
-• Investment strategies (SIP, diversification, risk management)
-• Market insights and IPO analysis
-• Educational content about trading and investing
-
-Ask me something specific like "Analyze Reliance stock" or "Best investment strategy for beginners".
-
-📚 This is for educational purposes. Always do your own research before investing."""
-        
+        # NO FALLBACK - return error
         return {
-            "status": "success", 
-            "answer": fallback_msg,
-            "service_type": "enhanced_fallback",
-            "error_logged": str(e)
+            "status": "error", 
+            "message": f"AI service failed: {str(e)}",
+            "error_type": type(e).__name__
         }
 
 if __name__ == "__main__":
