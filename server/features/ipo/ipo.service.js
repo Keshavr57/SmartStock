@@ -1,18 +1,24 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
-// Simple config - OPTIMIZED FOR DEPLOYMENT SPEED
+// Simple config
 const config = {
     nseBaseURL: 'https://www.nseindia.com',
     bseBaseURL: 'https://api.bseindia.com',
-    cacheTimeout: 2 * 60 * 1000, // 2 minutes for faster refresh
-    fastTimeout: 2000, // 2 seconds for instant loading
-    normalTimeout: 5000, // 5 seconds max for full load
+    cacheTimeout: 5 * 60 * 1000, // 5 minutes
     headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'application/json, text/plain, */*',
         'Accept-Language': 'en-US,en;q=0.9',
-        'Connection': 'keep-alive'
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Referer': 'https://www.nseindia.com/market-data/all-upcoming-issues-ipo',
+        'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"Windows"',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-origin'
     }
 };
 
@@ -47,191 +53,90 @@ async function initNSESession() {
     }
 }
 
-// Get current IPOs - INSTANT DEPLOYMENT OPTIMIZED
-async function getCurrentIPOs(fastMode = false) {
+// Get current IPOs from NSE
+async function getCurrentIPOs() {
     try {
-        // INSTANT CACHE CHECK - Return immediately if available
+        // Check cache
         if (cache.ipos && Date.now() - cache.ipos.timestamp < config.cacheTimeout) {
-            console.log('⚡ INSTANT: Using cached IPO data');
+            console.log('Using cached IPO data');
             return cache.ipos.data;
         }
 
-        console.log('🚀 DEPLOYMENT MODE: Fetching IPOs with instant fallback...');
+        console.log('Fetching REAL IPO data from NSE...');
         
-        // INSTANT FALLBACK DATA - Always available
-        const instantData = getInstantIPOData();
+        // Initialize session if needed
+        if (!cookies) {
+            await initNSESession();
+        }
+
+        // Fetch from NSE API
+        const nseIPOs = await fetchFromNSEAPI();
         
-        if (fastMode) {
-            console.log('⚡ FAST MODE: Returning instant data immediately');
-            // Cache instant data and return immediately
-            cache.ipos = { data: instantData, timestamp: Date.now() };
-            return instantData;
+        // Fetch from IPOWatch for additional upcoming IPOs
+        const ipoWatchData = await fetchFromIPOWatch();
+        
+        // Combine and deduplicate
+        let allIPOs = [];
+        
+        if (nseIPOs && nseIPOs.length > 0) {
+            console.log(`✅ NSE Total: ${nseIPOs.length} IPOs`);
+            allIPOs = [...nseIPOs];
         }
         
-        // Try to get live data with very short timeout for deployment
-        try {
-            const timeout = config.fastTimeout; // 2 seconds max
+        if (ipoWatchData && ipoWatchData.length > 0) {
+            console.log(`📊 IPOWatch: ${ipoWatchData.length} IPOs found`);
             
-            const liveData = await Promise.race([
-                fetchLiveIPOData(),
-                new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Deployment timeout')), timeout)
-                )
-            ]);
+            let addedCount = 0;
+            // Add IPOWatch data that's not already in NSE data
+            // Only add if it has at least some real data (not all TBA)
+            ipoWatchData.forEach(watchIPO => {
+                const exists = allIPOs.some(nseIPO => 
+                    nseIPO.name.toLowerCase().includes(watchIPO.name.toLowerCase()) ||
+                    watchIPO.name.toLowerCase().includes(nseIPO.name.toLowerCase())
+                );
+                
+                // Only add if not duplicate and has at least dates or price
+                const hasRealData = watchIPO.openDate !== 'TBA' || watchIPO.priceBand !== 'TBA';
+                
+                if (!exists && hasRealData) {
+                    allIPOs.push(watchIPO);
+                    addedCount++;
+                }
+            });
             
-            if (liveData && liveData.length > 0) {
-                console.log(`✅ LIVE DATA: Got ${liveData.length} IPOs in ${timeout}ms`);
-                
-                // Combine with instant data for comprehensive list
-                const combinedData = [...liveData, ...instantData];
-                const uniqueData = removeDuplicateIPOs(combinedData);
-                
-                // Apply risk assessment quickly
-                const processedData = uniqueData.map(ipo => {
-                    const riskAssessment = calculateRiskAssessment(ipo);
-                    return { ...ipo, ...riskAssessment };
-                });
-                
-                // Cache and return
-                cache.ipos = { data: processedData, timestamp: Date.now() };
-                return processedData;
+            console.log(`  ✓ Added ${addedCount} unique IPOs from IPOWatch`);
+        }
+
+        if (allIPOs.length === 0) {
+            // Fallback: Try scraping NSE website
+            console.log('⚠️ Primary sources failed, trying NSE website scraping...');
+            const scrapedIPOs = await scrapeNSEWebsite();
+            
+            if (scrapedIPOs && scrapedIPOs.length > 0) {
+                console.log(`✅ Got ${scrapedIPOs.length} IPOs from NSE website`);
+                allIPOs = scrapedIPOs;
             }
-        } catch (error) {
-            console.log('⚡ DEPLOYMENT: Live data timeout, using instant data');
         }
-        
-        // Always return instant data with risk assessment
-        const processedInstant = instantData.map(ipo => {
-            const riskAssessment = calculateRiskAssessment(ipo);
-            return { ...ipo, ...riskAssessment };
-        });
-        
-        // Cache instant data
-        cache.ipos = { data: processedInstant, timestamp: Date.now() };
-        
-        console.log(`⚡ INSTANT: Returning ${processedInstant.length} IPOs for deployment`);
-        return processedInstant;
+
+        if (allIPOs.length === 0) {
+            throw new Error('All IPO data sources failed');
+        }
+
+        console.log(`📊 Total IPOs collected: ${allIPOs.length}`);
+        cache.ipos = { data: allIPOs, timestamp: Date.now() };
+        return allIPOs;
 
     } catch (error) {
-        console.error('❌ IPO Error:', error.message);
+        console.error('❌ Error fetching IPO data:', error.message);
         
-        // GUARANTEED FALLBACK - Never fail
-        const fallbackData = getInstantIPOData();
-        const processedFallback = fallbackData.map(ipo => {
-            const riskAssessment = calculateRiskAssessment(ipo);
-            return { ...ipo, ...riskAssessment };
-        });
-        
-        return processedFallback;
-    }
-}
-
-// INSTANT IPO DATA - Always available for deployment
-function getInstantIPOData() {
-    return [
-        {
-            name: "Shayona Engineering Limited",
-            symbol: "SHAYONA",
-            openDate: "22 Jan 2025",
-            closeDate: "27 Jan 2025",
-            priceBand: "₹140-144",
-            issueSize: "₹14.86 Cr",
-            lotSize: "1000",
-            status: "Open",
-            type: "SME",
-            sector: "Engineering",
-            listingDate: "30 Jan 2025",
-            gmp: "₹20-25",
-            subscription: "1.34x",
-            minInvestment: "₹1,44,000",
-            source: "Live Market"
-        },
-        {
-            name: "Hannah Joseph Hospital Limited",
-            symbol: "HANNAH",
-            openDate: "22 Jan 2025",
-            closeDate: "27 Jan 2025",
-            priceBand: "₹67-70",
-            issueSize: "₹42 Cr",
-            lotSize: "2000",
-            status: "Open",
-            type: "SME",
-            sector: "Healthcare",
-            listingDate: "30 Jan 2025",
-            gmp: "₹10-15",
-            subscription: "0.55x",
-            minInvestment: "₹1,40,000",
-            source: "Live Market"
-        },
-        {
-            name: "Kasturi Metal Composite Limited",
-            symbol: "KASTURI",
-            openDate: "27 Jan 2025",
-            closeDate: "29 Jan 2025",
-            priceBand: "₹61-64",
-            issueSize: "₹17.61 Cr",
-            lotSize: "234",
-            status: "Upcoming",
-            type: "SME",
-            sector: "Metals",
-            listingDate: "3 Feb 2025",
-            gmp: "₹10-15",
-            subscription: "N/A",
-            minInvestment: "₹14,976",
-            source: "Live Market"
-        },
-        {
-            name: "Shadowfax Technologies Limited",
-            symbol: "SHADOWFAX",
-            openDate: "20 Jan 2025",
-            closeDate: "22 Jan 2025",
-            priceBand: "₹118-124",
-            issueSize: "₹1,907 Cr",
-            lotSize: "120",
-            status: "Open",
-            type: "Mainboard",
-            sector: "Logistics",
-            listingDate: "27 Jan 2025",
-            gmp: "₹30-40",
-            subscription: "2.7x",
-            minInvestment: "₹14,880",
-            source: "Live Market"
-        },
-        {
-            name: "Amagi Media Labs Limited",
-            symbol: "AMAGI",
-            openDate: "13 Jan 2025",
-            closeDate: "16 Jan 2025",
-            priceBand: "₹343-361",
-            issueSize: "₹1,789 Cr",
-            lotSize: "41",
-            status: "Closed",
-            type: "Mainboard",
-            sector: "Media Technology",
-            listingDate: "21 Jan 2025",
-            gmp: "₹80-100",
-            subscription: "4.2x",
-            minInvestment: "₹14,801",
-            source: "Live Market"
-        },
-        {
-            name: "Clean Max Enviro Limited",
-            symbol: "CLEANMAX",
-            openDate: "TBA",
-            closeDate: "TBA",
-            priceBand: "TBA",
-            issueSize: "₹5,200 Cr",
-            lotSize: "TBA",
-            status: "Upcoming",
-            type: "Mainboard",
-            sector: "Renewable Energy",
-            listingDate: "TBA",
-            gmp: "N/A",
-            subscription: "N/A",
-            minInvestment: "TBA",
-            source: "Live Market"
+        // Return cached data if available, even if expired
+        if (cache.ipos) {
+            console.log('⚠️ Returning expired cache data');
+            return cache.ipos.data;
         }
-    ];
+        
+        throw error;
+    }
 }
 
 // Fetch from NSE API

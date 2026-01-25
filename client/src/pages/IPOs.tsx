@@ -11,11 +11,15 @@ export default function IPOs() {
     const [lastUpdated, setLastUpdated] = useState<string>('')
     const [showRiskGuide, setShowRiskGuide] = useState(false)
 
-    const fetchIPOs = async (fastMode = true, forceRefresh = false) => {
+    const fetchIPOs = async (fastMode = false, forceRefresh = false) => {
         setLoading(true)
         try {
-            // DEPLOYMENT OPTIMIZED - Always use fast mode
-            const res = await getUpcomingIPOs(true, forceRefresh) // Always fast for deployment
+            // Add cache busting and refresh parameters
+            const url = forceRefresh 
+                ? `${fastMode ? '?fast=true&refresh=true&clear=true' : '?refresh=true&clear=true'}&t=${Date.now()}`
+                : `${fastMode ? '?fast=true' : ''}${fastMode ? '&' : '?'}t=${Date.now()}`;
+            
+            const res = await getUpcomingIPOs(fastMode, forceRefresh)
             if (res && res.status === "success" && Array.isArray(res.data)) {
                 const mappedData = res.data.map((item: any) => ({
                     company: item.name || "Unknown Company",
@@ -38,22 +42,33 @@ export default function IPOs() {
                     listingDate: item.listingDate || "TBA"
                 }))
                 
-                setIpos(mappedData)
+                // Filter out any old 2024 data that might still be coming through
+                const current2025Data = mappedData.filter(ipo => {
+                    const year = new Date().getFullYear();
+                    return !ipo.date.includes('2024') || ipo.date.includes('2025') || ipo.date.includes(year.toString());
+                });
+                
+                setIpos(current2025Data.length > 0 ? current2025Data : mappedData)
                 setLastUpdated(res.lastUpdated || new Date().toLocaleString())
                 
-                console.log(`⚡ DEPLOYMENT: IPO data loaded instantly - ${mappedData.length} IPOs`)
+                console.log(`✅ IPO data loaded: ${mappedData.length} total, ${current2025Data.length} current`)
             }
         } catch (error) {
-            console.log('⚡ DEPLOYMENT: IPO loading with fallback')
-            // Don't show error to user in deployment
+            console.error('IPO loading error:', error)
+            // Don't show error to user, just log it
         } finally {
             setLoading(false)
         }
     }
 
     useEffect(() => {
-        // DEPLOYMENT OPTIMIZED - Instant loading only
-        fetchIPOs(true, false) // Fast mode, no force refresh for instant load
+        // Force refresh to get current 2025 data
+        fetchIPOs(true, true) // Fast mode + force refresh
+        
+        // Full load after 2 seconds with force refresh
+        setTimeout(() => {
+            fetchIPOs(false, true) // Full load + force refresh
+        }, 2000)
     }, [])
 
     const getStatusColor = (status: string) => {

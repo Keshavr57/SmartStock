@@ -29,7 +29,7 @@ export default function News() {
     const [activeFilter, setActiveFilter] = useState<string>('all')
     const [searchQuery, setSearchQuery] = useState('')
 
-    const fetchNews = async (filter: string = 'all', fastMode = true) => {
+    const fetchNews = async (filter: string = 'all', fastMode = false) => {
         setLoading(true)
         try {
             let res;
@@ -45,16 +45,15 @@ export default function News() {
                     res = await getNewsByImpact(filter as 'high' | 'medium' | 'low');
                     break;
                 default:
-                    res = await getTrendingNews(true); // Always fast for deployment
+                    res = await getTrendingNews(fastMode);
             }
             
             if (res.status === "success") {
                 setNews(res.data)
-                console.log(`⚡ DEPLOYMENT: News loaded instantly - ${res.data.length} articles`)
             }
         } catch (error) {
-            console.log('⚡ DEPLOYMENT: News loading with fallback')
-            // Don't show error to user in deployment
+            console.error('News loading error:', error)
+            // Don't show error to user, just log it
         } finally {
             setLoading(false)
         }
@@ -62,18 +61,23 @@ export default function News() {
 
     const handleRefresh = async () => {
         setRefreshing(true)
-        await fetchNews(activeFilter, true) // Always fast refresh for deployment
+        await fetchNews(activeFilter, false) // Full refresh
         setRefreshing(false)
     }
 
     useEffect(() => {
-        // DEPLOYMENT OPTIMIZED - Instant loading only
-        fetchNews('all', true) // Always fast mode for deployment
+        // Fast initial load, then full load in background
+        fetchNews('all', true)
+        
+        // Full load after 2 seconds
+        setTimeout(() => {
+            fetchNews('all', false)
+        }, 2000)
     }, [])
 
     const handleFilterChange = (filter: string) => {
         setActiveFilter(filter)
-        fetchNews(filter, true) // Always fast for deployment
+        fetchNews(filter, false) // Full load for filters
     }
 
     const getSentimentColor = (sentiment: string) => {

@@ -1,10 +1,9 @@
 import axios from 'axios';
 import { API_CONFIG } from './config';
 
-// DEPLOYMENT OPTIMIZED API CLIENT
 export const api = axios.create({
     baseURL: API_CONFIG.BASE_URL,
-    timeout: 5000, // 5 second timeout for deployment
+    timeout: 15000, // 15 second timeout for better UX
 });
 
 // Add auth interceptor to include token in all requests
@@ -16,27 +15,20 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-// DEPLOYMENT OPTIMIZED response interceptor
+// Add response interceptor for better error handling
 api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.code === 'ECONNABORTED') {
-            console.log('⚡ DEPLOYMENT: Request timeout - using fallback');
+            console.error('Request timeout - server taking too long');
         }
-        // Don't reject - return empty response for deployment
-        return Promise.resolve({ 
-            data: { 
-                status: 'success', 
-                data: [], 
-                message: 'Loading...' 
-            } 
-        });
+        return Promise.reject(error);
     }
 );
 
 export const aiApi = axios.create({
     baseURL: API_CONFIG.AI_SERVICE_URL,
-    timeout: 10000, // AI requests timeout
+    timeout: 30000, // AI requests can take longer
 });
 
 // Market highlights
@@ -63,86 +55,22 @@ export const getComprehensiveComparison = async (symbols: string[]) => {
     return response.data;
 };
 
-// IPOs - DEPLOYMENT OPTIMIZED for instant loading
-export const getUpcomingIPOs = async (fastMode = true, forceRefresh = false) => {
-    const timeout = 3000; // 3 seconds max for deployment
+// IPOs - REAL data only with fast loading
+export const getUpcomingIPOs = async (fastMode = false, forceRefresh = false) => {
+    const timeout = fastMode ? 5000 : 15000; // Fast mode for initial load
     const refreshParam = forceRefresh ? '&refresh=true&clear=true' : '';
-    const fastParam = 'fast=true&instant=true'; // Always use fast mode for deployment
+    const fastParam = fastMode ? 'fast=true' : '';
     const params = `?${fastParam}${refreshParam}&t=${Date.now()}`;
     
-    try {
-        const response = await api.get(`/ipo/upcoming${params}`, { timeout });
-        return response.data;
-    } catch (error) {
-        // DEPLOYMENT FALLBACK - Never fail
-        console.log('⚡ DEPLOYMENT: IPO API fallback');
-        return {
-            status: "success",
-            data: [
-                {
-                    name: "Shayona Engineering Limited",
-                    openDate: "22 Jan 2025",
-                    closeDate: "27 Jan 2025",
-                    priceBand: "₹140-144",
-                    issueSize: "₹14.86 Cr",
-                    status: "Open",
-                    type: "SME",
-                    riskLevel: "Medium",
-                    riskIcon: "🟡"
-                },
-                {
-                    name: "Hannah Joseph Hospital Limited",
-                    openDate: "22 Jan 2025",
-                    closeDate: "27 Jan 2025",
-                    priceBand: "₹67-70",
-                    issueSize: "₹42 Cr",
-                    status: "Open",
-                    type: "SME",
-                    riskLevel: "Medium",
-                    riskIcon: "🟡"
-                }
-            ],
-            count: 2,
-            message: "Deployment fallback data"
-        };
-    }
+    const response = await api.get(`/ipo/upcoming${params}`, { timeout });
+    return response.data;
 };
 
-// News - DEPLOYMENT OPTIMIZED for instant loading
-export const getTrendingNews = async (fastMode = true) => {
-    const timeout = 3000; // 3 seconds max for deployment
-    const params = `?fast=true&instant=true&t=${Date.now()}`;
-    
-    try {
-        const response = await api.get(`/news/trending${params}`, { timeout });
-        return response.data;
-    } catch (error) {
-        // DEPLOYMENT FALLBACK - Never fail
-        console.log('⚡ DEPLOYMENT: News API fallback');
-        return {
-            status: "success",
-            data: [
-                {
-                    title: "Nifty 50 Hits Fresh Record High",
-                    description: "Indian benchmark indices surge to new peaks",
-                    source: "Economic Times",
-                    sentiment: "positive",
-                    sentimentIcon: "🟢",
-                    marketImpact: "high"
-                },
-                {
-                    title: "IT Sector Rallies on Strong Earnings",
-                    description: "Technology stocks lead market gains",
-                    source: "Mint",
-                    sentiment: "positive", 
-                    sentimentIcon: "🟢",
-                    marketImpact: "medium"
-                }
-            ],
-            count: 2,
-            message: "Deployment fallback data"
-        };
-    }
+// News - REAL data only with fast loading
+export const getTrendingNews = async (fastMode = false) => {
+    const timeout = fastMode ? 5000 : 15000; // Fast mode for initial load
+    const response = await api.get(`/news/trending?t=${Date.now()}`, { timeout });
+    return response.data;
 };
 
 // Fast news loading for initial page load

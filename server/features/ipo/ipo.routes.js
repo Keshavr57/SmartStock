@@ -13,74 +13,71 @@ router.get('/test', (req, res) => {
 
 router.get('/upcoming', async (req, res) => {
     try {
-        // DEPLOYMENT OPTIMIZATION - Instant response
-        const fastMode = req.query.fast === 'true' || req.query.instant === 'true';
-        
-        // Clear cache if requested
+        // Clear cache if requested or if showing old data
         if (req.query.refresh === 'true' || req.query.clear === 'true') {
-            console.log('🔄 Clearing IPO cache for fresh data...');
+            console.log('🔄 Clearing IPO cache for fresh current 2025 data...');
             realIPOService.clearCache();
         }
         
-        // INSTANT TIMEOUT for deployment
-        const timeout = fastMode ? 1000 : 3000; // 1s for fast, 3s max for full
+        // Set timeout for faster response
+        const timeout = req.query.fast === 'true' ? 5000 : 15000;
         
-        // Get IPO data with deployment optimization
+        // Use REAL IPO service only with timeout
         const ipoData = await Promise.race([
-            realIPOService.getCurrentIPOs(fastMode),
+            realIPOService.getCurrentIPOs(),
             new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Deployment timeout')), timeout)
+                setTimeout(() => reject(new Error('Request timeout')), timeout)
             )
         ]);
         
-        console.log(`⚡ DEPLOYMENT: Returning ${ipoData.length} IPOs in <${timeout}ms`);
+        // Ensure we're returning current 2025 data
+        console.log(`📊 Returning ${ipoData.length} IPOs (prioritizing 2025 data)`);
         
         res.json({
             status: "success",
             timestamp: new Date(),
             count: ipoData.length,
             data: ipoData,
-            message: `⚡ INSTANT: ${ipoData.length} IPOs loaded for deployment`,
-            dataSource: "Deployment Optimized: Live + Instant Fallback",
+            message: `Found ${ipoData.length} COMPREHENSIVE IPOs - Open, Upcoming & Recent`,
+            dataSource: "LIVE Market Data: Economic Times + IPOWatch + Chittorgarh",
             categories: {
                 open: ipoData.filter(ipo => ipo.status === 'Open').length,
                 upcoming: ipoData.filter(ipo => ipo.status === 'Upcoming').length,
-                closed: ipoData.filter(ipo => ipo.status === 'Closed').length,
-                mainboard: ipoData.filter(ipo => ipo.type === 'Mainboard').length,
-                sme: ipoData.filter(ipo => ipo.type === 'SME').length
+                closing: ipoData.filter(ipo => ipo.status === 'Closing').length,
+                recent: ipoData.filter(ipo => ipo.status === 'Listed' || ipo.status === 'Closed').length
             },
-            performance: {
-                loadTime: `<${timeout}ms`,
-                cached: false,
-                deploymentOptimized: true
-            },
-            lastUpdated: new Date().toLocaleString('en-IN')
+            lastUpdated: new Date().toLocaleString('en-IN'),
+            note: "Comprehensive IPO data matching live market sources"
         });
         
     } catch (error) {
         console.error("❌ IPO Route Error:", error.message);
         
-        // GUARANTEED FALLBACK - Never fail on deployment
-        try {
-            const fallbackData = await realIPOService.fetchFastIPOData();
-            res.json({
-                status: "success",
-                timestamp: new Date(),
-                count: fallbackData.length,
-                data: fallbackData,
-                message: `⚡ FALLBACK: ${fallbackData.length} IPOs (guaranteed)`,
-                dataSource: "Instant Fallback Data",
-                lastUpdated: new Date().toLocaleString('en-IN'),
-                note: "Fallback data for deployment reliability"
-            });
-        } catch (fallbackError) {
-            // Last resort - return empty but valid response
-            res.json({ 
-                status: "success", 
-                message: "Service initializing",
-                data: [],
-                count: 0,
-                timestamp: new Date()
+        // Return fallback data on timeout or error
+        if (error.message === 'Request timeout') {
+            try {
+                const fallbackData = await realIPOService.fetchFastIPOData();
+                res.json({
+                    status: "success",
+                    timestamp: new Date(),
+                    count: fallbackData.length,
+                    data: fallbackData,
+                    message: `Fallback: ${fallbackData.length} current 2025 IPOs`,
+                    dataSource: "Current 2025 Fast Cache",
+                    lastUpdated: new Date().toLocaleString('en-IN')
+                });
+            } catch (fallbackError) {
+                res.status(500).json({ 
+                    status: "error", 
+                    message: "Service temporarily unavailable",
+                    data: []
+                });
+            }
+        } else {
+            res.status(500).json({ 
+                status: "error", 
+                message: error.message,
+                data: []
             });
         }
     }
