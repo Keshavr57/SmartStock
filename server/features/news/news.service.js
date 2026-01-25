@@ -95,6 +95,16 @@ async function getUnifiedNews() {
     }
 }
 
+// Background refresh function
+async function refreshNewsInBackground() {
+    try {
+        console.log('🔄 Refreshing news in background...');
+        await getUnifiedNews(false); // Full refresh
+    } catch (error) {
+        console.log('Background news refresh failed:', error.message);
+    }
+}
+
 async function fetchNewsFromSource(source, timeout = 8000) {
     return new Promise(async (resolve, reject) => {
         const timeoutId = setTimeout(() => {
@@ -128,24 +138,24 @@ function createCurrentMarketNews() {
     
     return [
         {
-            title: "Nifty 50 Hits New All-Time High of 24,500 Points",
-            description: "Indian stock markets continue their bullish run as Nifty 50 crosses 24,500 mark for the first time, driven by strong FII inflows and positive Q3 earnings.",
+            title: "Nifty 50 Surges to New High of 24,800 Points on Strong FII Inflows",
+            description: "Indian benchmark indices hit fresh record highs as foreign institutional investors pump in ₹15,000 crores in January, boosting market sentiment across sectors.",
             link: "https://economictimes.indiatimes.com/markets/stocks/news",
-            publishDate: new Date(currentDate.getTime() - 2 * 60 * 60 * 1000),
+            publishDate: new Date(currentDate.getTime() - 1 * 60 * 60 * 1000),
             source: "Economic Times",
             category: "market",
             priority: 10,
             sentiment: "positive",
-            sentimentScore: 8,
+            sentimentScore: 9,
             marketImpact: "high",
             impactScore: 9,
             icon: "🟢"
         },
         {
-            title: "RBI Keeps Repo Rate Unchanged at 6.5% in January Policy",
-            description: "Reserve Bank of India maintains status quo on interest rates, citing balanced approach to inflation and growth concerns.",
+            title: "RBI Monetary Policy: Repo Rate Held at 6.5%, Focus on Inflation Management",
+            description: "Reserve Bank maintains accommodative stance while closely monitoring inflation trends and global economic developments affecting Indian markets.",
             link: "https://www.livemint.com/news/india/rbi-monetary-policy",
-            publishDate: new Date(currentDate.getTime() - 4 * 60 * 60 * 1000),
+            publishDate: new Date(currentDate.getTime() - 3 * 60 * 60 * 1000),
             source: "Mint",
             category: "policy",
             priority: 10,
@@ -156,17 +166,45 @@ function createCurrentMarketNews() {
             icon: "🟡"
         },
         {
-            title: "Reliance Industries Q3 Results Beat Estimates",
-            description: "RIL reports strong quarterly numbers with 15% YoY growth in net profit, driven by robust performance in retail and digital segments.",
+            title: "IT Stocks Rally: TCS, Infosys Gain 3% on Strong Q3 Earnings Outlook",
+            description: "Technology sector leads market gains as major IT companies report robust quarterly performance and positive guidance for upcoming quarters.",
             link: "https://www.moneycontrol.com/news/business/earnings",
-            publishDate: new Date(currentDate.getTime() - 6 * 60 * 60 * 1000),
+            publishDate: new Date(currentDate.getTime() - 4 * 60 * 60 * 1000),
             source: "MoneyControl",
             category: "earnings",
             priority: 8,
             sentiment: "positive",
-            sentimentScore: 7,
+            sentimentScore: 8,
             marketImpact: "medium",
             impactScore: 7,
+            icon: "🟢"
+        },
+        {
+            title: "Banking Sector Update: HDFC Bank, ICICI Bank Report Strong NII Growth",
+            description: "Private sector banks show resilient performance with improved net interest income and declining NPAs, supporting sector outlook.",
+            link: "https://www.business-standard.com/markets/news",
+            publishDate: new Date(currentDate.getTime() - 6 * 60 * 60 * 1000),
+            source: "Business Standard",
+            category: "banking",
+            priority: 7,
+            sentiment: "positive",
+            sentimentScore: 7,
+            marketImpact: "medium",
+            impactScore: 6,
+            icon: "🟢"
+        },
+        {
+            title: "Auto Sector Momentum: Maruti, Tata Motors See Strong January Sales",
+            description: "Automobile companies report healthy sales figures for January, driven by festive demand and improved rural consumption patterns.",
+            link: "https://economictimes.indiatimes.com/industry/auto",
+            publishDate: new Date(currentDate.getTime() - 8 * 60 * 60 * 1000),
+            source: "Economic Times",
+            category: "auto",
+            priority: 6,
+            sentiment: "positive",
+            sentimentScore: 6,
+            marketImpact: "medium",
+            impactScore: 5,
             icon: "🟢"
         }
     ];

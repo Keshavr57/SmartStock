@@ -38,30 +38,35 @@ class AuthService {
   private async initializeAuth() {
     if (this.isInitialized) return;
     
-    // Initialize from localStorage
+    // Fast initialization from localStorage only
     this.token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
+    const lastLogin = localStorage.getItem('lastLogin');
     
-    if (userData) {
+    if (userData && this.token && lastLogin) {
       try {
         this.user = JSON.parse(userData);
+        
+        // Check if login is recent (within 7 days)
+        const daysSinceLogin = (Date.now() - new Date(lastLogin).getTime()) / (1000 * 60 * 60 * 24);
+        
+        if (daysSinceLogin <= 7) {
+          // Valid recent login - no need to verify with server
+          this.setupTokenRefresh();
+          this.isInitialized = true;
+          return;
+        }
       } catch (error) {
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
-      }
-    }
-
-    // If we have a token, verify it's still valid
-    if (this.token) {
-      const isValid = await this.verifyToken();
-      if (!isValid) {
+        // Invalid data, clear it
         this.logout();
-      } else {
-        // Set up auto-refresh for valid tokens
-        this.setupTokenRefresh();
       }
     }
-
+    
+    // If no valid cached auth, clear everything
+    if (!this.token || !this.user) {
+      this.logout();
+    }
+    
     this.isInitialized = true;
   }
 
@@ -306,18 +311,34 @@ class AuthService {
   }
 
   async isAuthenticated(): Promise<boolean> {
-    // Ensure auth is initialized
-    if (!this.isInitialized) {
-      await this.initializeAuth();
-    }
+    // Ultra-fast authentication check
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
+    const lastLogin = localStorage.getItem('lastLogin');
     
-    // Quick check for token and user
-    if (!this.token || !this.user) {
+    // Quick validation without API calls
+    if (!token || !userData || !lastLogin) {
       return false;
     }
-
-    // For performance, don't verify token on every call
-    // Token verification happens during initialization and refresh
+    
+    // Check if login is recent (within 7 days)
+    const daysSinceLogin = (Date.now() - new Date(lastLogin).getTime()) / (1000 * 60 * 60 * 24);
+    if (daysSinceLogin > 7) {
+      this.logout();
+      return false;
+    }
+    
+    // Set auth data if not already set
+    if (!this.token || !this.user) {
+      try {
+        this.token = token;
+        this.user = JSON.parse(userData);
+      } catch (error) {
+        this.logout();
+        return false;
+      }
+    }
+    
     return true;
   }
 

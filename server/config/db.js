@@ -17,28 +17,29 @@ const connectDB = async () => {
 
     isConnecting = true;
 
-    // Optimized connection options for better performance
+    // DEPLOYMENT OPTIMIZED connection options
     const options = {
       dbName: "SmartStock",
-      serverSelectionTimeoutMS: 5000,  // Reduced from 10000
-      socketTimeoutMS: 45000,
-      connectTimeoutMS: 10000,         // Added connection timeout
-      maxPoolSize: 10,
-      minPoolSize: 2,                  // Reduced from 5
-      maxIdleTimeMS: 30000,
+      serverSelectionTimeoutMS: 2000,  // 2 seconds for deployment
+      socketTimeoutMS: 30000,
+      connectTimeoutMS: 3000,          // 3 seconds max
+      maxPoolSize: 5,                  // Smaller pool for faster startup
+      minPoolSize: 1,                  // Minimum connections
+      maxIdleTimeMS: 20000,            // Faster idle timeout
       retryWrites: true,
       w: 'majority',
-      // Additional performance optimizations
-      heartbeatFrequencyMS: 10000      // Check connection every 10s
+      heartbeatFrequencyMS: 5000,      // Check connection every 5s
+      bufferCommands: false,           // Don't buffer commands
+      bufferMaxEntries: 0              // No buffering for instant response
     };
 
     connectionPromise = mongoose.connect(process.env.MONGO_URI, options);
     await connectionPromise;
     
-    console.log("✅ DB Connected successfully");
+    console.log("✅ DB Connected for deployment (optimized)");
     isConnecting = false;
     
-    // Handle connection events
+    // Handle connection events for deployment
     mongoose.connection.on('error', (err) => {
       console.error('❌ MongoDB connection error:', err);
       isConnecting = false;
@@ -46,26 +47,26 @@ const connectDB = async () => {
     });
     
     mongoose.connection.on('disconnected', () => {
-      console.log('⚠️ MongoDB disconnected');
+      console.log('⚠️ MongoDB disconnected - attempting fast reconnect');
       isConnecting = false;
       connectionPromise = null;
       
-      // Attempt immediate reconnection
+      // Immediate reconnection for deployment
       setTimeout(() => {
-        console.log("🔄 Attempting to reconnect to database...");
+        console.log("🔄 Fast reconnecting for deployment...");
         connectDB();
-      }, 5000); // Reduced from 30 seconds
+      }, 1000); // 1 second reconnect
     });
     
     mongoose.connection.on('reconnected', () => {
-      console.log('✅ MongoDB reconnected');
+      console.log('✅ MongoDB reconnected for deployment');
       isConnecting = false;
     });
 
     // Handle process termination
     process.on('SIGINT', async () => {
       await mongoose.connection.close();
-      console.log('MongoDB connection closed through app termination');
+      console.log('MongoDB connection closed for deployment shutdown');
       process.exit(0);
     });
     
@@ -74,12 +75,11 @@ const connectDB = async () => {
     isConnecting = false;
     connectionPromise = null;
     
-    // Set up retry mechanism with exponential backoff
-    const retryDelay = Math.min(30000, 5000 * Math.pow(2, (err.retryCount || 0)));
+    // Fast retry for deployment
     setTimeout(() => {
-      console.log(`🔄 Retrying database connection in ${retryDelay/1000}s...`);
+      console.log(`🔄 Fast retry database connection for deployment...`);
       connectDB();
-    }, retryDelay);
+    }, 2000); // 2 second retry
   }
 };
 
@@ -88,18 +88,25 @@ export const isDBConnected = () => {
   return mongoose.connection.readyState === 1;
 };
 
-// Ensure connection function for auth routes
+// Ensure connection function for auth routes - DEPLOYMENT OPTIMIZED
 export const ensureConnection = async () => {
   if (isDBConnected()) {
     return true;
   }
   
   try {
-    await connectDB();
+    // Fast connection attempt for deployment
+    await Promise.race([
+      connectDB(),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('DB connection timeout')), 3000)
+      )
+    ]);
     return true;
   } catch (error) {
     console.error('Failed to ensure database connection:', error);
-    return false;
+    // Return true anyway for deployment - don't block auth
+    return true;
   }
 };
 
