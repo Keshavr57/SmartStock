@@ -3,7 +3,7 @@ import { API_CONFIG } from './config';
 
 export const api = axios.create({
     baseURL: API_CONFIG.BASE_URL,
-    timeout: 15000, // 15 second timeout for better UX
+    timeout: 45000, // Increased timeout for cold starts
 });
 
 // Add auth interceptor to include token in all requests
@@ -15,13 +15,20 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-// Add response interceptor for better error handling
+// Enhanced response interceptor for cold start handling
 api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.code === 'ECONNABORTED') {
-            console.error('Request timeout - server taking too long');
+            console.error('Request timeout - server may be starting up (cold start)');
+            // You could show a specific message to users about server startup
         }
+        
+        // Handle 502/503 errors (common during cold starts)
+        if (error.response?.status === 502 || error.response?.status === 503) {
+            console.error('Server unavailable - likely cold start in progress');
+        }
+        
         return Promise.reject(error);
     }
 );

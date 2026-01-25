@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import connectDB from './config/db.js';
+import keepAliveService from './utils/keepAlive.js';
+import performanceMonitor from './middleware/performanceMonitor.js';
 
 // Import routes from organized features
 import stockRoutes from './features/stocks/stock.routes.js';
@@ -73,6 +75,9 @@ app.options('*', cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Performance monitoring
+app.use(performanceMonitor);
+
 // Request logging middleware
 app.use((req, res, next) => {
     console.log(`📥 ${req.method} ${req.path} - Origin: ${req.headers.origin || 'none'}`);
@@ -124,23 +129,52 @@ app.use('/api/market', marketRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
 
-// Health Check
-app.get('/api/health', (req, res) => {
-    res.json({ 
-        status: 'ok', 
-        message: 'Server is running',
-        features: [
-            'stocks',
-            'ipo',
-            'news',
-            'learning',
-            'trading',
-            'market',
-            'auth',
-            'chat'
-        ]
-    });
+// Health Check with warmup capabilities
+app.get('/api/health', async (req, res) => {
+    const startTime = Date.now();
+    
+    try {
+        // Quick DB ping to ensure connection is ready
+        const dbStatus = await checkDatabaseConnection();
+        
+        const responseTime = Date.now() - startTime;
+        
+        res.json({ 
+            status: 'ok', 
+            message: 'Server is running',
+            timestamp: new Date().toISOString(),
+            responseTime: `${responseTime}ms`,
+            database: dbStatus ? 'connected' : 'disconnected',
+            uptime: process.uptime(),
+            features: [
+                'stocks',
+                'ipo', 
+                'news',
+                'learning',
+                'trading',
+                'market',
+                'auth',
+                'chat'
+            ]
+        });
+    } catch (error) {
+        res.status(503).json({
+            status: 'error',
+            message: 'Server starting up...',
+            error: error.message
+        });
+    }
 });
+
+// Quick database connection check
+async function checkDatabaseConnection() {
+    try {
+        const mongoose = await import('mongoose');
+        return mongoose.default.connection.readyState === 1;
+    } catch (error) {
+        return false;
+    }
+}
 
 // Root Route
 app.get('/', (req, res) => {
@@ -166,6 +200,28 @@ const PORT = process.env.PORT || 5050;
 httpServer.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     console.log('Socket.IO enabled for real-time trading');
+    
+    // Start keep-alive service to prevent cold starts
+    keepAliveService.start();
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+    console.log('🛑 SIGTERM received, shutting down gracefully...');
+    keepAliveService.stop();
+    httpServer.close(() => {
+        console.log('✅ Server closed');
+        process.exit(0);
+    });
+});
+
+process.on('SIGINT', () => {
+    console.log('🛑 SIGINT received, shutting down gracefully...');
+    keepAliveService.stop();
+    httpServer.close(() => {
+        console.log('✅ Server closed');
+        process.exit(0);
+    });
 });
 
 export default app;
