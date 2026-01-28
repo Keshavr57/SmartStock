@@ -96,9 +96,8 @@ export const getLessonContent = async (id: string) => {
     return response.data;
 };
 
-// AI Advisor (Chat)
+// AI Advisor (Chat) - Direct connection to AI service
 export const processAiQuery = async (message: string, userId: string = 'client_user') => {
-    // Use the main API instead of direct AI service call
     const response = await api.post('/chat/ai-chat', { message, userId });
     return response.data;
 };

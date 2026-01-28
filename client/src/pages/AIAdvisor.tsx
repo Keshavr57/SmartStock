@@ -72,27 +72,13 @@ export default function AIAdvisor() {
                 }
                 setMessages(prev => [...prev, assistantMsg])
             } else {
-                const fallbackMsg: Message = { 
-                    role: 'assistant', 
-                    content: `I'm having trouble processing that right now. Let me help you with some common topics:
-
-How about asking me about stock analysis basics, investment strategies for beginners, or risk management tips? 
-
-I can also explain market concepts like P/E ratios, diversification, or how to evaluate IPOs.
-
-What specific area would you like to learn about?`,
-                    timestamp: new Date()
-                }
-                setMessages(prev => [...prev, fallbackMsg])
+                throw new Error('AI service error: ' + (res.message || 'Unknown error'))
             }
         } catch (error) {
+            console.error('AI Service Error:', error)
             const errorMsg: Message = { 
                 role: 'assistant', 
-                content: `Sorry, I'm having connection issues right now. 
-
-While I get back online, here are some key investing principles: always research before buying, diversify your portfolio, and never invest money you'll need soon.
-
-Try asking me again in a moment, or ask about specific topics like "how to analyze stocks" or "investment tips for beginners".`,
+                content: `Sorry, I'm having trouble connecting to the AI service right now. Please try again in a moment.`,
                 timestamp: new Date()
             }
             setMessages(prev => [...prev, errorMsg])

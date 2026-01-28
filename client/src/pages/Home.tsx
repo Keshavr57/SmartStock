@@ -1,10 +1,8 @@
 import { MarketTable } from "@/components/MarketTable"
-import { TrendingUp, DollarSign, Activity, BarChart3, ArrowUpRight, RefreshCw } from "lucide-react"
+import { TrendingUp, DollarSign, Activity, BarChart3, ArrowUpRight, RefreshCw, TrendingDown } from "lucide-react"
 import { useState, useEffect } from "react"
 import { authService } from "../lib/auth"
 import { ENDPOINTS } from "../lib/config"
-import { getMarketCharts } from "../lib/api"
-import { LineChart, Line, ResponsiveContainer } from 'recharts'
 import { formatCurrency, formatPercentage } from "../lib/currency"
 
 interface PortfolioData {
@@ -38,108 +36,11 @@ export default function Home() {
         dayPnLPercent: 0
     });
     const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
-    const [marketCharts, setMarketCharts] = useState<any>({
-        nifty: {
-            name: 'NIFTY 50',
-            currentPrice: 24150,
-            change: 0.5,
-            data: [
-                { name: 'Mon', value: 24052 },
-                { name: 'Tue', value: 24230 },
-                { name: 'Wed', value: 24219 },
-                { name: 'Thu', value: 23966 },
-                { name: 'Fri', value: 24378 }
-            ]
-        },
-        sp500: {
-            name: 'S&P 500',
-            currentPrice: 5900,
-            change: 0.3,
-            data: [
-                { name: 'Mon', value: 5843 },
-                { name: 'Tue', value: 5945 },
-                { name: 'Wed', value: 5882 },
-                { name: 'Thu', value: 5922 },
-                { name: 'Fri', value: 5882 }
-            ]
-        }
-    });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         fetchUserData();
-        fetchMarketCharts();
-        
-        const chartInterval = setInterval(fetchMarketCharts, 30000);
-        
-        return () => {
-            clearInterval(chartInterval);
-        };
     }, []);
-
-    const fetchMarketCharts = async () => {
-        try {
-            const response = await getMarketCharts();
-            
-            if (response.success && response.charts) {
-                setMarketCharts(response.charts);
-            } else {
-                setMarketCharts({
-                    nifty: {
-                        name: 'NIFTY 50',
-                        currentPrice: 24150,
-                        change: 0.5,
-                        data: [
-                            { name: 'Mon', value: 24052 },
-                            { name: 'Tue', value: 24230 },
-                            { name: 'Wed', value: 24219 },
-                            { name: 'Thu', value: 23966 },
-                            { name: 'Fri', value: 24378 }
-                        ]
-                    },
-                    sp500: {
-                        name: 'S&P 500',
-                        currentPrice: 5900,
-                        change: 0.3,
-                        data: [
-                            { name: 'Mon', value: 5843 },
-                            { name: 'Tue', value: 5945 },
-                            { name: 'Wed', value: 5882 },
-                            { name: 'Thu', value: 5922 },
-                            { name: 'Fri', value: 5882 }
-                        ]
-                    }
-                });
-            }
-        } catch (error) {
-            setMarketCharts({
-                nifty: {
-                    name: 'NIFTY 50',
-                    currentPrice: 24150,
-                    change: 0.5,
-                    data: [
-                        { name: 'Mon', value: 24052 },
-                        { name: 'Tue', value: 24230 },
-                        { name: 'Wed', value: 24219 },
-                        { name: 'Thu', value: 23966 },
-                        { name: 'Fri', value: 24378 }
-                    ]
-                },
-                sp500: {
-                    name: 'S&P 500',
-                    currentPrice: 5900,
-                    change: 0.3,
-                    data: [
-                        { name: 'Mon', value: 5843 },
-                        { name: 'Tue', value: 5945 },
-                        { name: 'Wed', value: 5882 },
-                        { name: 'Thu', value: 5922 },
-                        { name: 'Fri', value: 5882 }
-                    ]
-                }
-            });
-        }
-    };
 
     const fetchUserData = async () => {
         try {
@@ -284,68 +185,88 @@ export default function Home() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                         <div className="p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <div>
-                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">NIFTY 50</h3>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                                            {marketCharts?.nifty?.currentPrice?.toLocaleString() || '24,150'}
-                                        </span>
-                                        <span className={`text-sm font-medium ${
-                                            (marketCharts?.nifty?.change || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                                        }`}>
-                                            {(marketCharts?.nifty?.change || 0) >= 0 ? '+' : ''}{(marketCharts?.nifty?.change || 0.5).toFixed(2)}%
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                    <TrendingUp className="h-5 w-5 text-green-600" />
+                                    Top Gainers
+                                </h3>
+                                <span className="text-sm text-gray-500 dark:text-gray-400">NSE</span>
                             </div>
-                            <div className="h-32 w-full">
-                                <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={128}>
-                                    <LineChart data={marketCharts?.nifty?.data || []}>
-                                        <Line 
-                                            type="monotone" 
-                                            dataKey="value" 
-                                            stroke="#2563eb" 
-                                            strokeWidth={2}
-                                            dot={false}
-                                        />
-                                    </LineChart>
-                                </ResponsiveContainer>
+                            <div className="space-y-4">
+                                {[
+                                    { symbol: 'ADANIENT', name: 'Adani Enterprises', price: 2485, change: 8.2, volume: '2.1M' },
+                                    { symbol: 'TATAMOTORS', name: 'Tata Motors', price: 785, change: 6.8, volume: '5.3M' },
+                                    { symbol: 'JSWSTEEL', name: 'JSW Steel', price: 985, change: 5.4, volume: '3.2M' },
+                                    { symbol: 'COALINDIA', name: 'Coal India', price: 385, change: 4.9, volume: '1.8M' },
+                                    { symbol: 'ZOMATO', name: 'Zomato Ltd', price: 285, change: 4.2, volume: '4.1M' }
+                                ].map((stock, index) => (
+                                    <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                                                    <span className="text-xs font-bold text-green-800 dark:text-green-200">
+                                                        {index + 1}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold text-gray-900 dark:text-white text-sm">{stock.symbol}</p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400">{stock.name}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="font-semibold text-gray-900 dark:text-white text-sm">₹{stock.price}</p>
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-xs font-medium text-green-600">+{stock.change}%</span>
+                                                <span className="text-xs text-gray-500">{stock.volume}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>
 
                     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                         <div className="p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <div>
-                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">S&P 500</h3>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                                            {marketCharts?.sp500?.currentPrice?.toLocaleString() || '5,900'}
-                                        </span>
-                                        <span className={`text-sm font-medium ${
-                                            (marketCharts?.sp500?.change || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                                        }`}>
-                                            {(marketCharts?.sp500?.change || 0) >= 0 ? '+' : ''}{(marketCharts?.sp500?.change || 0.3).toFixed(2)}%
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                    <TrendingDown className="h-5 w-5 text-red-600" />
+                                    Top Losers
+                                </h3>
+                                <span className="text-sm text-gray-500 dark:text-gray-400">NSE</span>
                             </div>
-                            <div className="h-32 w-full">
-                                <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={128}>
-                                    <LineChart data={marketCharts?.sp500?.data || []}>
-                                        <Line 
-                                            type="monotone" 
-                                            dataKey="value" 
-                                            stroke="#10b981" 
-                                            strokeWidth={2}
-                                            dot={false}
-                                        />
-                                    </LineChart>
-                                </ResponsiveContainer>
+                            <div className="space-y-4">
+                                {[
+                                    { symbol: 'PAYTM', name: 'Paytm', price: 985, change: -5.2, volume: '3.8M' },
+                                    { symbol: 'BAJFINANCE', name: 'Bajaj Finance', price: 945, change: -4.8, volume: '2.1M' },
+                                    { symbol: 'ASIANPAINT', name: 'Asian Paints', price: 2420, change: -3.9, volume: '1.2M' },
+                                    { symbol: 'ULTRACEMCO', name: 'UltraTech Cement', price: 11800, change: -3.1, volume: '0.8M' },
+                                    { symbol: 'NESTLEIND', name: 'Nestle India', price: 2180, change: -2.8, volume: '0.5M' }
+                                ].map((stock, index) => (
+                                    <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center">
+                                                    <span className="text-xs font-bold text-red-800 dark:text-red-200">
+                                                        {index + 1}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold text-gray-900 dark:text-white text-sm">{stock.symbol}</p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400">{stock.name}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="font-semibold text-gray-900 dark:text-white text-sm">₹{stock.price}</p>
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-xs font-medium text-red-600">{stock.change}%</span>
+                                                <span className="text-xs text-gray-500">{stock.volume}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -358,13 +279,6 @@ export default function Home() {
                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                                     Market Overview
                                 </h3>
-                                <button 
-                                    onClick={fetchMarketCharts}
-                                    className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                                >
-                                    <RefreshCw className="h-4 w-4" />
-                                    <span className="text-sm">Refresh</span>
-                                </button>
                             </div>
                             <MarketTable />
                         </div>

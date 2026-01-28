@@ -6,7 +6,6 @@ const config = {
     yahooFundamentalsURL: 'https://query2.finance.yahoo.com/v10/finance/quoteSummary/',
     indianAPIBaseURL: 'https://stock.indianapi.in',
     indianAPIKey: process.env.INDIAN_API_KEY,
-    coinGeckoURL: 'https://api.coingecko.com/api/v3',
     cacheTimeout: 5 * 60 * 1000
 };
 
@@ -38,8 +37,6 @@ async function getComprehensiveStockData(symbol) {
 
         if (symbol.includes('.NS') || symbol.includes('.BO')) {
             result = await getIndianStockData(symbol, result);
-        } else if (isCrypto(symbol)) {
-            result = await getCryptoData(symbol, result);
         } else {
             result = await getYahooStockData(symbol, result);
         }
@@ -220,32 +217,6 @@ async function getYahooStockData(symbol, result) {
     }
 }
 
-async function getCryptoData(symbol, result) {
-    try {
-        const coinId = getCoinGeckoId(symbol);
-        const coinData = await axios.get(`${config.coinGeckoURL}/coins/${coinId}`, { timeout: 10000 });
-
-        if (coinData.data) {
-            const coin = coinData.data;
-            result.name = coin.name;
-            result.lastTradedPrice = coin.market_data.current_price.usd;
-            result.oneDayChangePercent = coin.market_data.price_change_percentage_24h;
-            result.marketCap = coin.market_data.market_cap.usd;
-            result.volume = coin.market_data.total_volume.usd;
-            result.fiftyTwoWeekHigh = coin.market_data.high_52w.usd;
-            result.fiftyTwoWeekLow = coin.market_data.low_52w.usd;
-            result.description = coin.description.en;
-            result.circulatingSupply = coin.market_data.circulating_supply;
-            result.totalSupply = coin.market_data.total_supply;
-            result.maxSupply = coin.market_data.max_supply;
-        }
-
-        return result;
-    } catch (error) {
-        return result;
-    }
-}
-
 // Fetch from NSE India official API (most reliable for Indian stocks)
 async function fetchFromNSEIndia(symbol) {
     try {
@@ -307,7 +278,7 @@ async function fetchFromNSEIndia(symbol) {
 async function fetchFromIndianAPI(symbol) {
     try {
         const cleanSymbol = symbol.replace('.NS', '').replace('.BO', '').toUpperCase();
-        console.log(`🇮🇳 Trying Indian API for: ${cleanSymbol}`);
+        console.log(`rying Indian API for: ${cleanSymbol}`);
         
         const response = await axios.get(`${config.indianAPIBaseURL}/stock`, {
             params: { name: cleanSymbol },
@@ -503,21 +474,6 @@ async function getYahooProfile(symbol) {
 }
 
 // Helper functions
-function isCrypto(symbol) {
-    const cryptoSymbols = ['BTC', 'ETH', 'ADA', 'DOT', 'SOL', 'MATIC', 'AVAX', 'LINK', 'UNI'];
-    return cryptoSymbols.some(crypto => symbol.toUpperCase().includes(crypto));
-}
-
-function getCoinGeckoId(symbol) {
-    const cryptoMap = {
-        'BTC': 'bitcoin', 'ETH': 'ethereum', 'ADA': 'cardano', 'DOT': 'polkadot',
-        'SOL': 'solana', 'MATIC': 'polygon', 'AVAX': 'avalanche-2', 'LINK': 'chainlink', 'UNI': 'uniswap'
-    };
-    
-    const cleanSymbol = symbol.replace('-USD', '').replace('-USDT', '').toUpperCase();
-    return cryptoMap[cleanSymbol] || 'bitcoin';
-}
-
 function generateFallbackPrice(symbol) {
     // Updated fallback prices based on user corrections (January 2025)
     const priceMap = {
