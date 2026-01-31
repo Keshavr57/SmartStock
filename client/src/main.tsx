@@ -5,7 +5,7 @@ import "./index.css"
 import "./utils/console"
 import "./utils/devMode"
 
-// Force cache invalidation - Build: 2026-01-14-v3
+// Force cache invalidation - Build: 2026-01-31-loading-fix
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

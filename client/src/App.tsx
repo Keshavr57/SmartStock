@@ -63,19 +63,11 @@ function AppContent() {
 
     // Check authentication status on app load
     useEffect(() => {
-        const checkAuth = async () => {
+        const checkAuth = () => {
             setLoading(true)
             
             if (authService.isAuthenticated()) {
-                // Try to refresh user profile
-                const user = await authService.getProfile()
-                if (user) {
-                    setIsAuthenticated(true)
-                } else {
-                    // Token might be expired, logout
-                    authService.logout()
-                    setIsAuthenticated(false)
-                }
+                setIsAuthenticated(true)
             } else {
                 setIsAuthenticated(false)
             }
@@ -88,19 +80,12 @@ function AppContent() {
 
     const handleLogin = () => {
         // Force re-check authentication status
-        const checkAuthAfterLogin = async () => {
-            if (authService.isAuthenticated()) {
-                const user = await authService.getProfile();
-                if (user) {
-                    setIsAuthenticated(true);
-                    navigate('/home');
-                } else {
-                    setIsAuthenticated(false);
-                }
-            }
-        };
-        
-        checkAuthAfterLogin();
+        if (authService.isAuthenticated()) {
+            setIsAuthenticated(true);
+            navigate('/home');
+        } else {
+            setIsAuthenticated(false);
+        }
     };
 
     const handleLogout = () => {

@@ -3,6 +3,7 @@ import marketService from './market.service.js';
 import chartService from '../stocks/chart.service.js';
 import { getAllIndianStocks, getStocksByCategory, searchStocks, POPULAR_STOCKS, STOCK_METADATA } from '../stocks/stocksList.js';
 import { getMarketHistory } from './market.controller.js';
+import { getTopMovers, getMarketStatus } from './topMovers.service.js';
 
 const router = express.Router();
 
@@ -257,5 +258,42 @@ router.get('/charts', async (req, res) => {
 });
 
 router.get('/history', getMarketHistory);
+
+// Real-time top movers (gainers and losers) - With fallback for now
+router.get('/top-movers', async (req, res) => {
+    try {
+        console.log('🔥 Fetching top movers (trying real APIs first)...');
+        const data = await getTopMovers();
+        res.json({
+            status: 'success',
+            data: data,
+            timestamp: new Date().toISOString(),
+            source: 'fallback_data_until_live_api_found'
+        });
+    } catch (error) {
+        console.error('❌ Top movers API error:', error.message);
+        res.status(500).json({
+            status: 'error',
+            message: 'Failed to fetch market data',
+            error: error.message
+        });
+    }
+});
+
+// Market status (open/closed)
+router.get('/status', async (req, res) => {
+    try {
+        const status = await getMarketStatus();
+        res.json({
+            status: 'success',
+            data: status
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: 'Failed to fetch market status'
+        });
+    }
+});
 
 export default router;

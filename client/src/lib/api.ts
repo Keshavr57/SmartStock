@@ -50,6 +50,18 @@ export const getMarketCharts = async () => {
     return response.data;
 };
 
+// Real-time top movers (gainers and losers)
+export const getTopMovers = async () => {
+    const response = await api.get('/market/top-movers');
+    return response.data;
+};
+
+// Market status
+export const getMarketStatus = async () => {
+    const response = await api.get('/market/status');
+    return response.data;
+};
+
 // Compare stocks
 export const compareAssets = async (symbols: string[]) => {
     const response = await api.post('/compare', { symbols });

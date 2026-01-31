@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { authService } from "../lib/auth"
 import { ENDPOINTS } from "../lib/config"
 import { formatCurrency, formatPercentage } from "../lib/currency"
+import { getTopMovers, getMarketStatus } from "../lib/api"
 
 interface PortfolioData {
     totalValue: number;
@@ -24,6 +25,19 @@ interface Transaction {
     date: string;
 }
 
+interface Stock {
+    symbol: string;
+    name: string;
+    price: number;
+    change: number;
+    volume: string;
+}
+
+interface TopMoversData {
+    gainers: Stock[];
+    losers: Stock[];
+}
+
 export default function Home() {
     const [portfolioData, setPortfolioData] = useState<PortfolioData>({
         totalValue: 0,
@@ -36,11 +50,51 @@ export default function Home() {
         dayPnLPercent: 0
     });
     const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+    const [topMovers, setTopMovers] = useState<TopMoversData>({ gainers: [], losers: [] });
+    const [marketStatus, setMarketStatus] = useState<any>({ isOpen: false });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         fetchUserData();
+        fetchTopMovers();
+        fetchMarketStatus();
+        
+        // Refresh top movers every 30 seconds
+        const interval = setInterval(() => {
+            fetchTopMovers();
+            fetchMarketStatus();
+        }, 30000);
+        
+        return () => clearInterval(interval);
     }, []);
+
+    const fetchTopMovers = async () => {
+        try {
+            console.log('🔥 Fetching top movers (with fallback)...');
+            const response = await getTopMovers();
+            if (response.status === 'success') {
+                setTopMovers(response.data);
+                console.log('✅ Top movers updated:', response.data);
+            } else {
+                throw new Error(response.message || 'API returned error status');
+            }
+        } catch (error) {
+            console.error('❌ Failed to fetch top movers:', error);
+            // Set empty state on error
+            setTopMovers({ gainers: [], losers: [] });
+        }
+    };
+
+    const fetchMarketStatus = async () => {
+        try {
+            const response = await getMarketStatus();
+            if (response.status === 'success') {
+                setMarketStatus(response.data);
+            }
+        } catch (error) {
+            console.error('❌ Failed to fetch market status:', error);
+        }
+    };
 
     const fetchUserData = async () => {
         try {
@@ -120,15 +174,30 @@ export default function Home() {
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4 text-sm">
                                 <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                                    <span className="text-gray-600 dark:text-gray-400">NSE: Open</span>
+                                    <div className={`w-3 h-3 rounded-full ${marketStatus.isOpen ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                    <span className="text-gray-600 dark:text-gray-400">
+                                        NSE: {marketStatus.isOpen ? 'Open' : 'Closed'}
+                                    </span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                                    <span className="text-gray-600 dark:text-gray-400">BSE: Open</span>
+                                    <div className={`w-3 h-3 rounded-full ${marketStatus.isOpen ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                    <span className="text-gray-600 dark:text-gray-400">
+                                        BSE: {marketStatus.isOpen ? 'Open' : 'Closed'}
+                                    </span>
                                 </div>
+                                {marketStatus.currentTime && (
+                                    <span className="text-gray-500 dark:text-gray-400">
+                                        IST: {marketStatus.currentTime}
+                                    </span>
+                                )}
                             </div>
-                            <button className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                            <button 
+                                onClick={() => {
+                                    fetchTopMovers();
+                                    fetchMarketStatus();
+                                }}
+                                className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                            >
                                 <RefreshCw className="h-4 w-4" />
                                 <span className="text-sm">Refresh</span>
                             </button>
@@ -193,36 +262,37 @@ export default function Home() {
                                 <span className="text-sm text-gray-500 dark:text-gray-400">NSE</span>
                             </div>
                             <div className="space-y-4">
-                                {[
-                                    { symbol: 'ADANIENT', name: 'Adani Enterprises', price: 2485, change: 8.2, volume: '2.1M' },
-                                    { symbol: 'TATAMOTORS', name: 'Tata Motors', price: 785, change: 6.8, volume: '5.3M' },
-                                    { symbol: 'JSWSTEEL', name: 'JSW Steel', price: 985, change: 5.4, volume: '3.2M' },
-                                    { symbol: 'COALINDIA', name: 'Coal India', price: 385, change: 4.9, volume: '1.8M' },
-                                    { symbol: 'ZOMATO', name: 'Zomato Ltd', price: 285, change: 4.2, volume: '4.1M' }
-                                ].map((stock, index) => (
-                                    <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
-                                                    <span className="text-xs font-bold text-green-800 dark:text-green-200">
-                                                        {index + 1}
-                                                    </span>
+                                {topMovers.gainers && topMovers.gainers.length > 0 ? (
+                                    topMovers.gainers.map((stock: Stock, index: number) => (
+                                        <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                                                        <span className="text-xs font-bold text-green-800 dark:text-green-200">
+                                                            {index + 1}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-semibold text-gray-900 dark:text-white text-sm">{stock.symbol}</p>
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400">{stock.name}</p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className="font-semibold text-gray-900 dark:text-white text-sm">{stock.symbol}</p>
-                                                    <p className="text-xs text-gray-500 dark:text-gray-400">{stock.name}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-semibold text-gray-900 dark:text-white text-sm">₹{stock.price?.toLocaleString()}</p>
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-xs font-medium text-green-600">+{stock.change?.toFixed(2)}%</span>
+                                                    <span className="text-xs text-gray-500">{stock.volume}</span>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <p className="font-semibold text-gray-900 dark:text-white text-sm">₹{stock.price}</p>
-                                            <div className="flex items-center gap-1">
-                                                <span className="text-xs font-medium text-green-600">+{stock.change}%</span>
-                                                <span className="text-xs text-gray-500">{stock.volume}</span>
-                                            </div>
-                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-center py-8">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
+                                        <p className="text-gray-500 mt-2">Loading market data...</p>
                                     </div>
-                                ))}
+                                )}
                             </div>
                         </div>
                     </div>
@@ -237,36 +307,37 @@ export default function Home() {
                                 <span className="text-sm text-gray-500 dark:text-gray-400">NSE</span>
                             </div>
                             <div className="space-y-4">
-                                {[
-                                    { symbol: 'PAYTM', name: 'Paytm', price: 985, change: -5.2, volume: '3.8M' },
-                                    { symbol: 'BAJFINANCE', name: 'Bajaj Finance', price: 945, change: -4.8, volume: '2.1M' },
-                                    { symbol: 'ASIANPAINT', name: 'Asian Paints', price: 2420, change: -3.9, volume: '1.2M' },
-                                    { symbol: 'ULTRACEMCO', name: 'UltraTech Cement', price: 11800, change: -3.1, volume: '0.8M' },
-                                    { symbol: 'NESTLEIND', name: 'Nestle India', price: 2180, change: -2.8, volume: '0.5M' }
-                                ].map((stock, index) => (
-                                    <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center">
-                                                    <span className="text-xs font-bold text-red-800 dark:text-red-200">
-                                                        {index + 1}
-                                                    </span>
+                                {topMovers.losers && topMovers.losers.length > 0 ? (
+                                    topMovers.losers.map((stock: Stock, index: number) => (
+                                        <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center">
+                                                        <span className="text-xs font-bold text-red-800 dark:text-red-200">
+                                                            {index + 1}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-semibold text-gray-900 dark:text-white text-sm">{stock.symbol}</p>
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400">{stock.name}</p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className="font-semibold text-gray-900 dark:text-white text-sm">{stock.symbol}</p>
-                                                    <p className="text-xs text-gray-500 dark:text-gray-400">{stock.name}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-semibold text-gray-900 dark:text-white text-sm">₹{stock.price?.toLocaleString()}</p>
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-xs font-medium text-red-600">{stock.change?.toFixed(2)}%</span>
+                                                    <span className="text-xs text-gray-500">{stock.volume}</span>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <p className="font-semibold text-gray-900 dark:text-white text-sm">₹{stock.price}</p>
-                                            <div className="flex items-center gap-1">
-                                                <span className="text-xs font-medium text-red-600">{stock.change}%</span>
-                                                <span className="text-xs text-gray-500">{stock.volume}</span>
-                                            </div>
-                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-center py-8">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
+                                        <p className="text-gray-500 mt-2">Loading market data...</p>
                                     </div>
-                                ))}
+                                )}
                             </div>
                         </div>
                     </div>

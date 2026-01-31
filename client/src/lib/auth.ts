@@ -310,8 +310,8 @@ class AuthService {
     localStorage.setItem('isAuthenticated', 'false');
   }
 
-  async isAuthenticated(): Promise<boolean> {
-    // Ultra-fast authentication check
+  isAuthenticated(): boolean {
+    // Ultra-fast authentication check - synchronous
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
     const lastLogin = localStorage.getItem('lastLogin');

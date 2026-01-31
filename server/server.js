@@ -85,7 +85,7 @@ app.use((req, res, next) => {
 });
 
 // Connect to Database
-connectDB();
+// connectDB(); // Temporarily disabled for API testing
 
 // Socket.IO Setup with enhanced CORS
 const io = new Server(httpServer, {

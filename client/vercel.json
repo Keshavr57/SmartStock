@@ -19,7 +19,7 @@
   ],
   "headers": [
     {
-      "source": "/(.*)",
+      "source": "/index.html",
       "headers": [
         {
           "key": "Cache-Control",
@@ -32,10 +32,6 @@
         {
           "key": "Expires",
           "value": "0"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
         }
       ]
     },
@@ -44,7 +40,16 @@
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "no-cache"
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
         }
       ]
     }
@@ -54,6 +59,6 @@
     "VITE_AI_SERVICE_URL": "https://smartstock-ai-service.onrender.com",
     "VITE_BACKEND_URL": "https://smartstock-lkcx.onrender.com",
     "VITE_GOOGLE_CLIENT_ID": "817549154886-k5r92c4grcvr5usdiqfjtib2se0uc5qv.apps.googleusercontent.com",
-    "VITE_APP_VERSION": "2.0.2"
+    "VITE_APP_VERSION": "2.0.3"
   }
 }
