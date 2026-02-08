@@ -1,24 +1,16 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 import os
-import time
+from dotenv import load_dotenv
+from groq import Groq
 
-from fastapi.middleware.cors import CORSMiddleware
+load_dotenv()
 
-from engine import process_query
-from ipo_service import get_current_ipos
-from engine import get_ui_landing_stocks
+app = FastAPI(title="SmartStock AI Advisor", version="2.0.0")
 
-# Get port from environment (Render sets this automatically)
-PORT = int(os.getenv("PORT", 10000))
-
-app = FastAPI(
-    title="SmartStock AI Service",
-    description="AI-powered stock analysis and advisory service",
-    version="1.0.0"
-)
-
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -27,112 +19,103 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Initialize Groq client
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+if not GROQ_API_KEY:
+    print("⚠️ WARNING: GROQ_API_KEY not found!")
+else:
+    print(f"✅ GROQ_API_KEY loaded: {GROQ_API_KEY[:10]}...")
+
+groq_client = Groq(api_key=GROQ_API_KEY)
+
+# System prompt for financial advisor
+SYSTEM_PROMPT = """You are an expert Indian stock market financial advisor specializing in NSE and BSE markets.
+
+RULES:
+1. ONLY answer questions about: stocks, trading, investing, IPOs, mutual funds, market analysis, financial planning
+2. If question is NOT financial, respond: "I can only help with financial and investment questions. Please ask about stocks, trading, or market analysis."
+3. Keep responses under 200 words
+4. Use simple, clear language
+5. Focus on Indian markets (NSE, BSE, Indian companies)
+6. Use ₹ for currency
+7. Always add disclaimer: "This is educational advice. Do your own research."
+
+EXPERTISE:
+- Stock analysis (P/E, P/B, ROE, fundamentals)
+- Indian stock recommendations (Reliance, TCS, HDFC, etc.)
+- SIP and investment strategies
+- Risk management
+- IPO analysis
+- Market trends
+
+Be friendly, helpful, and educational. Give actionable advice with clear reasoning."""
+
 class ChatRequest(BaseModel):
     message: str
-    user_id: Optional[str] = "learning_section"
+    user_id: Optional[str] = "user"
 
 @app.get("/")
 async def root():
-    return {"message": "SmartStock AI Service is running", "status": "healthy"}
+    return {
+        "service": "SmartStock AI Advisor",
+        "status": "running",
+        "version": "2.0.0"
+    }
 
 @app.get("/health")
-async def health_check():
-    return {"status": "OK", "service": "AI Service"}
-
-@app.get("/test")
-async def test_ai():
-    """Enhanced test endpoint to verify RAG functionality"""
-    try:
-        # Test GROQ API key
-        groq_key = os.getenv("GROQ_API_KEY")
-        if not groq_key:
-            return {"status": "error", "message": "GROQ API key not found"}
-        
-        # Test RAG knowledge retrieval
-        from engine import get_relevant_knowledge, get_stock_context
-        
-        test_query = "What is P/E ratio?"
-        knowledge = get_relevant_knowledge(test_query)
-        stock_context = get_stock_context("reliance stock analysis")
-        
-        # Test simple AI query
-        from engine import process_query_with_rag
-        
-        test_response = process_query_with_rag("Hello, test the AI service")
-        
-        return {
-            "status": "success", 
-            "groq_key_present": bool(groq_key),
-            "groq_key_prefix": groq_key[:10] if groq_key else None,
-            "rag_knowledge_items": len(knowledge),
-            "stock_context_items": len(stock_context),
-            "ai_response_length": len(test_response),
-            "ai_response_preview": test_response[:100] + "..." if len(test_response) > 100 else test_response,
-            "message": "Enhanced RAG-based AI service test completed successfully"
-        }
-        
-    except Exception as e:
-        return {"status": "error", "message": f"AI test failed: {str(e)}", "error_type": type(e).__name__}
+async def health():
+    return {
+        "status": "healthy",
+        "groq_configured": bool(GROQ_API_KEY)
+    }
 
 @app.post("/process")
-async def chat_endpoint(request: ChatRequest):
+async def process_query(request: ChatRequest):
+    """Process AI query - financial questions only"""
     try:
-        print(f"🤖 AI Service received query: {request.message}")
-        print(f"🤖 User ID: {request.user_id}")
+        if not GROQ_API_KEY:
+            raise HTTPException(status_code=500, detail="AI service not configured")
         
-        # Test GROQ API key first
-        groq_key = os.getenv("GROQ_API_KEY")
-        if not groq_key:
-            raise Exception("GROQ API key not found")
+        if not request.message or len(request.message.strip()) == 0:
+            raise HTTPException(status_code=400, detail="Message cannot be empty")
         
-        print(f"🤖 GROQ API key present: {groq_key[:10]}...")
+        print(f"💬 Query from {request.user_id}: {request.message[:50]}...")
         
-        # BYPASS LOGIC: If the system asks for raw IPO data, return it directly
-        if request.message == "FETCH_LIVE_IPOS_NOW":
-            raw_data = get_current_ipos()
-            return {"status": "success", "answer": raw_data}
+        # Call Groq API
+        chat_completion = groq_client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": request.message}
+            ],
+            model="llama-3.1-8b-instant",
+            temperature=0.3,
+            max_tokens=400,
+            top_p=1,
+            stream=False
+        )
         
-        if request.message == "FETCH_STOCKS_JSON":
-            raw_data = get_ui_landing_stocks()
-            return {"status": "success", "answer": raw_data}
+        # Extract response
+        ai_response = chat_completion.choices[0].message.content
         
-        # Test simple response first
-        if request.message.lower() == "test":
-            return {"status": "success", "answer": "AI service is receiving messages correctly and GROQ API is working!"}
+        if not ai_response or len(ai_response.strip()) == 0:
+            raise Exception("AI returned empty response")
         
-        # Process with RAG engine - NO FALLBACK
-        print("🤖 Processing query with RAG engine...")
-        ai_answer = process_query(request.message)
-        print(f"🤖 AI Response generated: {len(ai_answer)} characters")
-        
-        if not ai_answer or len(ai_answer.strip()) == 0:
-            raise Exception("AI service returned empty response")
+        print(f"✅ Response generated: {len(ai_response)} chars")
         
         return {
-            "status": "success", 
-            "answer": ai_answer,
-            "service_type": "rag_enhanced",
-            "timestamp": str(int(time.time()))
+            "status": "success",
+            "answer": ai_response.strip()
         }
         
     except Exception as e:
-        print(f"🚨 AI Service Error: {str(e)}")
-        print(f"🚨 Error type: {type(e).__name__}")
-        
-        # NO FALLBACK - return error
-        return {
-            "status": "error", 
-            "message": f"AI service failed: {str(e)}",
-            "error_type": type(e).__name__
-        }
+        print(f"❌ Error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"AI service error: {str(e)}"
+        )
 
 if __name__ == "__main__":
     import uvicorn
-    import os
-    
-    # Render provides PORT environment variable
     port = int(os.getenv("PORT", 10000))
-    host = "0.0.0.0"  # Must bind to 0.0.0.0 for Render
-    
-    print(f"Starting AI service on {host}:{port}")
-    uvicorn.run(app, host=host, port=port, log_level="info")
+    print(f"🚀 Starting AI Advisor on port {port}")
+    uvicorn.run(app, host="0.0.0.0", port=port)

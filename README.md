@@ -19,11 +19,11 @@ SmartStock is an **educational virtual trading platform** where users can learn 
 - Complete portfolio tracking with P&L
 - Indian market hours (9:15 AM - 3:30 PM IST)
 
-### 🤖 **AI-Powered Learning**
-- Smart investment insights and risk analysis
-- Conversational AI advisor (not technical jargon)
-- IPO risk assessment with color-coded indicators
-- Educational focus - learning, not investment advice
+### 🤖 **AI-Powered Advisor**
+- Financial questions only (stocks, trading, investing)
+- Fast responses using Groq LLaMA 3.1
+- Indian market focus (NSE, BSE)
+- Educational disclaimers on all advice
 
 ### 📊 **Market Analysis**
 - Live Indian stock data and charts
@@ -66,8 +66,8 @@ npm run dev
 | Frontend | Backend | AI Service | Database |
 |----------|---------|------------|----------|
 | React 18 + TypeScript | Node.js + Express | Python FastAPI | MongoDB |
-| Tailwind CSS | JWT Authentication | LangChain + Groq | Mongoose ODM |
-| Vite + ShadcnUI | Google OAuth | Stock Analysis | Real-time Data |
+| Tailwind CSS | JWT Authentication | Groq LLaMA 3.1 | Mongoose ODM |
+| Vite + ShadcnUI | Google OAuth | Financial Advisor | Real-time Data |
 
 ## 📱 Platform Screenshots
 
@@ -129,9 +129,9 @@ npm run dev
 | Feature | Implementation | Impact |
 |---------|---------------|---------|
 | **Virtual Trading** | Real NSE/BSE data integration | Risk-free learning environment |
-| **AI Advisor** | LangChain + Groq LLM | Personalized educational guidance |
+| **AI Advisor** | Groq LLaMA 3.1 (Financial only) | Fast, reliable financial guidance |
 | **Security** | JWT + OAuth + Input validation | Production-ready security |
-| **Performance** | Memory leak fixes + optimization | Smooth user experience |
+| **Performance** | Optimized API calls | Smooth user experience |
 | **Education** | Indian market focus | Practical learning platform |
 
 ## 🚀 Getting Started

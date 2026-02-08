@@ -11,7 +11,7 @@ class KeepAliveService {
 
     start() {
         if (!this.isEnabled) {
-            console.log('🏠 Keep-alive disabled in development');
+            console.log('Keep-alive disabled in development');
             return;
         }
 
@@ -22,13 +22,13 @@ class KeepAliveService {
                 const response = await axios.get(`${RENDER_URL}/api/health`, {
                     timeout: 10000
                 });
-                console.log(`💓 Keep-alive ping successful: ${response.status}`);
+                console.log(`Keep-alive ping successful: ${response.status}`);
             } catch (error) {
-                console.log('❌ Keep-alive ping failed:', error.message);
+                console.log('Keep-alive ping failed:', error.message);
             }
         }, PING_INTERVAL);
 
-        console.log(`✅ Keep-alive service started (ping every ${PING_INTERVAL/60000} minutes)`);
+        console.log(`Keep-alive service started (ping every ${PING_INTERVAL/60000} minutes)`);
     }
 
     stop() {
