@@ -1,403 +1,383 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
-// Simple config for live data
-const config = {
-    cacheTimeout: 5 * 60 * 1000, // 5 minutes
-    headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Connection': 'keep-alive'
-    }
-};
+// Cache configuration
+const CACHE_TIMEOUT = 10 * 60 * 1000; // 10 minutes
+const cache = { ipos: null, timestamp: 0 };
 
-// Simple cache
-const cache = {};
+// User agent for web scraping
+const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
-// Function to clear cache
-function clearCache() {
-    Object.keys(cache).forEach(key => delete cache[key]);
-    console.log('🗑️ IPO cache cleared');
-}
-
-// Get current IPOs - REAL LIVE DATA ONLY
+/**
+ * Main function to get current IPOs from multiple sources
+ */
 async function getCurrentIPOs() {
     try {
-        console.log('🔥 Starting getCurrentIPOs...');
-        
         // Check cache first
-        if (cache.ipos && Date.now() - cache.ipos.timestamp < config.cacheTimeout) {
+        if (cache.ipos && (Date.now() - cache.timestamp) < CACHE_TIMEOUT) {
             console.log('⚡ Using cached IPO data');
-            return cache.ipos.data;
+            return cache.ipos;
         }
 
-        console.log('🔥 Fetching REAL LIVE IPO data...');
+        console.log('🔥 Fetching LIVE IPO data from sources...');
         
         let allIPOs = [];
-        
-        // Method 1: Fetch from IPOWatch (most reliable) - TEMPORARILY DISABLED
+
+        // Source 1: Chittorgarh (Most reliable for Indian IPOs)
         try {
-            console.log('📡 IPOWatch temporarily disabled for clean data...');
-            // const ipoWatchData = await fetchFromIPOWatch();
-            // if (ipoWatchData && ipoWatchData.length > 0) {
-            //     console.log(`✅ IPOWatch: ${ipoWatchData.length} IPOs`);
-            //     allIPOs = [...ipoWatchData];
-            // } else {
-            //     console.log('⚠️ IPOWatch returned no data');
-            // }
-        } catch (error) {
-            console.log('❌ IPOWatch failed:', error.message);
-        }
-        
-        // Method 2: Fetch from Chittorgarh - TEMPORARILY DISABLED
-        try {
-            console.log('📡 Chittorgarh temporarily disabled for clean data...');
-            // const chittorgarhData = await fetchFromChittorgarh();
-            // if (chittorgarhData && chittorgarhData.length > 0) {
-            //     console.log(`✅ Chittorgarh: ${chittorgarhData.length} IPOs`);
-                
-            //     chittorgarhData.forEach(ipo => {
-            //         const exists = allIPOs.some(existing => 
-            //             existing.name.toLowerCase().includes(ipo.name.toLowerCase())
-            //         );
-                    
-            //         if (!exists) {
-            //             allIPOs.push(ipo);
-            //         }
-            //     });
-            // } else {
-            //     console.log('⚠️ Chittorgarh returned no data');
-            // }
-        } catch (error) {
-            console.log('❌ Chittorgarh failed:', error.message);
-        }
-        
-        // Method 3: Add current market IPOs (REAL 2025 DATA)
-        console.log('📊 Adding current market IPOs...');
-        const currentIPOs = getCurrentMarketIPOs();
-        currentIPOs.forEach(ipo => {
-            const exists = allIPOs.some(existing => 
-                existing.name.toLowerCase().includes(ipo.name.toLowerCase())
-            );
-            
-            if (!exists) {
-                allIPOs.push(ipo);
+            const chittorgarhIPOs = await fetchFromChittorgarh();
+            if (chittorgarhIPOs && chittorgarhIPOs.length > 0) {
+                console.log(`✅ Chittorgarh: ${chittorgarhIPOs.length} IPOs`);
+                allIPOs = [...chittorgarhIPOs];
             }
+        } catch (error) {
+            console.log('⚠️ Chittorgarh failed:', error.message);
+        }
+
+        // Source 2: IPOWatch
+        try {
+            const ipoWatchIPOs = await fetchFromIPOWatch();
+            if (ipoWatchIPOs && ipoWatchIPOs.length > 0) {
+                console.log(`✅ IPOWatch: ${ipoWatchIPOs.length} IPOs`);
+                // Merge without duplicates
+                ipoWatchIPOs.forEach(ipo => {
+                    if (!allIPOs.some(existing => isSameIPO(existing, ipo))) {
+                        allIPOs.push(ipo);
+                    }
+                });
+            }
+        } catch (error) {
+            console.log('⚠️ IPOWatch failed:', error.message);
+        }
+
+        // Source 3: Investing.com India
+        try {
+            const investingIPOs = await fetchFromInvesting();
+            if (investingIPOs && investingIPOs.length > 0) {
+                console.log(`✅ Investing.com: ${investingIPOs.length} IPOs`);
+                investingIPOs.forEach(ipo => {
+                    if (!allIPOs.some(existing => isSameIPO(existing, ipo))) {
+                        allIPOs.push(ipo);
+                    }
+                });
+            }
+        } catch (error) {
+            console.log('⚠️ Investing.com failed:', error.message);
+        }
+
+        // If all sources fail, throw error
+        if (allIPOs.length === 0) {
+            throw new Error('No IPO data available from any source');
+        }
+
+        // Add risk assessment to each IPO
+        allIPOs = allIPOs.map(ipo => ({
+            ...ipo,
+            ...calculateRiskAssessment(ipo)
+        }));
+
+        // Sort by date (open IPOs first, then upcoming, then closed)
+        allIPOs.sort((a, b) => {
+            const statusOrder = { 'Open': 1, 'Upcoming': 2, 'Closed': 3, 'Listed': 4 };
+            return (statusOrder[a.status] || 5) - (statusOrder[b.status] || 5);
         });
 
-        // Remove duplicates
-        allIPOs = removeDuplicateIPOs(allIPOs);
+        console.log(`✅ Total IPOs fetched: ${allIPOs.length}`);
 
-        // Add risk assessment
-        allIPOs = allIPOs.map(ipo => {
-            try {
-                const riskAssessment = calculateRiskAssessment(ipo);
-                return {
-                    ...ipo,
-                    riskLevel: riskAssessment.riskLevel,
-                    riskIcon: riskAssessment.riskIcon,
-                    riskColor: riskAssessment.riskColor,
-                    riskScore: riskAssessment.riskScore,
-                    riskFactors: riskAssessment.riskFactors
-                };
-            } catch (riskError) {
-                console.log('⚠️ Risk assessment failed for', ipo.name, ':', riskError.message);
-                return {
-                    ...ipo,
-                    riskLevel: 'Medium',
-                    riskIcon: '🟡',
-                    riskColor: 'yellow',
-                    riskScore: 2.0,
-                    riskFactors: ['Standard market risks apply']
-                };
-            }
-        });
-
-        console.log(`🔥 Total LIVE IPOs: ${allIPOs.length}`);
-        
         // Cache the results
-        cache.ipos = { data: allIPOs, timestamp: Date.now() };
+        cache.ipos = allIPOs;
+        cache.timestamp = Date.now();
+
         return allIPOs;
 
     } catch (error) {
-        console.error('❌ Error in getCurrentIPOs:', error.message);
-        console.error('❌ Stack:', error.stack);
-        throw error; // No fallback - let it fail
-    }
-}
-
-// Fetch from IPOWatch
-async function fetchFromIPOWatch() {
-    try {
-        console.log('🌐 Fetching from IPOWatch...');
-        const response = await axios.get('https://ipowatch.in/upcoming-ipo-calendar-ipo-list/', {
-            headers: config.headers,
-            timeout: 8000,
-            validateStatus: function (status) {
-                return status >= 200 && status < 300;
-            }
-        });
-
-        if (!response.data) {
-            console.log('⚠️ IPOWatch: No response data');
-            return null;
+        console.error('❌ Error fetching IPO data:', error.message);
+        
+        // Return cached data if available, even if expired
+        if (cache.ipos) {
+            console.log('⚠️ Returning stale cached data');
+            return cache.ipos;
         }
-
-        const $ = cheerio.load(response.data);
-        const ipos = [];
-
-        // Parse IPOWatch table
-        $('table tbody tr').each((index, row) => {
-            try {
-                const cells = $(row).find('td');
-                if (cells.length >= 4) {
-                    const name = $(cells[0]).text().trim();
-                    const status = $(cells[1]).text().trim();
-                    const dates = $(cells[2]).text().trim();
-                    const price = $(cells[3]).text().trim();
-
-                    if (name && name.length > 3 && !name.includes('IPO / Stock')) {
-                        ipos.push({
-                            name: name,
-                            symbol: name.replace(/[^A-Z]/g, ''),
-                            openDate: extractOpenDate(dates),
-                            closeDate: extractCloseDate(dates),
-                            priceBand: price && price !== '₹-' ? price : 'TBA',
-                            issueSize: 'TBA',
-                            lotSize: 'TBA',
-                            status: mapStatus(status),
-                            type: 'Mainboard',
-                            sector: 'Unknown',
-                            listingDate: 'TBA',
-                            gmp: 'N/A',
-                            subscription: 'N/A',
-                            source: 'IPOWatch'
-                        });
-                    }
-                }
-            } catch (parseError) {
-                console.log('⚠️ Error parsing IPOWatch row:', parseError.message);
-            }
-        });
-
-        console.log(`✅ IPOWatch parsed ${ipos.length} IPOs`);
-        return ipos.length > 0 ? ipos : null;
-    } catch (error) {
-        console.log('❌ IPOWatch error:', error.message);
-        return null;
+        
+        throw error;
     }
 }
 
-// Fetch from Chittorgarh
+/**
+ * Fetch IPOs from Chittorgarh.com
+ */
 async function fetchFromChittorgarh() {
-    try {
-        console.log('🌐 Fetching from Chittorgarh...');
-        const response = await axios.get('https://www.chittorgarh.com/ipo/ipo_dashboard.asp', {
-            headers: config.headers,
-            timeout: 8000,
-            validateStatus: function (status) {
-                return status >= 200 && status < 300;
+    const response = await axios.get('https://www.chittorgarh.com/ipo/ipo_dashboard.asp', {
+        headers: { 'User-Agent': USER_AGENT },
+        timeout: 10000
+    });
+
+    const $ = cheerio.load(response.data);
+    const ipos = [];
+
+    // Parse upcoming IPOs table
+    $('table.table').each((_, table) => {
+        $(table).find('tr').each((index, row) => {
+            if (index === 0) return; // Skip header
+
+            const cells = $(row).find('td');
+            if (cells.length < 4) return;
+
+            const name = $(cells[0]).text().trim();
+            const openDate = $(cells[1]).text().trim();
+            const closeDate = $(cells[2]).text().trim();
+            const price = $(cells[3]).text().trim();
+            const issueSize = $(cells[4])?.text().trim() || 'TBA';
+            const type = $(cells[5])?.text().trim() || 'Mainboard';
+
+            if (name && name.length > 3) {
+                ipos.push({
+                    name,
+                    symbol: extractSymbol(name),
+                    openDate: formatDate(openDate),
+                    closeDate: formatDate(closeDate),
+                    priceBand: price || 'TBA',
+                    issueSize: issueSize || 'TBA',
+                    lotSize: 'TBA',
+                    status: determineStatus(openDate, closeDate),
+                    type: type.includes('SME') ? 'SME' : 'Mainboard',
+                    sector: 'Unknown',
+                    listingDate: 'TBA',
+                    gmp: 'N/A',
+                    subscription: 'N/A',
+                    source: 'Chittorgarh'
+                });
             }
         });
+    });
 
-        if (!response.data) {
-            console.log('⚠️ Chittorgarh: No response data');
-            return null;
+    return ipos;
+}
+
+/**
+ * Fetch IPOs from IPOWatch.in
+ */
+async function fetchFromIPOWatch() {
+    const response = await axios.get('https://ipowatch.in/upcoming-ipo-calendar-ipo-list/', {
+        headers: { 'User-Agent': USER_AGENT },
+        timeout: 10000
+    });
+
+    const $ = cheerio.load(response.data);
+    const ipos = [];
+
+    $('table tbody tr').each((_, row) => {
+        const cells = $(row).find('td');
+        if (cells.length < 4) return;
+
+        const name = $(cells[0]).text().trim();
+        const dates = $(cells[1]).text().trim();
+        const price = $(cells[2]).text().trim();
+        const status = $(cells[3]).text().trim();
+
+        if (name && name.length > 3 && !name.includes('Company')) {
+            const [openDate, closeDate] = extractDateRange(dates);
+            
+            ipos.push({
+                name,
+                symbol: extractSymbol(name),
+                openDate,
+                closeDate,
+                priceBand: price || 'TBA',
+                issueSize: 'TBA',
+                lotSize: 'TBA',
+                status: mapStatus(status),
+                type: 'Mainboard',
+                sector: 'Unknown',
+                listingDate: 'TBA',
+                gmp: 'N/A',
+                subscription: 'N/A',
+                source: 'IPOWatch'
+            });
         }
+    });
+
+    return ipos;
+}
+
+/**
+ * Fetch IPOs from Investing.com India
+ */
+async function fetchFromInvesting() {
+    try {
+        const response = await axios.get('https://in.investing.com/equities/india-ipos', {
+            headers: { 'User-Agent': USER_AGENT },
+            timeout: 10000
+        });
 
         const $ = cheerio.load(response.data);
         const ipos = [];
 
-        // Parse Chittorgarh data
-        $('table.table tr').each((index, row) => {
-            try {
-                const cells = $(row).find('td');
-                if (cells.length >= 3) {
-                    const name = $(cells[0]).text().trim();
-                    const dates = $(cells[1]).text().trim();
-                    const price = $(cells[2]).text().trim();
+        $('table.genTbl tr').each((index, row) => {
+            if (index === 0) return; // Skip header
 
-                    if (name && name.length > 3 && !name.includes('Company')) {
-                        ipos.push({
-                            name: name,
-                            symbol: name.replace(/[^A-Z]/g, ''),
-                            openDate: extractOpenDate(dates),
-                            closeDate: extractCloseDate(dates),
-                            priceBand: price || 'TBA',
-                            issueSize: 'TBA',
-                            lotSize: 'TBA',
-                            status: 'Upcoming',
-                            type: 'Mainboard',
-                            sector: 'Unknown',
-                            listingDate: 'TBA',
-                            gmp: 'N/A',
-                            subscription: 'N/A',
-                            source: 'Chittorgarh'
-                        });
-                    }
-                }
-            } catch (parseError) {
-                console.log('⚠️ Error parsing Chittorgarh row:', parseError.message);
+            const cells = $(row).find('td');
+            if (cells.length < 3) return;
+
+            const name = $(cells[0]).text().trim();
+            const dates = $(cells[1]).text().trim();
+            const price = $(cells[2]).text().trim();
+
+            if (name && name.length > 3) {
+                const [openDate, closeDate] = extractDateRange(dates);
+                
+                ipos.push({
+                    name,
+                    symbol: extractSymbol(name),
+                    openDate,
+                    closeDate,
+                    priceBand: price || 'TBA',
+                    issueSize: 'TBA',
+                    lotSize: 'TBA',
+                    status: determineStatus(openDate, closeDate),
+                    type: 'Mainboard',
+                    sector: 'Unknown',
+                    listingDate: 'TBA',
+                    gmp: 'N/A',
+                    subscription: 'N/A',
+                    source: 'Investing.com'
+                });
             }
         });
 
-        console.log(`✅ Chittorgarh parsed ${ipos.length} IPOs`);
-        return ipos.length > 0 ? ipos : null;
+        return ipos;
     } catch (error) {
-        console.log('❌ Chittorgarh error:', error.message);
-        return null;
+        console.log('⚠️ Investing.com scraping failed:', error.message);
+        return [];
     }
 }
 
-// Current market IPOs (January 2025 - REAL CURRENT DATA)
-function getCurrentMarketIPOs() {
-    return [
-        {
-            name: "Shayona Engineering Limited",
-            symbol: "SHAYONA",
-            openDate: "22 Jan 2025",
-            closeDate: "27 Jan 2025",
-            priceBand: "₹140-144",
-            issueSize: "₹14.86 Cr",
-            lotSize: "1000",
-            status: "Open",
-            type: "SME",
-            sector: "Engineering",
-            listingDate: "30 Jan 2025",
-            gmp: "₹20-25",
-            subscription: "1.34x",
-            source: "Live Market Data"
-        },
-        {
-            name: "Hannah Joseph Hospital Limited",
-            symbol: "HANNAH",
-            openDate: "22 Jan 2025",
-            closeDate: "27 Jan 2025",
-            priceBand: "₹67-70",
-            issueSize: "₹42 Cr",
-            lotSize: "2000",
-            status: "Open",
-            type: "SME",
-            sector: "Healthcare",
-            listingDate: "30 Jan 2025",
-            gmp: "₹10-15",
-            subscription: "0.55x",
-            source: "Live Market Data"
-        },
-        {
-            name: "Kasturi Metal Composite Limited",
-            symbol: "KASTURI",
-            openDate: "27 Jan 2025",
-            closeDate: "29 Jan 2025",
-            priceBand: "₹61-64",
-            issueSize: "₹17.61 Cr",
-            lotSize: "234",
-            status: "Upcoming",
-            type: "SME",
-            sector: "Metals",
-            listingDate: "3 Feb 2025",
-            gmp: "₹10-15",
-            subscription: "N/A",
-            source: "Live Market Data"
-        },
-        {
-            name: "Shadowfax Technologies Limited",
-            symbol: "SHADOWFAX",
-            openDate: "20 Jan 2025",
-            closeDate: "22 Jan 2025",
-            priceBand: "₹118-124",
-            issueSize: "₹1,907 Cr",
-            lotSize: "120",
-            status: "Closed",
-            type: "Mainboard",
-            sector: "Logistics",
-            listingDate: "27 Jan 2025",
-            gmp: "₹30-40",
-            subscription: "2.7x",
-            source: "Live Market Data"
-        },
-        {
-            name: "Amagi Media Labs Limited",
-            symbol: "AMAGI",
-            openDate: "13 Jan 2025",
-            closeDate: "16 Jan 2025",
-            priceBand: "₹343-361",
-            issueSize: "₹1,789 Cr",
-            lotSize: "41",
-            status: "Closed",
-            type: "Mainboard",
-            sector: "Media Technology",
-            listingDate: "21 Jan 2025",
-            gmp: "₹80-100",
-            subscription: "4.2x",
-            source: "Live Market Data"
-        },
-        {
-            name: "Mobikwik Systems Limited",
-            symbol: "MOBIKWIK",
-            openDate: "11 Dec 2024",
-            closeDate: "13 Dec 2024",
-            priceBand: "₹265-279",
-            issueSize: "₹572 Cr",
-            lotSize: "53",
-            status: "Listed",
-            type: "Mainboard",
-            sector: "Fintech",
-            listingDate: "18 Dec 2024",
-            gmp: "₹15-20",
-            subscription: "1.2x",
-            source: "Live Market Data"
-        }
-    ];
+/**
+ * Helper: Check if two IPOs are the same
+ */
+function isSameIPO(ipo1, ipo2) {
+    const name1 = ipo1.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const name2 = ipo2.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    return name1 === name2 || name1.includes(name2) || name2.includes(name1);
 }
 
-// Helper function to calculate risk assessment
+/**
+ * Helper: Extract symbol from company name
+ */
+function extractSymbol(name) {
+    return name
+        .replace(/Limited|Ltd|Private|Pvt|IPO/gi, '')
+        .replace(/[^A-Z]/g, '')
+        .substring(0, 10)
+        .toUpperCase();
+}
+
+/**
+ * Helper: Format date string
+ */
+function formatDate(dateStr) {
+    if (!dateStr || dateStr === 'TBA') return 'TBA';
+    
+    // Try to parse and format consistently
+    const cleaned = dateStr.trim();
+    if (cleaned.match(/^\d{1,2}[-\/]\d{1,2}[-\/]\d{4}$/)) {
+        return cleaned;
+    }
+    
+    return cleaned;
+}
+
+/**
+ * Helper: Extract date range from string
+ */
+function extractDateRange(dateStr) {
+    if (!dateStr) return ['TBA', 'TBA'];
+    
+    // Pattern: "DD MMM - DD MMM YYYY" or "DD-DD MMM YYYY"
+    const rangeMatch = dateStr.match(/(\d{1,2})\s*(\w+)?\s*-\s*(\d{1,2})\s*(\w+)\s*(\d{4})/);
+    if (rangeMatch) {
+        const [, day1, month1, day2, month2, year] = rangeMatch;
+        const m1 = month1 || month2;
+        return [
+            `${day1} ${m1} ${year}`,
+            `${day2} ${month2} ${year}`
+        ];
+    }
+    
+    return [dateStr, dateStr];
+}
+
+/**
+ * Helper: Determine IPO status based on dates
+ */
+function determineStatus(openDate, closeDate) {
+    if (openDate === 'TBA' || closeDate === 'TBA') return 'Upcoming';
+    
+    try {
+        const today = new Date();
+        const open = new Date(openDate);
+        const close = new Date(closeDate);
+        
+        if (today >= open && today <= close) return 'Open';
+        if (today < open) return 'Upcoming';
+        if (today > close) return 'Closed';
+    } catch (error) {
+        // Date parsing failed
+    }
+    
+    return 'Upcoming';
+}
+
+/**
+ * Helper: Map status string
+ */
+function mapStatus(status) {
+    const s = status.toLowerCase();
+    if (s.includes('open') || s.includes('live')) return 'Open';
+    if (s.includes('closed') || s.includes('completed')) return 'Closed';
+    if (s.includes('upcoming') || s.includes('forthcoming')) return 'Upcoming';
+    if (s.includes('listed')) return 'Listed';
+    return 'Upcoming';
+}
+
+/**
+ * Calculate risk assessment for IPO
+ */
 function calculateRiskAssessment(ipo) {
     let riskScore = 0;
-    let riskFactors = [];
+    const riskFactors = [];
     
-    // Factor 1: Issue Size
-    const issueSize = extractIssueSize(ipo.issueSize);
-    if (issueSize >= 5000) {
-        riskScore += 1;
-        riskFactors.push("Large issue size (₹5000+ Cr)");
-    } else if (issueSize >= 1000) {
-        riskScore += 2;
-        riskFactors.push("Medium issue size (₹1000-5000 Cr)");
-    } else if (issueSize > 0) {
-        riskScore += 3;
-        riskFactors.push("Small issue size (<₹1000 Cr)");
-    } else {
-        riskScore += 2;
-        riskFactors.push("Issue size data unavailable");
-    }
-    
-    // Factor 2: Type (SME is generally riskier)
+    // Factor 1: Type
     if (ipo.type === 'SME') {
-        riskScore += 1;
-        riskFactors.push("SME segment (higher volatility)");
+        riskScore += 1.5;
+        riskFactors.push('SME segment (higher volatility)');
+    } else {
+        riskScore += 0.5;
     }
     
-    // Factor 3: Sector risk
-    const sector = ipo.sector?.toLowerCase() || '';
-    if (sector.includes('tech') || sector.includes('fintech')) {
+    // Factor 2: Issue size
+    const issueSize = extractIssueSize(ipo.issueSize);
+    if (issueSize > 0 && issueSize < 100) {
         riskScore += 1;
-        riskFactors.push("Technology sector (growth potential)");
-    } else if (sector.includes('healthcare') || sector.includes('pharma')) {
-        riskScore += 1;
-        riskFactors.push("Healthcare sector (regulatory risks)");
+        riskFactors.push('Small issue size');
+    } else if (issueSize >= 1000) {
+        riskScore += 0.5;
+        riskFactors.push('Large issue size');
     }
     
-    // Calculate final risk level
-    const avgScore = riskScore / 2;
+    // Factor 3: Price band availability
+    if (ipo.priceBand === 'TBA') {
+        riskScore += 0.5;
+        riskFactors.push('Price not yet announced');
+    }
     
+    // Determine risk level
     let riskLevel, riskIcon, riskColor;
-    if (avgScore <= 1.5) {
+    if (riskScore <= 1) {
         riskLevel = 'Low';
         riskIcon = '🟢';
         riskColor = 'green';
-    } else if (avgScore <= 2.5) {
+    } else if (riskScore <= 2) {
         riskLevel = 'Medium';
         riskIcon = '🟡';
         riskColor = 'yellow';
@@ -411,102 +391,58 @@ function calculateRiskAssessment(ipo) {
         riskLevel,
         riskIcon,
         riskColor,
-        riskScore: Math.round(avgScore * 10) / 10,
-        riskFactors
+        riskScore: Math.round(riskScore * 10) / 10,
+        riskFactors: riskFactors.length > 0 ? riskFactors : ['Standard market risks']
     };
 }
 
-// Helper functions
+/**
+ * Helper: Extract numeric issue size
+ */
 function extractIssueSize(sizeStr) {
     if (!sizeStr || sizeStr === 'TBA') return 0;
     
-    const str = sizeStr.toLowerCase();
-    const numMatch = str.match(/[\d,]+\.?\d*/);
+    const numMatch = sizeStr.match(/[\d,]+\.?\d*/);
     if (!numMatch) return 0;
     
     const num = parseFloat(numMatch[0].replace(/,/g, ''));
     
-    if (str.includes('cr') || str.includes('crore')) {
-        return num;
-    } else if (str.includes('lakh')) {
-        return num / 100;
-    }
+    if (sizeStr.toLowerCase().includes('cr')) return num;
+    if (sizeStr.toLowerCase().includes('lakh')) return num / 100;
     
     return num;
 }
 
-function mapStatus(status) {
-    if (!status) return 'Upcoming';
-    
-    const statusLower = status.toLowerCase();
-    if (statusLower.includes('open') || statusLower.includes('live')) return 'Open';
-    if (statusLower.includes('closed') || statusLower.includes('completed')) return 'Closed';
-    if (statusLower.includes('upcoming')) return 'Upcoming';
-    
-    return 'Upcoming';
+/**
+ * Clear cache
+ */
+function clearCache() {
+    cache.ipos = null;
+    cache.timestamp = 0;
+    console.log('🗑️ IPO cache cleared');
 }
 
-function extractOpenDate(dateStr) {
-    if (!dateStr) return 'TBA';
-    
-    const rangeMatch = dateStr.match(/(\d{1,2})-\d{1,2}\s+(\w+)\s+(\d{4})/);
-    if (rangeMatch) {
-        return `${rangeMatch[1]} ${rangeMatch[2]} ${rangeMatch[3]}`;
-    }
-    
-    const singleMatch = dateStr.match(/(\d{1,2}[-\/]\d{1,2}[-\/]\d{4}|\d{1,2}\s+\w+\s+\d{4})/);
-    return singleMatch ? singleMatch[0] : dateStr === '2025' ? 'TBA' : dateStr;
-}
-
-function extractCloseDate(dateStr) {
-    if (!dateStr) return 'TBA';
-    
-    const rangeMatch = dateStr.match(/\d{1,2}-(\d{1,2})\s+(\w+)\s+(\d{4})/);
-    if (rangeMatch) {
-        return `${rangeMatch[1]} ${rangeMatch[2]} ${rangeMatch[3]}`;
-    }
-    
-    const matches = dateStr.match(/(\d{1,2}[-\/]\d{1,2}[-\/]\d{4}|\d{1,2}\s+\w+\s+\d{4})/g);
-    if (matches && matches.length > 1) return matches[1];
-    if (matches) return matches[0];
-    
-    return dateStr === '2025' ? 'TBA' : dateStr;
-}
-
-function removeDuplicateIPOs(ipos) {
-    const seen = new Set();
-    return ipos.filter(ipo => {
-        const key = ipo.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-    });
-}
-
-// Fast IPO data fetch - REAL DATA ONLY
+/**
+ * Fast IPO data fetch (uses cache aggressively)
+ */
 async function fetchFastIPOData() {
-    try {
-        // Get real live data only
-        return await getCurrentIPOs();
-    } catch (error) {
-        console.error('Fast IPO data error:', error);
-        throw error; // No fallback
-    }
+    return await getCurrentIPOs();
 }
 
-// Background refresh function - NO FALLBACK
+/**
+ * Background refresh
+ */
 async function refreshIPOsInBackground() {
     try {
-        console.log('🔄 Refreshing IPO data in background...');
+        console.log('🔄 Background IPO refresh started...');
         clearCache();
-        await getCurrentIPOs(); // Will throw error if no real data
+        await getCurrentIPOs();
+        console.log('✅ Background IPO refresh completed');
     } catch (error) {
-        console.log('Background refresh failed:', error.message);
-        throw error; // No fallback
+        console.error('❌ Background refresh failed:', error.message);
     }
 }
 
-// Export functions
 export default {
     getCurrentIPOs,
     refreshIPOsInBackground,
