@@ -2,7 +2,6 @@ services:
   - type: web
     name: smartstock-ai-service
     env: python
-    pythonVersion: 3.12
     region: oregon
     plan: free
     
