@@ -20,11 +20,11 @@ router.get('/test', async (req, res) => {
         
         // Test fast data first
         const fastData = await realIPOService.fetchFastIPOData();
-        console.log(`✅ Fast data: ${fastData.length} IPOs`);
+        console.log(`Fast data: ${fastData.length} IPOs`);
         
         // Test full service
         const fullData = await realIPOService.getCurrentIPOs();
-        console.log(`✅ Full data: ${fullData.length} IPOs`);
+        console.log(`Full data: ${fullData.length} IPOs`);
         
         res.json({
             status: "success",
@@ -33,11 +33,11 @@ router.get('/test', async (req, res) => {
             tests: {
                 fastData: {
                     count: fastData.length,
-                    status: "✅ Working"
+                    status: "Working"
                 },
                 fullData: {
                     count: fullData.length,
-                    status: "✅ Working"
+                    status: "Working"
                 }
             },
             sampleData: fastData.slice(0, 2)

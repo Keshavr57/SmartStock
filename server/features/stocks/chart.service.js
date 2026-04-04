@@ -1,5 +1,4 @@
 import axios from 'axios';
-import yahooFinance from 'yahoo-finance2';
 
 // Simple config and cache - no class
 const cache = {};
@@ -42,7 +41,7 @@ async function getStockChart(symbol, period = '1d', interval = '5m') {
         return { symbol, error: 'Chart data unavailable' };
 
     } catch (error) {
-        console.error(`❌ Chart error for ${symbol}:`, error.message);
+        console.error(`Chart error for ${symbol}:`, error.message);
         return { symbol, error: 'Chart data unavailable' };
     }
 }
@@ -50,44 +49,57 @@ async function getStockChart(symbol, period = '1d', interval = '5m') {
 // Get Yahoo Finance chart data
 async function getYahooChartData(yahooSymbol, period, interval) {
     try {
-        const data = await yahooFinance.chart(yahooSymbol, {
-            period1: getPeriodStart(period),
-            period2: Math.floor(Date.now() / 1000),
-            interval: interval
+        const period1 = getPeriodStart(period);
+        const period2 = Math.floor(Date.now() / 1000);
+        
+        const response = await axios.get(`https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}`, {
+            params: {
+                interval: interval,
+                range: period
+            },
+            timeout: 10000,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Referer': 'https://finance.yahoo.com/'
+            }
         });
 
-        if (!data || !data.quotes || data.quotes.length === 0) {
+        const result = response.data?.chart?.result?.[0];
+        if (!result || !result.timestamp || !result.indicators?.quote?.[0]) {
             return null;
         }
 
-        const chartData = {
+        const meta = result.meta;
+        const quotes = result.indicators.quote[0];
+        
+        const candles = result.timestamp.map((time, index) => ({
+            time: time * 1000,
+            open: quotes.open[index],
+            high: quotes.high[index],
+            low: quotes.low[index],
+            close: quotes.close[index],
+            volume: quotes.volume[index]
+        })).filter(candle => candle.open && candle.high && candle.low && candle.close);
+
+        const currentPrice = meta.regularMarketPrice || candles[candles.length - 1]?.close;
+        const previousClose = meta.previousClose;
+        const change = currentPrice - previousClose;
+        const changePercent = (change / previousClose) * 100;
+
+        return {
             symbol: yahooSymbol,
-            name: data.meta?.longName || yahooSymbol,
-            currentPrice: data.meta?.regularMarketPrice || data.quotes[data.quotes.length - 1]?.close,
-            previousClose: data.meta?.previousClose,
-            change: 0,
-            changePercent: 0,
-            high: data.meta?.regularMarketDayHigh,
-            low: data.meta?.regularMarketDayLow,
-            volume: data.meta?.regularMarketVolume,
-            marketCap: data.meta?.marketCap,
-            pe: data.meta?.trailingPE,
-            candles: data.quotes.map(quote => ({
-                time: quote.date.getTime(),
-                open: quote.open,
-                high: quote.high,
-                low: quote.low,
-                close: quote.close,
-                volume: quote.volume
-            })).filter(candle => candle.open && candle.high && candle.low && candle.close)
+            name: meta.longName || yahooSymbol,
+            currentPrice,
+            previousClose,
+            change,
+            changePercent,
+            high: meta.regularMarketDayHigh,
+            low: meta.regularMarketDayLow,
+            volume: meta.regularMarketVolume,
+            marketCap: meta.marketCap,
+            pe: meta.trailingPE,
+            candles
         };
-
-        if (chartData.currentPrice && chartData.previousClose) {
-            chartData.change = chartData.currentPrice - chartData.previousClose;
-            chartData.changePercent = (chartData.change / chartData.previousClose) * 100;
-        }
-
-        return chartData;
     } catch (error) {
         console.log(`Yahoo Finance chart error for ${yahooSymbol}:`, error.message);
         return null;
@@ -200,7 +212,6 @@ function getSymbolVolatility(symbol) {
     if (symbol.includes('PHARMA')) return 0.03;
     if (symbol.includes('AUTO')) return 0.035;
     if (symbol.includes('METAL') || symbol.includes('STEEL')) return 0.04;
-    if (symbol.includes('CRYPTO') || symbol.includes('BTC') || symbol.includes('ETH')) return 0.08;
     return 0.025;
 }
 
@@ -228,66 +239,7 @@ function getPeriodDays(period) {
     return periodMap[period] || 1;
 }
 
-// Get crypto chart data
-async function getCryptoChart(symbol, period = '1d') {
-    const cacheKey = `crypto_${symbol}_${period}`;
-    const cached = cache[cacheKey];
-    
-    if (cached && Date.now() - cached.timestamp < config.cacheTimeout) {
-        return cached.data;
-    }
 
-    try {
-        const cryptoMap = {
-            'BTC': 'bitcoin', 'ETH': 'ethereum', 'ADA': 'cardano', 'DOT': 'polkadot',
-            'SOL': 'solana', 'MATIC': 'polygon', 'AVAX': 'avalanche-2', 'LINK': 'chainlink'
-        };
-
-        const coinId = cryptoMap[symbol] || symbol.toLowerCase();
-        const days = getCryptoPeriodDays(period);
-
-        const priceResponse = await axios.get(`https://api.coingecko.com/api/v3/coins/${coinId}/market_chart`, {
-            params: { vs_currency: 'inr', days: days, interval: days <= 1 ? 'hourly' : 'daily' },
-            timeout: 10000
-        });
-
-        const currentResponse = await axios.get(`https://api.coingecko.com/api/v3/coins/${coinId}`, {
-            timeout: 5000
-        });
-
-        const prices = priceResponse.data.prices || [];
-        const volumes = priceResponse.data.total_volumes || [];
-        const current = currentResponse.data;
-
-        const chartData = {
-            symbol: symbol,
-            name: current.name || symbol,
-            currentPrice: current.market_data?.current_price?.usd || 0,
-            previousClose: prices.length > 1 ? prices[prices.length - 2][1] : 0,
-            change: 0,
-            changePercent: current.market_data?.price_change_percentage_24h || 0,
-            high: current.market_data?.high_24h?.usd || 0,
-            low: current.market_data?.low_24h?.usd || 0,
-            volume: current.market_data?.total_volume?.usd || 0,
-            marketCap: current.market_data?.market_cap?.usd || 0,
-            candles: prices.map((price, index) => ({
-                time: price[0],
-                close: price[1],
-                volume: volumes[index] ? volumes[index][1] : 0,
-                open: index > 0 ? prices[index - 1][1] : price[1],
-                high: price[1] * 1.02,
-                low: price[1] * 0.98
-            }))
-        };
-
-        chartData.change = chartData.currentPrice - chartData.previousClose;
-        cache[cacheKey] = { data: chartData, timestamp: Date.now() };
-        return chartData;
-
-    } catch (error) {
-        return { symbol, error: 'Crypto chart data unavailable' };
-    }
-}
 
 // Calculate technical indicators
 function calculateTechnicalIndicators(candles) {
@@ -428,22 +380,13 @@ function getPeriodStart(period) {
     return Math.floor((now - (periods[period] || periods['1d'])) / 1000);
 }
 
-function getCryptoPeriodDays(period) {
-    const periodMap = {
-        '1d': 1, '5d': 5, '1mo': 30, '3mo': 90, '6mo': 180, '1y': 365, '5y': 1825
-    };
-    
-    return periodMap[period] || 1;
-}
 
 // Get watchlist data
 async function getWatchlistData(symbols) {
     const watchlistData = await Promise.all(
         symbols.map(async (symbolData) => {
             try {
-                const chartData = symbolData.type === 'crypto' 
-                    ? await getCryptoChart(symbolData.symbol, '1d')
-                    : await getStockChart(symbolData.symbol, '1d');
+                const chartData = await getStockChart(symbolData.symbol, '1d');
                 
                 return {
                     symbol: symbolData.symbol,
@@ -468,6 +411,5 @@ async function getWatchlistData(symbols) {
 // Export simple object with functions
 export default {
     getStockChart,
-    getCryptoChart,
     getWatchlistData
 };

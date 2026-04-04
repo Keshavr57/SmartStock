@@ -37,7 +37,8 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
         'https://smart-stock-ku3d.vercel.app',
         'http://localhost:5173', 
         'http://localhost:3000', 
-        'http://localhost:3001'
+        'http://localhost:3001',
+        'http://localhost:3002'
     ];
 
 console.log('🌐 CORS Configuration:', {
@@ -85,7 +86,7 @@ app.use((req, res, next) => {
 });
 
 // Connect to Database
-// connectDB(); // Temporarily disabled for API testing
+connectDB(); // Enable MongoDB connection for fundamentals data
 
 // Socket.IO Setup with enhanced CORS
 const io = new Server(httpServer, {

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import StockFundamentals from '../../models/StockFundamentals.js';
 
 // Configuration object (no class needed)
 const config = {
@@ -39,6 +40,20 @@ async function getComprehensiveStockData(symbol) {
             result = await getIndianStockData(symbol, result);
         } else {
             result = await getYahooStockData(symbol, result);
+        }
+
+        // IMPORTANT: Merge MongoDB fundamentals data for all stocks
+        // This ensures PE ratio, EPS, Revenue, etc. always come from our reliable MongoDB
+        const mongoDBFundamentals = await getStockFundamentals(symbol);
+        if (mongoDBFundamentals) {
+            console.log(`🔄 Merging MongoDB fundamentals for ${symbol}`);
+            // Merge MongoDB data - MongoDB data takes priority for financial metrics
+            result = {
+                ...result,
+                ...mongoDBFundamentals,
+                // Keep API price data but use MongoDB fundamentals
+                dataSource: 'API_price_with_MongoDB_fundamentals'
+            };
         }
 
         setCache(cacheKey, result);
@@ -367,57 +382,244 @@ async function getYahooPriceData(symbol) {
     }
 }
 
+async function getStockFundamentals(symbol) {
+    try {
+        // Clean symbol - remove .NS, .BO suffixes
+        const cleanSymbol = symbol.replace('.NS', '').replace('.BO', '').replace('-', '').replace('&', '');
+        
+        // Try exact symbol match first
+        let stock = await StockFundamentals.findOne({ 
+            symbol: cleanSymbol,
+            isActive: true 
+        });
+        
+        // Try nsSymbol match if exact match not found
+        if (!stock) {
+            stock = await StockFundamentals.findOne({ nsSymbol: symbol });
+        }
+
+        if (!stock) {
+            console.log(`⚠️ ${symbol} not in MongoDB — fundamentals coming soon`);
+            return null;
+        }
+
+        console.log(`✅ Got fundamentals from MongoDB for ${symbol}`);
+        return {
+            peRatio:        stock.peRatio,
+            pbRatio:        stock.pbRatio,
+            eps:            stock.eps,
+            bookValue:      stock.bookValue,
+            beta:           stock.beta,
+            marketCap:      stock.marketCapCr,
+            
+            roe:            stock.roe,
+            roce:           stock.roce,
+            profitMargin:   stock.profitMargin,
+            grossMargin:    stock.grossMargin,
+            operatingMargin: stock.operatingMargin,
+            revenueGrowth:  stock.revenueGrowth,
+            earningsGrowth: stock.earningsGrowth,
+            
+            revenue:        stock.revenueCr,
+            netIncome:      stock.netIncomeCr,
+            totalAssets:    stock.totalAssetsCr,
+            
+            debtToEquity:   stock.debtToEquity,
+            currentRatio:   stock.currentRatio,
+            dividendYield:  stock.dividendYield,
+            
+            sector:         stock.sector,
+            industry:       stock.industry,
+            promoterHolding: stock.promoterHolding,
+            fiiHolding:     stock.fiiHolding,
+            
+            dataSource:     'MongoDB',
+            lastUpdated:    stock.lastUpdated
+        };
+    } catch (error) {
+        console.error(`❌ Error fetching fundamentals for ${symbol}:`, error.message);
+        return null;
+    }
+}
+
+// Fetch fundamentals from FMP API instead of hardcoded fallback
+async function getStockFundamentalsFromFMP(symbol) {
+    try {
+        const fmpKey = process.env.FMP_API_KEY;
+        if (!fmpKey) {
+            console.error('FMP_API_KEY not found in environment');
+            return null;
+        }
+
+        // Convert NSE/BSE symbol to FMP format (RELIANCE.NS → RELIANCE.NSE)
+        let fmpSymbol = symbol;
+        if (symbol.includes('.NS')) {
+            fmpSymbol = symbol.replace('.NS', '.NSE');
+        } else if (symbol.includes('.BO')) {
+            fmpSymbol = symbol.replace('.BO', '.BSE');
+        }
+
+        console.log(`🔍 Fetching FMP fundamentals for ${fmpSymbol}...`);
+
+        // Fetch all 3 endpoints in parallel
+        const [profileRes, ratiosRes, incomeRes] = await Promise.all([
+            axios.get(`https://financialmodelingprep.com/api/v3/profile/${fmpSymbol}?apikey=${fmpKey}`, { timeout: 10000 }),
+            axios.get(`https://financialmodelingprep.com/api/v3/ratios-ttm/${fmpSymbol}?apikey=${fmpKey}`, { timeout: 10000 }),
+            axios.get(`https://financialmodelingprep.com/api/v3/income-statement/${fmpSymbol}?limit=1&apikey=${fmpKey}`, { timeout: 10000 })
+        ]).catch(err => {
+            console.log(`⚠️ FMP API failed for ${fmpSymbol}:`, err.message);
+            return [null, null, null];
+        });
+
+        // Check if we got valid responses
+        if (!profileRes || !profileRes.data || profileRes.data.length === 0) {
+            console.log(`⚠️ No profile data from FMP for ${fmpSymbol}`);
+            return null;
+        }
+
+        const profile = profileRes.data[0] || {};
+        const ratios = ratiosRes?.data?.[0] || {};
+        const income = incomeRes?.data?.[0] || {};
+
+        console.log(`✅ Got FMP data for ${fmpSymbol}`);
+
+        return {
+            peRatio:        profile.pe || null,
+            forwardPE:      profile.forwardPE || null,
+            pbRatio:        ratios.priceToBookRatio || null,
+            eps:            profile.eps || null,
+            bookValue:      profile.bookValuePerShare || null,
+            beta:           profile.beta || null,
+            marketCap:      profile.mktCap ? Math.round(profile.mktCap / 1e7) : null,
+            
+            roe:            ratios.roe ? +(ratios.roe * 100).toFixed(2) : null,
+            roa:            ratios.roa ? +(ratios.roa * 100).toFixed(2) : null,
+            profitMargin:   ratios.netProfitMargin ? +(ratios.netProfitMargin * 100).toFixed(2) : null,
+            revenueGrowth:  null,
+            debtToEquity:   ratios.debtToEquityRatio || null,
+            currentRatio:   ratios.currentRatio || null,
+            
+            revenue:        income.revenue ? Math.round(income.revenue / 1e7) : null,
+            netIncome:      income.netIncome ? Math.round(income.netIncome / 1e7) : null,
+            grossProfit:    income.grossProfit ? Math.round(income.grossProfit / 1e7) : null,
+            
+            totalAssets:    null,
+            totalDebt:      null,
+            totalEquity:    null,
+            
+            dividendYield:  profile.dividendYield ? +(profile.dividendYield * 100).toFixed(2) : null,
+            
+            dataSource: 'fmp'
+        };
+    } catch (error) {
+        console.error(`Error fetching FMP fundamentals for ${symbol}:`, error.message);
+        return null;
+    }
+}
+
+// Fallback fundamentals for when all APIs are unavailable
+function generateFallbackFundamentals(symbol) {
+    console.log(`⚠️ All APIs failed for ${symbol}, returning null values (no fake data)`);
+    return {
+        peRatio: null,
+        eps: null,
+        pbRatio: null,
+        roe: null,
+        debtToEquity: null,
+        marketCap: null,
+        revenue: null,
+        netIncome: null,
+        beta: null,
+        dividendYield: null,
+        profitMargin: null,
+        currentRatio: null
+    };
+}
+
 async function getYahooFundamentals(symbol) {
     try {
-        const modules = ['summaryDetail', 'financialData', 'defaultKeyStatistics', 'incomeStatementHistory', 'balanceSheetHistory', 'cashflowStatementHistory', 'recommendationTrend'].join(',');
+        const modules = 'financialData,defaultKeyStatistics,summaryDetail,incomeStatementHistory,balanceSheetHistory,earningsTrend,assetProfile';
 
         const response = await axios.get(`${config.yahooFundamentalsURL}${symbol}`, {
             params: { modules },
-            timeout: 15000
+            timeout: 15000,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+                'Accept': 'application/json',
+                'Referer': 'https://finance.yahoo.com'
+            }
         });
+
+        console.log('Yahoo response status:', response.status);
+        console.log('Yahoo result keys:', Object.keys(response.data?.quoteSummary?.result?.[0] || {}));
+        console.log('financialData sample:', JSON.stringify(response.data?.quoteSummary?.result?.[0]?.financialData, null, 2));
 
         const quoteSummary = response.data?.quoteSummary?.result?.[0];
         if (!quoteSummary) return null;
 
         const summaryDetail = quoteSummary.summaryDetail || {};
         const financialData = quoteSummary.financialData || {};
+        const defaultKeyStats = quoteSummary.defaultKeyStatistics || {};
         const incomeStatement = quoteSummary.incomeStatementHistory?.incomeStatementHistory?.[0] || {};
         const balanceSheet = quoteSummary.balanceSheetHistory?.balanceSheetStatements?.[0] || {};
 
+        // Helper function to convert USD to INR (₹ Crore)
+        const toInrCrore = (value) => value ? value / 1e7 : null;
+        // Helper function to convert to percentage
+        const toPercentage = (value) => value !== null && value !== undefined ? value * 100 : null;
+
         return {
-            marketCap: summaryDetail.marketCap?.raw,
-            trailingPE: summaryDetail.trailingPE?.raw,
-            pegRatio: financialData.pegRatio?.raw,
-            bookValue: financialData.bookValue?.raw,
-            priceToBook: financialData.priceToBook?.raw,
-            beta: financialData.beta?.raw,
-            returnOnEquity: financialData.returnOnEquity?.raw,
-            returnOnAssets: financialData.returnOnAssets?.raw,
-            grossMargins: financialData.grossMargins?.raw,
-            operatingMargins: financialData.operatingMargins?.raw,
-            profitMargins: financialData.profitMargins?.raw,
-            debtToEquity: financialData.debtToEquity?.raw,
-            currentRatio: financialData.currentRatio?.raw,
-            quickRatio: financialData.quickRatio?.raw,
-            trailingEps: financialData.trailingEps?.raw,
-            forwardEps: financialData.forwardEps?.raw,
-            dividendYield: summaryDetail.dividendYield?.raw,
-            revenueGrowth: financialData.revenueGrowth?.raw,
-            earningsGrowth: financialData.earningsGrowth?.raw,
-            totalRevenue: financialData.totalRevenue?.raw,
-            grossProfits: financialData.grossProfits?.raw,
-            ebitda: financialData.ebitda?.raw,
-            operatingIncome: incomeStatement.operatingIncome?.raw,
-            netIncomeToCommon: incomeStatement.netIncome?.raw,
-            totalAssets: balanceSheet.totalAssets?.raw,
-            totalLiab: balanceSheet.totalLiab?.raw,
-            totalDebt: financialData.totalDebt?.raw,
-            totalCash: financialData.totalCash?.raw,
-            operatingCashflow: financialData.operatingCashflow?.raw,
-            freeCashflow: financialData.freeCashflow?.raw,
-            targetMeanPrice: financialData.targetMeanPrice?.raw,
-            recommendationKey: financialData.recommendationKey,
-            numberOfAnalystOpinions: financialData.numberOfAnalystOpinions?.raw
+            // From financialData
+            currentPrice: financialData.currentPrice?.raw || null,
+            returnOnEquity: toPercentage(financialData.returnOnEquity?.raw),
+            returnOnAssets: toPercentage(financialData.returnOnAssets?.raw),
+            profitMargins: toPercentage(financialData.profitMargins?.raw),
+            revenueGrowth: toPercentage(financialData.revenueGrowth?.raw),
+            earningsGrowth: toPercentage(financialData.earningsGrowth?.raw),
+            debtToEquity: financialData.debtToEquity?.raw || null,
+            currentRatio: financialData.currentRatio?.raw || null,
+            
+            // From defaultKeyStatistics
+            trailingEps: defaultKeyStats.trailingEps?.raw || null,
+            priceToBook: defaultKeyStats.priceToBook?.raw || null,
+            enterpriseToEbitda: defaultKeyStats.enterpriseToEbitda?.raw || null,
+            trailingPE: defaultKeyStats.trailingPE?.raw || null,
+            bookValue: defaultKeyStats.bookValue?.raw || null,
+            
+            // From summaryDetail
+            marketCap: toInrCrore(summaryDetail.marketCap?.raw),
+            dividendYield: toPercentage(summaryDetail.dividendYield?.raw),
+            beta: summaryDetail.beta?.raw || null,
+            fiftyTwoWeekHigh: summaryDetail.fiftyTwoWeekHigh?.raw || null,
+            fiftyTwoWeekLow: summaryDetail.fiftyTwoWeekLow?.raw || null,
+            
+            // From incomeStatementHistory
+            totalRevenue: toInrCrore(incomeStatement.totalRevenue?.raw),
+            netIncome: toInrCrore(incomeStatement.netIncome?.raw),
+            grossProfit: toInrCrore(incomeStatement.grossProfit?.raw),
+            
+            // From balanceSheetHistory
+            totalAssets: toInrCrore(balanceSheet.totalAssets?.raw),
+            totalDebt: toInrCrore(balanceSheet.totalDebt?.raw),
+            totalStockholderEquity: toInrCrore(balanceSheet.totalStockholderEquity?.raw),
+            
+            // Legacy fields for backward compatibility
+            pegRatio: financialData.pegRatio?.raw || null,
+            grossMargins: toPercentage(financialData.grossMargins?.raw),
+            operatingMargins: toPercentage(financialData.operatingMargins?.raw),
+            quickRatio: financialData.quickRatio?.raw || null,
+            forwardEps: financialData.forwardEps?.raw || null,
+            ebitda: toInrCrore(financialData.ebitda?.raw),
+            operatingIncome: toInrCrore(incomeStatement.operatingIncome?.raw),
+            netIncomeToCommon: toInrCrore(incomeStatement.netIncome?.raw),
+            totalLiab: toInrCrore(balanceSheet.totalLiab?.raw),
+            totalCash: toInrCrore(financialData.totalCash?.raw),
+            operatingCashflow: toInrCrore(financialData.operatingCashflow?.raw),
+            freeCashflow: toInrCrore(financialData.freeCashflow?.raw),
+            targetMeanPrice: financialData.targetMeanPrice?.raw || null,
+            recommendationKey: financialData.recommendationKey || null,
+            numberOfAnalystOpinions: financialData.numberOfAnalystOpinions?.raw || null,
+            grossProfits: toInrCrore(financialData.grossProfits?.raw)
         };
     } catch (error) {
         return null;
@@ -523,5 +725,6 @@ function getEmptyDataStructure(symbol) {
 // Export simple object with functions (no class)
 export default {
     getComprehensiveStockData,
-    getEmptyDataStructure
+    getEmptyDataStructure,
+    getStockFundamentals
 };

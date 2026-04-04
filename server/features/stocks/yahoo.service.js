@@ -1,22 +1,23 @@
-import YahooFinance from "yahoo-finance2";
-
-const yahoo = new YahooFinance({
-  suppressNotices: ["yahooSurvey"]
-});
+import axios from 'axios';
 
 export const fetchYahooFundamentals = async (symbol) => {
   try {
-    const data = await yahoo.quoteSummary(symbol, {
-      modules: [
-        "price",
-        "summaryDetail", 
-        "financialData",
-        "defaultKeyStatistics",
-        "quoteType"
-      ]
+    const modules = 'price,summaryDetail,financialData,defaultKeyStatistics,quoteType';
+    const url = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${symbol}`;
+    
+    const response = await axios.get(url, {
+      params: { modules },
+      timeout: 15000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+        'Referer': 'https://finance.yahoo.com'
+      }
     });
 
-    // Helper function to safely extract numeric values
+    const result = response.data?.quoteSummary?.result?.[0];
+    if (!result) return null;
+
     const getNumericValue = (value) => {
       if (value === null || value === undefined) return null;
       if (typeof value === 'object' && value.raw !== undefined) return value.raw;
@@ -24,39 +25,36 @@ export const fetchYahooFundamentals = async (symbol) => {
       return null;
     };
 
+    const price = result.price || {};
+    const fd = result.financialData || {};
+    const sd = result.summaryDetail || {};
+    const ks = result.defaultKeyStatistics || {};
+
     return {
-      // price - try multiple sources
-      price: getNumericValue(data.price?.regularMarketPrice) ?? 
-             getNumericValue(data.financialData?.currentPrice) ?? 
-             getNumericValue(data.summaryDetail?.previousClose) ?? null,
+      price: getNumericValue(price.regularMarketPrice) ?? 
+             getNumericValue(fd.currentPrice) ?? 
+             getNumericValue(sd.previousClose) ?? null,
 
-      // market cap - try multiple sources
-      marketCap: getNumericValue(data.price?.marketCap) ??
-                 getNumericValue(data.summaryDetail?.marketCap) ??
-                 getNumericValue(data.defaultKeyStatistics?.marketCap) ?? null,
+      marketCap: getNumericValue(price.marketCap) ??
+                 getNumericValue(sd.marketCap) ??
+                 getNumericValue(ks.marketCap) ?? null,
 
-      // P/E ratio - try multiple sources
-      pe: getNumericValue(data.summaryDetail?.trailingPE) ?? 
-          getNumericValue(data.summaryDetail?.forwardPE) ?? 
-          getNumericValue(data.defaultKeyStatistics?.trailingPE) ?? null,
+      pe: getNumericValue(sd.trailingPE) ?? 
+          getNumericValue(sd.forwardPE) ?? 
+          getNumericValue(ks.trailingPE) ?? null,
 
-      // ROE - try multiple sources
-      roe: getNumericValue(data.financialData?.returnOnEquity) ?? 
-           getNumericValue(data.defaultKeyStatistics?.returnOnEquity) ?? null,
+      roe: getNumericValue(fd.returnOnEquity) ?? 
+           getNumericValue(ks.returnOnEquity) ?? null,
 
-      // Profit margin
-      profitMargin: getNumericValue(data.financialData?.profitMargins) ?? 
-                    getNumericValue(data.defaultKeyStatistics?.profitMargins) ?? null,
+      profitMargin: getNumericValue(fd.profitMargins) ?? 
+                    getNumericValue(ks.profitMargins) ?? null,
 
-      // Revenue
-      revenue: getNumericValue(data.financialData?.totalRevenue) ?? 
-               getNumericValue(data.financialData?.revenuePerShare) ?? null,
+      revenue: getNumericValue(fd.totalRevenue) ?? 
+               getNumericValue(fd.revenuePerShare) ?? null,
 
-      // Debt to equity
-      debtToEquity: getNumericValue(data.financialData?.debtToEquity) ?? null,
+      debtToEquity: getNumericValue(fd.debtToEquity) ?? null,
 
-      // Recommendation
-      recommendation: data.financialData?.recommendationKey ?? "neutral"
+      recommendation: fd.recommendationKey ?? "neutral"
     };
   } catch (err) {
     console.error("Yahoo Error for", symbol, ":", err.message);
@@ -66,24 +64,24 @@ export const fetchYahooFundamentals = async (symbol) => {
 
 export const fetchYahooHistory = async (symbol, range = "1mo") => {
   try {
-    // yahoo-finance2 chart() now requires period1 and period2 for historical data
-    const now = new Date();
-    const period2 = Math.floor(now.getTime() / 1000);
-    const period1 = period2 - (30 * 24 * 60 * 60); // Roughly 1 month ago
-
-    const data = await yahoo.chart(symbol, {
-      period1,
-      period2,
-      interval: "1d"
+    const response = await axios.get(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}`, {
+      params: { range: range, interval: '1d' },
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://finance.yahoo.com'
+      }
     });
 
-    if (!data || !data.quotes) {
+    const result = response.data?.chart?.result?.[0];
+    if (!result || !result.timestamp || !result.indicators?.quote?.[0]) {
       return generateFallbackHistoryData(symbol);
     }
 
-    return data.quotes.map(q => ({
-      date: q.date,
-      price: q.close
+    const quotes = result.indicators.quote[0];
+    return result.timestamp.map((time, index) => ({
+      date: new Date(time * 1000),
+      price: quotes.close[index] || 0
     }));
   } catch (err) {
     return generateFallbackHistoryData(symbol);
@@ -115,17 +113,17 @@ const generateFallbackHistoryData = (symbol) => {
   return data;
 };
 
-// Get realistic base prices for common symbols (Updated January 2025)
+// Get realistic base prices for common symbols
 const getBasePriceForSymbol = (symbol) => {
   const basePrices = {
-    'RELIANCE.NS': 1458,      // Updated Jan 2025
-    'TCS.NS': 3197,           // Updated Jan 2025
-    'INFY.NS': 1608,          // Updated Jan 2025
-    'HDFCBANK.NS': 925,       // Updated Jan 2025
+    'RELIANCE.NS': 1458,
+    'TCS.NS': 3197,
+    'INFY.NS': 1608,
+    'HDFCBANK.NS': 925,
     'ICICIBANK.NS': 1285,
     'ITC.NS': 485,
     'HINDUNILVR.NS': 2385,
-    'SBIN.NS': 1030,          // Updated Jan 2025
+    'SBIN.NS': 1030,
     'BHARTIARTL.NS': 1685,
     'KOTAKBANK.NS': 1785,
     'LT.NS': 3685,
@@ -138,9 +136,8 @@ const getBasePriceForSymbol = (symbol) => {
     'NESTLEIND.NS': 2180,
     'POWERGRID.NS': 285,
     'NTPC.NS': 285,
-    'BAJFINANCE.NS': 945,     // Updated Jan 2025
-    // Add more as needed
+    'BAJFINANCE.NS': 945,
   };
   
-  return basePrices[symbol] || 1000; // Default fallback price
+  return basePrices[symbol] || 1000;
 };

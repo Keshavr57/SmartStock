@@ -11,7 +11,7 @@ const holdingSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['stock', 'crypto'],
+    enum: ['stock'],
     required: true
   },
   quantity: {

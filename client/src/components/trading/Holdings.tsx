@@ -32,7 +32,7 @@ const Holdings: React.FC = () => {
         try {
             const user = authService.getUser();
             if (!user) {
-
+                
                 return;
             }
 
@@ -41,8 +41,8 @@ const Holdings: React.FC = () => {
             if (response.data.status === 'success') {
                 setHoldings(response.data.data);
             }
-        } catch (error) {
-
+        }catch (error) {
+            console.error('Error fetching holdings:', error);
         } finally {
             setLoading(false);
         }

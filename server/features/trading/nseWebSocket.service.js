@@ -196,7 +196,7 @@ function cleanup(socket) {
         state.subscribers[symbol] = state.subscribers[symbol].filter(id => id !== socket.id);
         
         // Stop polling if no more subscribers
-        if (state.subscribers[symbol].length === 0) {
+if (state.subscribers[symbol].length === 0) {
             stopPolling(symbol);
         }
     });

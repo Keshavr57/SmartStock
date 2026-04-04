@@ -1,4 +1,41 @@
 import comprehensiveStockService from "./stock.service.js";
+import StockFundamentals from '../../models/StockFundamentals.js';
+
+export const getStockFundamentals = async (req, res) => {
+  try {
+    const { symbol } = req.params;
+    
+    if (!symbol) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Please provide a stock symbol" 
+      });
+    }
+
+    console.log(`📊 Fetching fundamentals for: ${symbol}`);
+    
+    const fundamentals = await comprehensiveStockService.getStockFundamentals(symbol.toUpperCase());
+    
+    if (!fundamentals) {
+      return res.status(404).json({ 
+        success: false, 
+        error: "Could not fetch fundamentals for this symbol" 
+      });
+    }
+
+    res.json({
+      success: true,
+      symbol: symbol.toUpperCase(),
+      fundamentals
+    });
+  } catch (error) {
+    console.error('Error fetching fundamentals:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+};
 
 export const compareStocks = async (req, res) => {
   try {
@@ -36,8 +73,56 @@ export const compareStocks = async (req, res) => {
         
         console.log(`📊 Fetching comprehensive data for: ${processedSymbol}`);
         
-        // Get comprehensive data - this ensures ALL fields are populated
-        const stockData = await comprehensiveStockService.getComprehensiveStockData(processedSymbol);
+        // FIRST: Check if stock EXISTS in MongoDB
+        const cleanSymbol = processedSymbol.replace('.NS', '').replace('.BO', '');
+        const stockInDB = await StockFundamentals.findOne({ 
+          $or: [
+            { symbol: cleanSymbol },
+            { nsSymbol: processedSymbol }
+          ]
+        });
+        
+        // If stock NOT in DB, return "Coming Soon" immediately
+        if (!stockInDB) {
+          console.log(`⚠️ ${processedSymbol} NOT in MongoDB - showing "Coming Soon"`);
+          return {
+            symbol: processedSymbol,
+            name: cleanSymbol,
+            comingSoon: true,
+            price: null,
+            pe: null,
+            eps: null,
+            revenue: null,
+            roe: null,
+            marketCap: null,
+            sector: 'Unknown',
+            industry: 'Unknown',
+            message: 'Detailed fundamentals coming soon for this stock'
+          };
+        }
+        
+        // If stock IS in DB, fetch full data
+        console.log(`✅ ${processedSymbol} FOUND in MongoDB - fetching full details`);
+        
+        // Get BOTH comprehensive data AND fundamentals in parallel
+        const [priceData, fundamentalsData] = await Promise.all([
+          comprehensiveStockService.getComprehensiveStockData(processedSymbol),
+          comprehensiveStockService.getStockFundamentals(processedSymbol)
+        ]);
+        
+        // Check if fundamentals came from fallback or real API
+        const dataSource = fundamentalsData?.dataSource || 'unknown';
+        const sourceLabel = dataSource === 'api' ? '(Yahoo API)' : '(Fallback)';
+        console.log(`📈 Fundamentals for ${processedSymbol}: ${sourceLabel}`);
+        
+        // Merge fundamentals into price data
+        const stockData = {
+          ...priceData,
+          ...(fundamentalsData || {})
+        };
+        
+        // Flag stocks without fundamentals data as "coming soon"
+        const comingSoon = !fundamentalsData;
         
         // Validate that we got meaningful data
         if (!stockData.lastTradedPrice && !stockData.currentPrice) {
@@ -56,6 +141,7 @@ export const compareStocks = async (req, res) => {
           symbol: processedSymbol,
           name: stockData.name || processedSymbol.replace('.NS', '').replace('.BO', ''),
           price: stockData.lastTradedPrice || stockData.currentPrice || 0,
+          comingSoon: comingSoon,  // Flag for frontend to show "coming soon" badge
           marketCap: stockData.marketCap || null,
           pe: stockData.peRatio || null,
           roe: stockData.roe || null,

@@ -12,6 +12,7 @@ interface RowConfig {
 
 interface StockData {
   symbol: string;
+  comingSoon?: boolean;
   lastTradedPrice: number | null;
   oneDayChange: number | null;
   oneDayChangePercent: number | null;
@@ -144,6 +145,29 @@ export default function ComprehensiveComparisonTable({ data, loading }: Comprehe
     );
   }
 
+  // Filter out stocks marked as "coming soon" (not in database)
+  const availableStocks = data.filter(stock => !stock.comingSoon);
+  const comingSoonStocks = data.filter(stock => stock.comingSoon);
+
+  if (availableStocks.length === 0) {
+    return (
+      <Card className="border-muted/50 bg-card/50 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle>Comprehensive Comparison</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <p className="text-amber-600 font-medium mb-3">📅 Coming Soon</p>
+            <p className="text-muted-foreground">
+              Detailed fundamentals for {comingSoonStocks.map(s => s.symbol).join(', ')} will be available soon.
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">Currently we have detailed data for 48+ Indian stocks</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const sections: { title: string; rows: RowConfig[] }[] = [
     {
       title: 'Price Information',
@@ -206,7 +230,7 @@ export default function ComprehensiveComparisonTable({ data, loading }: Comprehe
                 <TableHeader className="bg-muted/30">
                   <TableRow className="hover:bg-transparent border-muted/50">
                     <TableHead className="w-1/4 font-semibold sticky left-0 bg-muted/30 z-10">Metric</TableHead>
-                    {data.map((stock, i) => (
+                    {availableStocks.map((stock, i) => (
                       <TableHead key={stock.symbol} className={cn(
                         "text-right font-bold min-w-[120px]",
                         i === 0 ? "text-blue-600" : i === 1 ? "text-purple-600" : "text-emerald-600"
@@ -222,7 +246,7 @@ export default function ComprehensiveComparisonTable({ data, loading }: Comprehe
                       <TableCell className="font-medium text-muted-foreground sticky left-0 bg-background/95 z-10">
                         {row.label}
                       </TableCell>
-                      {data.map((stock) => {
+                      {availableStocks.map((stock) => {
                         const value = stock[row.key as keyof StockData] as number | null;
                         const formattedValue = row.format(value, stock.symbol);
                         

@@ -4,9 +4,9 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { X, Plus, BarChart3 } from 'lucide-react'
 import { compareAssets, getAssetsHistory, getComprehensiveComparison } from '../lib/api'
 import { cn } from '../lib/utils'
-import { Input } from '@/components/ui/input'
 import ComprehensiveComparisonTable from '@/components/ComprehensiveComparisonTable'
 import StockRecommendationEngine from '@/components/StockRecommendationEngine'
+import StockSearchAutocomplete from '@/components/StockSearchAutocomplete'
 
 export default function Compare() {
     const [selectedAssets, setSelectedAssets] = useState<string[]>(['RELIANCE.NS', 'TCS.NS'])
@@ -14,7 +14,6 @@ export default function Compare() {
     const [chartData, setChartData] = useState<any[]>([])
     const [loading, setLoading] = useState(false)
     const [comprehensiveLoading, setComprehensiveLoading] = useState(false)
-    const [searchQuery, setSearchQuery] = useState('')
 
     useEffect(() => {
         const fetchData = async () => {
@@ -142,22 +141,12 @@ export default function Compare() {
                         ))}
                         
                         {selectedAssets.length < 3 && (
-                            <div className="flex items-center gap-2">
-                                <Input
-                                    placeholder="Add asset..."
-                                    className="w-40 h-10 rounded-full border-gray-300 dark:border-zinc-600"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && addAsset(searchQuery)}
+                            <div className="flex-1 max-w-md">
+                                <StockSearchAutocomplete
+                                    onSelectStock={addAsset}
+                                    selectedSymbols={selectedAssets}
+                                    maxSelection={3}
                                 />
-                                <Button
-                                    size="sm"
-                                    className="rounded-full"
-                                    onClick={() => addAsset(searchQuery)}
-                                    disabled={!searchQuery.trim()}
-                                >
-                                    <Plus className="h-4 w-4" />
-                                </Button>
                             </div>
                         )}
                     </div>

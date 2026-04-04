@@ -109,6 +109,7 @@ const OrderPanel: React.FC<OrderPanelProps> = ({ symbol, type, onClose, onOrderC
                 setError(data.message || 'Order failed');
             }
         } catch (error) {
+            console.error('Error submitting order:', error);
             setError('Network error. Please try again.');
         } finally {
             setLoading(false);

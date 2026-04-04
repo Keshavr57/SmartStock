@@ -31,7 +31,7 @@ async function getCurrentIPOs() {
                 allIPOs = [...chittorgarhIPOs];
             }
         } catch (error) {
-            console.log('⚠️ Chittorgarh failed:', error.message);
+            console.log('Chittorgarh failed:', error.message);
         }
 
         // Source 2: IPOWatch
@@ -47,7 +47,7 @@ async function getCurrentIPOs() {
                 });
             }
         } catch (error) {
-            console.log('⚠️ IPOWatch failed:', error.message);
+            console.log('IPOWatch failed:', error.message);
         }
 
         // Source 3: Investing.com India
