@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: smartstock-ai-service
+    env: python
+    region: oregon
+    plan: free
+    
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: GROQ_API_KEY
+        scope: run
+        sync: false
+    
+    healthCheckPath: /
+    healthCheckStartupTimeout: 30
+    healthCheckInterval: 30
