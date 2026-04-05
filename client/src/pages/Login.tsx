@@ -11,7 +11,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [googleLoading, setGoogleLoading] = useState(false);
-    
+
     const [loginForm, setLoginForm] = useState({
         email: '',
         password: ''
@@ -26,10 +26,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
         script.onload = () => {
             if (window.google) {
-                const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 
-                                document.querySelector('meta[name="google-signin-client_id"]')?.getAttribute('content') ||
-                                '817549154886-k5r92c4grcvr5usdiqfjtib2se0uc5qv.apps.googleusercontent.com';
-                
+                const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+                    document.querySelector('meta[name="google-signin-client_id"]')?.getAttribute('content') ||
+                    '817549154886-k5r92c4grcvr5usdiqfjtib2se0uc5qv.apps.googleusercontent.com';
+
                 if (clientId && clientId !== 'undefined') {
                     window.google.accounts.id.initialize({
                         client_id: clientId,
@@ -55,7 +55,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
         try {
             const result = await authService.googleLogin(response.credential);
-            
+
             if (result.success) {
                 onLogin();
                 navigate('/home');
@@ -73,10 +73,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         if (window.google) {
             try {
                 setGoogleLoading(true);
-                const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 
-                                document.querySelector('meta[name="google-signin-client_id"]')?.getAttribute('content') ||
-                                '817549154886-k5r92c4grcvr5usdiqfjtib2se0uc5qv.apps.googleusercontent.com';
-                
+                const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+                    document.querySelector('meta[name="google-signin-client_id"]')?.getAttribute('content') ||
+                    '817549154886-k5r92c4grcvr5usdiqfjtib2se0uc5qv.apps.googleusercontent.com';
+
                 if (clientId && clientId !== 'undefined') {
                     window.google.accounts.id.initialize({
                         client_id: clientId,
@@ -86,11 +86,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                         use_fedcm_for_prompt: false
                     });
                 }
-                
+
                 const buttonContainer = document.createElement('div');
                 document.body.appendChild(buttonContainer);
                 buttonContainer.style.display = 'none';
-                
+
                 window.google.accounts.id.renderButton(buttonContainer, {
                     theme: 'outline',
                     size: 'large',
@@ -98,7 +98,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     text: 'signin_with',
                     shape: 'rectangular'
                 });
-                
+
                 window.google.accounts.id.prompt();
                 setTimeout(() => setGoogleLoading(false), 2000);
             } catch (error) {
@@ -117,7 +117,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
         try {
             const result = await authService.login(loginForm.email, loginForm.password);
-            
+
             if (result.success) {
                 onLogin();
                 navigate('/home');
@@ -140,9 +140,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 }
                 `}
             </style>
-            
+
             <div className="w-full max-w-[1100px] grid md:grid-cols-2 bg-white rounded-xl overflow-hidden shadow-xl relative z-10 border border-gray-200/50">
-                
+
                 {/* Left Side: Brand & Visual Context */}
                 <div className="hidden md:flex flex-col justify-between p-12 relative overflow-hidden" style={{ backgroundColor: 'rgba(124,58,237,0.06)' }}>
                     <div className="relative z-10">
@@ -156,7 +156,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                         <p className="text-[#4a4455] text-lg leading-relaxed mb-8">
                             Join 50,000+ Indian investors learning to navigate volatility through data-driven insights and AI-powered simulation.
                         </p>
-                        
+
                         <div className="space-y-6">
                             <div className="flex items-center gap-4">
                                 <div className="w-10 h-10 rounded-lg bg-[#7c3aed]/10 flex items-center justify-center text-[#7c3aed]">
@@ -173,7 +173,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                                 </div>
                                 <div>
                                     <h4 className="font-semibold text-[#141b2b]">Virtual Trading</h4>
-                                    <p className="text-sm text-[#4a4455]">Practice with ₹10L virtual capital.</p>
+                                    <p className="text-sm text-[#4a4455]">Practice with ₹1L virtual capital.</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-4">
@@ -199,22 +199,22 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                         <h1 className="text-2xl font-bold text-[#141b2b] font-['Plus_Jakarta_Sans'] mb-2">Welcome Back</h1>
                         <p className="text-[#4a4455] text-sm">Enter your details to access your curator dashboard.</p>
                     </div>
-                    
+
                     {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">{error}</div>}
-                    
+
                     <form className="space-y-6" onSubmit={handleLogin}>
                         <div className="space-y-1.5">
                             <label className="text-xs font-semibold uppercase tracking-wider text-[#4a4455]" htmlFor="email">Email Address</label>
-                            <input 
-                                className="w-full px-4 py-3.5 bg-gray-50 rounded-lg border border-transparent focus:border-[#7c3aed]/30 focus:ring-2 focus:ring-[#7c3aed]/20 transition-all text-[#141b2b] outline-none" 
-                                id="email" 
-                                name="email" 
-                                placeholder="name@example.com" 
+                            <input
+                                className="w-full px-4 py-3.5 bg-gray-50 rounded-lg border border-transparent focus:border-[#7c3aed]/30 focus:ring-2 focus:ring-[#7c3aed]/20 transition-all text-[#141b2b] outline-none"
+                                id="email"
+                                name="email"
+                                placeholder="name@example.com"
                                 type="email"
-                                value={loginForm.email} 
-                                onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })} 
-                                autoComplete="email" 
-                                required 
+                                value={loginForm.email}
+                                onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+                                autoComplete="email"
+                                required
                             />
                         </div>
                         <div className="space-y-1.5">
@@ -222,23 +222,23 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                                 <label className="text-xs font-semibold uppercase tracking-wider text-[#4a4455]" htmlFor="password">Password</label>
                                 <a className="text-xs font-semibold text-[#7c3aed] hover:underline" href="#">Forgot password?</a>
                             </div>
-                            <input 
-                                className="w-full px-4 py-3.5 bg-gray-50 rounded-lg border border-transparent focus:border-[#7c3aed]/30 focus:ring-2 focus:ring-[#7c3aed]/20 transition-all text-[#141b2b] outline-none" 
-                                id="password" 
-                                name="password" 
-                                placeholder="••••••••" 
+                            <input
+                                className="w-full px-4 py-3.5 bg-gray-50 rounded-lg border border-transparent focus:border-[#7c3aed]/30 focus:ring-2 focus:ring-[#7c3aed]/20 transition-all text-[#141b2b] outline-none"
+                                id="password"
+                                name="password"
+                                placeholder="••••••••"
                                 type="password"
-                                value={loginForm.password} 
-                                onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })} 
-                                autoComplete="current-password" 
-                                required 
+                                value={loginForm.password}
+                                onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                                autoComplete="current-password"
+                                required
                             />
                         </div>
                         <button disabled={loading} className="w-full py-3.5 bg-[#7c3aed] hover:bg-[#6b25e0] text-white font-bold rounded-lg shadow-md hover:shadow-[#7c3aed]/30 transition-all disabled:opacity-50 mt-2" type="submit">
                             {loading ? "Logging in..." : "Login"}
                         </button>
                     </form>
-                    
+
                     <div className="relative my-8">
                         <div className="absolute inset-0 flex items-center">
                             <div className="w-full border-t border-gray-200"></div>
@@ -247,19 +247,19 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                             <span className="px-4 bg-white text-gray-400 font-semibold tracking-widest uppercase">or continue with</span>
                         </div>
                     </div>
-                    
+
                     <button type="button" onClick={handleGoogleButtonClick} disabled={googleLoading} className="w-full flex items-center justify-center gap-3 py-3.5 border border-gray-200 bg-white hover:bg-gray-50 rounded-lg text-[#141b2b] font-semibold transition-colors disabled:opacity-50">
                         <svg className="w-5 h-5" viewBox="0 0 24 24">
-                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                         </svg>
                         {googleLoading ? "Signing in..." : "Google"}
                     </button>
-                    
+
                     <p className="mt-8 text-center text-sm text-[#4a4455]">
-                        New to SmartStock? 
+                        New to SmartStock?
                         <button onClick={() => navigate('/signup')} className="text-[#7c3aed] font-bold ml-1 hover:underline">Sign up free</button>
                     </p>
                 </div>
