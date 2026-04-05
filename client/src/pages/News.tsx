@@ -113,132 +113,134 @@ export default function News() {
     ]
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
-            <div className="max-w-6xl mx-auto">
-                {/* Header */}
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Market News</h1>
-                    <p className="text-gray-600">Stay updated with the latest market developments</p>
+        <section className="bg-slate-50 dark:bg-slate-900 min-h-[calc(100vh-64px)] p-4 md:p-8 border-t dark:border-slate-800" id="discover">
+            <div className="max-w-7xl mx-auto space-y-8">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">Market News</h1>
+                        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Stay updated with developments</p>
+                    </div>
                 </div>
 
-                {/* Search and Filters */}
-                <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-                    <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-                        {/* Search */}
-                        <div className="relative flex-1 max-w-md">
-                            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                            <Input
-                                placeholder="Search news..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-10"
-                            />
-                        </div>
+                <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 flex flex-col md:flex-row gap-4 items-center justify-between">
+                    <div className="relative flex-1 w-full max-w-md">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Search news..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white pl-12 pr-4 py-3 rounded-xl focus:outline-none focus:border-[#630ed4] dark:focus:border-[#a975ff] shadow-inner font-medium"
+                        />
+                    </div>
+                    
+                    <button 
+                        onClick={handleRefresh} 
+                        disabled={refreshing}
+                        className="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-6 py-3 rounded-xl font-bold text-sm shadow-sm transition-colors border border-slate-200 dark:border-slate-600 hover:border-[#630ed4] dark:hover:border-[#a975ff] hover:text-[#630ed4] flex items-center gap-2 uppercase tracking-widest w-full md:w-auto justify-center"
+                    >
+                        <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                        Sync News
+                    </button>
+                </div>
 
-                        {/* Refresh Button */}
-                        <Button 
-                            variant="outline" 
-                            onClick={handleRefresh} 
-                            disabled={refreshing}
-                            className="flex items-center space-x-2"
+                <div className="flex flex-wrap gap-2">
+                    {filters.map((filter) => (
+                        <button
+                            key={filter.id}
+                            onClick={() => handleFilterChange(filter.id)}
+                            className={`px-5 py-2 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all ${
+                                activeFilter === filter.id
+                                    ? 'bg-[#630ed4] text-white shadow-md'
+                                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 hover:border-[#630ed4]/50'
+                            }`}
                         >
-                            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-                            <span>Refresh</span>
-                        </Button>
-                    </div>
-
-                    {/* Filters */}
-                    <div className="flex flex-wrap gap-2 mt-4">
-                        {filters.map((filter) => (
-                            <button
-                                key={filter.id}
-                                onClick={() => handleFilterChange(filter.id)}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                    activeFilter === filter.id
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
-                            >
-                                {filter.label}
-                            </button>
-                        ))}
-                    </div>
+                            {filter.label}
+                        </button>
+                    ))}
                 </div>
 
-                {/* News Grid */}
                 {loading ? (
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {[1, 2, 3, 4, 5, 6].map((i) => (
-                            <div key={i} className="h-64 bg-white rounded-lg border border-gray-200 animate-pulse">
-                                <div className="p-6">
-                                    <div className="h-4 bg-gray-200 rounded mb-4"></div>
-                                    <div className="h-4 bg-gray-200 rounded mb-4"></div>
-                                    <div className="h-4 bg-gray-200 rounded mb-4"></div>
-                                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                                </div>
+                            <div key={i} className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 animate-pulse">
+                                <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/3 mb-4"></div>
+                                <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded mb-4 w-full"></div>
+                                <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded mb-4 w-5/6"></div>
+                                <div className="h-10 bg-slate-100 dark:bg-slate-900 rounded w-full mt-6"></div>
                             </div>
                         ))}
+                    </div>
+                ) : filteredNews.length === 0 ? (
+                    <div className="py-16 bg-white dark:bg-slate-800 border border-dashed border-slate-200 dark:border-slate-700 rounded-3xl flex flex-col items-center justify-center text-center">
+                        <Newspaper className="h-16 w-16 text-slate-300 dark:text-slate-600 mb-4" />
+                        <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase">No News Found</h3>
+                        <p className="text-slate-500 font-medium">Try adjusting your search or filter.</p>
                     </div>
                 ) : (
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {filteredNews.map((item, index) => (
-                            <Card key={index} className="bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all duration-200">
-                                <CardHeader className="pb-3">
-                                    <div className="flex items-center justify-between mb-3 text-xs text-gray-500">
-                                        <Badge variant="secondary" className="bg-gray-100 text-gray-700">
-                                            {item.source}
-                                        </Badge>
-                                        <div className="flex items-center space-x-1">
-                                            <Clock className="h-3 w-3" />
-                                            <span>{new Date(item.date).toLocaleDateString()}</span>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="flex items-center space-x-2 mb-3">
-                                        <Badge className={getSentimentColor(item.sentiment)}>
-                                            {item.sentimentIcon} {item.sentiment}
-                                        </Badge>
-                                        <Badge className={getImpactColor(item.marketImpact)}>
-                                            {item.impactBadge}
-                                        </Badge>
-                                    </div>
+                            <div key={index} className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col h-full group">
+                                <div className="flex items-center justify-between mb-4">
+                                    <span className="text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1 rounded-full">
+                                        {item.source}
+                                    </span>
+                                    <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                                        <Clock className="w-3 h-3" /> {(() => {
+                                            const raw = item.date || item.publishDate;
+                                            if (!raw) return 'Just now';
+                                            const d = new Date(raw);
+                                            return isNaN(d.getTime()) ? 'Just now' : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                                        })()}
+                                    </span>
+                                </div>
 
-                                    <CardTitle className="text-lg leading-tight text-gray-900 hover:text-blue-600 transition-colors">
-                                        {item.title}
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="pt-0">
-                                    <a
-                                        href={item.link}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center space-x-2 text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
-                                    >
-                                        <span>Read Full Story</span>
-                                        <ExternalLink className="h-4 w-4" />
+                                <div className="flex gap-2 mb-4 flex-wrap">
+                                    <span className={`px-2.5 py-1 rounded-lg text-[10px] uppercase font-black flex items-center gap-1 border ${
+                                        item.sentiment === 'positive'
+                                            ? 'bg-green-500 text-white border-green-500'
+                                            : item.sentiment === 'negative'
+                                            ? 'bg-red-500 text-white border-red-500'
+                                            : 'bg-slate-200 text-slate-600 border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600'
+                                    }`}>
+                                        {item.sentimentIcon} {item.sentiment}
+                                    </span>
+                                    <span className={`px-2.5 py-1 rounded-lg text-[10px] uppercase font-black border ${
+                                        item.marketImpact === 'high'
+                                            ? 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800'
+                                            : item.marketImpact === 'medium'
+                                            ? 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
+                                            : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-700 dark:text-slate-400 dark:border-slate-600'
+                                    }`}>
+                                        Impact: {item.impactBadge}
+                                    </span>
+                                </div>
+
+                                <h3 className="text-base font-black text-slate-800 dark:text-white mb-4 leading-snug group-hover:text-[#630ed4] transition-colors">{item.title}</h3>
+
+                                <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-700">
+                                    <a href={item.link} target="_blank" rel="noopener noreferrer"
+                                        className="flex items-center justify-between text-xs font-black uppercase tracking-widest text-[#630ed4] dark:text-[#a975ff] hover:text-[#4d0aab] transition-colors">
+                                        Read Full Article <ExternalLink className="w-4 h-4" />
                                     </a>
-                                </CardContent>
-                            </Card>
+                                </div>
+                            </div>
                         ))}
                     </div>
                 )}
 
-                {/* No Results */}
-                {!loading && filteredNews.length === 0 && (
-                    <div className="text-center py-12">
-                        <Newspaper className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No news found</h3>
-                        <p className="text-gray-600">Try adjusting your search or filter criteria</p>
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-3xl p-6 md:p-8 relative overflow-hidden">
+                    <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center relative z-10">
+                        <Newspaper className="w-8 h-8 text-amber-500 shrink-0" />
+                        <div>
+                            <h4 className="font-black text-amber-600 uppercase tracking-widest text-sm mb-1">Educational Platform</h4>
+                            <p className="text-amber-700/80 dark:text-amber-300/80 text-sm font-medium leading-relaxed">
+                                News analysis is for educational purposes only. Always verify information from original sources and consult financial advisors for investment decisions.
+                            </p>
+                        </div>
                     </div>
-                )}
-
-                {/* Disclaimer */}
-                <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                    <p className="text-sm text-amber-800">
-                        <strong>Educational Purpose:</strong> News analysis is for educational purposes only. Always verify information from original sources and consult financial advisors for investment decisions.
-                    </p>
                 </div>
             </div>
-        </div>
+        </section>
     )
 }

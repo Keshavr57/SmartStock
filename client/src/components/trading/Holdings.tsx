@@ -49,12 +49,18 @@ const Holdings: React.FC = () => {
     };
 
     const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: 'INR',
+        // Handle NaN, null, undefined values
+        if (isNaN(amount) || amount === null || amount === undefined) {
+            return '₹0';
+        }
+        
+        // Format with Indian locale and explicitly add ₹ symbol
+        const formatted = Math.abs(amount).toLocaleString('en-IN', {
             minimumFractionDigits: 0,
             maximumFractionDigits: 0
-        }).format(amount);
+        });
+        
+        return `₹${formatted}`;
     };
 
     const sortedHoldings = [...holdings].sort((a, b) => {
@@ -158,10 +164,10 @@ const Holdings: React.FC = () => {
                                     <TrendingDown className="h-4 w-4" />
                                 )}
                                 <span className="font-medium">
-                                    {holding.pnl >= 0 ? '+' : ''}{formatCurrency(holding.pnl)}
+                                    {holding.pnl >= 0 ? '+' : ''}{formatCurrency(holding.pnl || 0)}
                                 </span>
                                 <span className="text-sm">
-                                    ({holding.pnl >= 0 ? '+' : ''}{holding.pnlPercent.toFixed(2)}%)
+                                    ({holding.pnl >= 0 ? '+' : ''}{isNaN(holding.pnlPercent) ? '0.00' : holding.pnlPercent.toFixed(2)}%)
                                 </span>
                             </div>
                         </div>
@@ -190,10 +196,15 @@ const Holdings: React.FC = () => {
                         
                         <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
                             <div className="text-sm text-gray-600">
-                                Invested: {formatCurrency(holding.totalInvested)}
+                                Invested: {isNaN(holding.totalInvested) || !holding.totalInvested ? '₹0' : formatCurrency(holding.totalInvested)}
                             </div>
                             <div className="text-xs text-gray-500">
-                                Updated: {new Date(holding.lastUpdated).toLocaleString('en-IN')}
+                                Updated: {(() => {
+                                    const raw = holding.lastUpdated;
+                                    if (!raw) return 'Just now';
+                                    const d = new Date(raw);
+                                    return isNaN(d.getTime()) ? 'Just now' : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                                })()}
                             </div>
                         </div>
                     </div>

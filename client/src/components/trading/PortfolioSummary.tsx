@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, DollarSign, PieChart } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, PieChart } from 'lucide-react';
 import { formatCurrency, formatPercentage } from '../../lib/currency';
 
 interface PortfolioSummaryProps {
@@ -59,7 +59,7 @@ const PortfolioSummary: React.FC<PortfolioSummaryProps> = ({ data }) => {
                 {/* Available Balance */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                        <DollarSign className="h-5 w-5 text-gray-500" />
+                        <Wallet className="h-5 w-5 text-gray-500" />
                         <span className="text-sm font-medium text-gray-600">Available Balance</span>
                     </div>
                     <span className="font-semibold text-gray-900">
@@ -70,7 +70,7 @@ const PortfolioSummary: React.FC<PortfolioSummaryProps> = ({ data }) => {
                 {/* Invested Amount */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                        <DollarSign className="h-5 w-5 text-gray-500" />
+                        <Wallet className="h-5 w-5 text-gray-500" />
                         <span className="text-sm font-medium text-gray-600">Invested</span>
                     </div>
                     <span className="font-semibold text-gray-900">
@@ -81,7 +81,7 @@ const PortfolioSummary: React.FC<PortfolioSummaryProps> = ({ data }) => {
                 {/* Current Value */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                        <DollarSign className="h-5 w-5 text-gray-500" />
+                        <Wallet className="h-5 w-5 text-gray-500" />
                         <span className="text-sm font-medium text-gray-600">Current Value</span>
                     </div>
                     <span className="font-semibold text-gray-900">

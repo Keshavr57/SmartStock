@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { TrendingUp, Menu, X, Bot, MessageCircle, BarChart3, BookOpen } from 'lucide-react';
 import { MarketTable } from "@/components/MarketTable";
 import { authService } from '../lib/auth';
@@ -15,888 +16,525 @@ interface LandingProps {
 }
 
 const Landing: React.FC<LandingProps> = ({ onLogin }) => {
+    const navigate = useNavigate();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [showLoginModal, setShowLoginModal] = useState(false);
-    const [showSignupModal, setShowSignupModal] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-    const [googleLoading, setGoogleLoading] = useState(false);
 
-    // Login form state
-    const [loginForm, setLoginForm] = useState({
-        email: '',
-        password: ''
-    });
 
-    // Signup form state
-    const [signupForm, setSignupForm] = useState({
-        name: '',
-        email: '',
-        password: ''
-    });
 
-    useEffect(() => {
-        // Load Google Sign-In script
-        const script = document.createElement('script');
-        script.src = 'https://accounts.google.com/gsi/client';
-        script.async = true;
-        script.defer = true;
-        document.head.appendChild(script);
 
-        script.onload = () => {
-            if (window.google) {
-                // Get Google Client ID with multiple fallbacks
-                const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 
-                                document.querySelector('meta[name="google-signin-client_id"]')?.getAttribute('content') ||
-                                '817549154886-k5r92c4grcvr5usdiqfjtib2se0uc5qv.apps.googleusercontent.com';
-                
-                if (clientId && clientId !== 'undefined') {
-                    window.google.accounts.id.initialize({
-                        client_id: clientId,
-                        callback: handleGoogleSignIn,
-                        auto_select: false,
-                        cancel_on_tap_outside: true,
-                        use_fedcm_for_prompt: false
-                    });
-                } else {
-                    // Google OAuth Client ID not found
-                }
-            }
-        };
 
-        return () => {
-            // Cleanup
-            if (document.head.contains(script)) {
-                document.head.removeChild(script);
-            }
-        };
-    }, []);
 
-    const handleGoogleSignIn = async (response: any) => {
-        setGoogleLoading(true);
-        setError('');
 
-        try {
-            const result = await authService.googleLogin(response.credential);
-            
-            if (result.success) {
-                setShowLoginModal(false);
-                setShowSignupModal(false);
-                onLogin();
-            } else {
-                setError(result.error || result.message || 'Google authentication failed');
-            }
-        } catch (error) {
-            setError('Google authentication failed. Please try again.');
-        } finally {
-            setGoogleLoading(false);
-        }
-    };
-
-    const handleGoogleButtonClick = () => {
-        if (window.google) {
-            try {
-                setGoogleLoading(true);
-                
-                // Debug the client ID
-                const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 
-                                document.querySelector('meta[name="google-signin-client_id"]')?.getAttribute('content') ||
-                                '817549154886-k5r92c4grcvr5usdiqfjtib2se0uc5qv.apps.googleusercontent.com';
-                
-                // Re-initialize if needed
-                if (clientId && clientId !== 'undefined') {
-                    window.google.accounts.id.initialize({
-                        client_id: clientId,
-                        callback: handleGoogleSignIn,
-                        auto_select: false,
-                        cancel_on_tap_outside: true,
-                        use_fedcm_for_prompt: false
-                    });
-                }
-                
-                // Use the renderButton approach which is more reliable
-                const buttonContainer = document.getElementById('google-signin-container');
-                if (buttonContainer) {
-                    buttonContainer.innerHTML = '';
-                    window.google.accounts.id.renderButton(buttonContainer, {
-                        theme: 'outline',
-                        size: 'large',
-                        width: 350, // Fixed width instead of percentage
-                        text: 'signin_with',
-                        shape: 'rectangular'
-                    });
-                } else {
-                    // Fallback to prompt
-                    window.google.accounts.id.prompt();
-                }
-                setGoogleLoading(false);
-            } catch (error) {
-                // Don't show error for Google OAuth issues, just hide the button
-                setGoogleLoading(false);
-                setError('');
-            }
-        } else {
-            // Google SDK not loaded
-            setGoogleLoading(false);
-        }
-    };
-
-    const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setError('');
-
-        try {
-            const result = await authService.login(loginForm.email, loginForm.password);
-            
-            if (result.success) {
-                setShowLoginModal(false);
-                onLogin();
-            } else {
-                setError(result.error || result.message || 'Login failed');
-            }
-        } catch (error) {
-            setError('Network error occurred');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSignup = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setError('');
-
-        if (signupForm.password.length < 6) {
-            setError('Password must be at least 6 characters');
-            setLoading(false);
-            return;
-        }
-
-        try {
-            const result = await authService.register(signupForm.name, signupForm.email, signupForm.password);
-            
-            if (result.success) {
-                setShowSignupModal(false);
-                onLogin();
-            } else {
-                setError(result.error || result.message || 'Registration failed');
-            }
-        } catch (error) {
-            setError('Network error occurred');
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const showLoginRequired = () => {
-        alert('Please login to access this feature');
-        setShowLoginModal(true);
+        navigate('/login');
     };
 
     return (
-        <div className="min-h-screen bg-white">
-            {/* Navbar - Exactly like Figma */}
-            <nav className="bg-white border-b border-gray-100 sticky top-0 z-50">
-                <div className="max-w-7xl mx-auto px-6">
-                    <div className="flex justify-between items-center h-16">
-                        {/* Logo */}
-                        <div className="flex items-center space-x-2">
-                            <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-purple-600 rounded-lg flex items-center justify-center">
-                                <TrendingUp className="h-5 w-5 text-white" />
-                            </div>
-                            <span className="text-xl font-bold text-gray-900">SmartStock</span>
-                        </div>
-
-                        {/* Navigation Menu */}
-                        <div className="hidden lg:flex items-center space-x-8">
-                            <button className="text-gray-900 font-medium px-4 py-2 bg-gray-900 text-white rounded-lg">
-                                Home
-                            </button>
-                            <button className="text-gray-600 hover:text-gray-900 font-medium px-4 py-2">
-                                Compare
-                            </button>
-                            <button className="text-gray-600 hover:text-gray-900 font-medium px-4 py-2">
-                                IPOs
-                            </button>
-                            <button 
-                                onClick={showLoginRequired}
-                                className="text-gray-600 hover:text-gray-900 font-medium px-4 py-2"
-                            >
-                                AI Advisor
-                            </button>
-                            <button 
-                                onClick={showLoginRequired}
-                                className="text-gray-600 hover:text-gray-900 font-medium px-4 py-2"
-                            >
-                                News
-                            </button>
-                            <button className="text-gray-600 hover:text-gray-900 font-medium px-4 py-2">
-                                Learn
-                            </button>
-                        </div>
-
-                        {/* Connect Portfolio Button */}
-                        <div className="hidden md:flex items-center space-x-4">
-                            <button 
-                                onClick={() => setShowLoginModal(true)}
-                                className="text-gray-600 hover:text-gray-900 font-medium px-4 py-2"
-                            >
-                                Login
-                            </button>
-                            <button 
-                                onClick={() => setShowSignupModal(true)}
-                                className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 font-medium"
-                            >
-                                Sign Up
-                            </button>
-                        </div>
-
-                        {/* Mobile menu */}
-                        <div className="lg:hidden">
-                            <button
-                                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                                className="text-gray-600 hover:text-gray-900"
-                            >
-                                {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Mobile Menu */}
-                    {isMenuOpen && (
-                        <div className="lg:hidden border-t border-gray-100 py-4">
-                            <div className="space-y-2">
-                                <button className="block w-full text-left px-4 py-2 text-gray-900 font-medium">Home</button>
-                                <button className="block w-full text-left px-4 py-2 text-gray-600">Compare</button>
-                                <button className="block w-full text-left px-4 py-2 text-gray-600">IPOs</button>
-                                <button onClick={showLoginRequired} className="block w-full text-left px-4 py-2 text-gray-600">AI Advisor</button>
-                                <button onClick={showLoginRequired} className="block w-full text-left px-4 py-2 text-gray-600">News</button>
-                                <button className="block w-full text-left px-4 py-2 text-gray-600">Learn</button>
-                                <button 
-                                    onClick={() => setShowLoginModal(true)}
-                                    className="block w-full text-left px-4 py-2 text-gray-600"
-                                >
-                                    Login
-                                </button>
-                                <button 
-                                    onClick={() => setShowSignupModal(true)}
-                                    className="block w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-medium"
-                                >
-                                    Sign Up
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
+        <div className="min-h-screen bg-[#f9f9ff] text-[#141b2b]">
+            <style>
+                {`
+                .dot-pattern {
+                    background-image: radial-gradient(#7c3aed 0.5px, transparent 0.5px);
+                    background-size: 24px 24px;
+                    opacity: 0.05;
+                }
+                .material-symbols-outlined {
+                    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+                }
+                `}
+            </style>
+            {/*  Top Navigation Bar  */}
+            <header className="sticky top-0 z-50 bg-white dark:bg-slate-900 border-none">
+            <nav className="flex justify-between items-center w-full px-8 py-4 max-w-7xl mx-auto">
+            <div className="text-xl font-bold text-[#141b2b] dark:text-white font-headline tracking-tight">SmartStock</div>
+            <div className="hidden md:flex gap-8 items-center font-['Plus_Jakarta_Sans'] font-medium text-sm">
+            <a className="text-[#7c3aed] font-bold border-b-2 border-[#7c3aed] pb-1 transition-all" href="#">Home</a>
+            <button className="text-[#4a4455] dark:text-slate-400 hover:text-[#7c3aed] transition-colors duration-200" onClick={showLoginRequired}>Compare</button>
+            <button className="text-[#4a4455] dark:text-slate-400 hover:text-[#7c3aed] transition-colors duration-200" onClick={showLoginRequired}>IPOs</button>
+            <button className="text-[#4a4455] dark:text-slate-400 hover:text-[#7c3aed] transition-colors duration-200" onClick={showLoginRequired}>AI Advisor</button>
+            <button className="text-[#4a4455] dark:text-slate-400 hover:text-[#7c3aed] transition-colors duration-200" onClick={showLoginRequired}>News</button>
+            <button className="text-[#4a4455] dark:text-slate-400 hover:text-[#7c3aed] transition-colors duration-200" onClick={showLoginRequired}>Learn</button>
+            </div>
+            <div className="flex items-center gap-4">
+            <button className="text-[#4a4455] dark:text-slate-400 font-medium text-sm hover:text-[#7c3aed] transition-colors" onClick={() => navigate('/login')}>Login</button>
+            <button className="bg-[#630ed4] hover:bg-[#630ed4]-container text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all scale-95 active:opacity-80" onClick={() => navigate('/signup')}>Sign Up</button>
+            </div>
             </nav>
-
-            {/* Hero Section - Clean and Consistent */}
-            <section className="py-20 px-6 text-center bg-white">
-                <div className="max-w-4xl mx-auto">
-                    <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-4">
-                        Learn Trading with
-                    </h1>
-                    <h2 className="text-5xl md:text-6xl font-bold mb-8">
-                        <span className="text-purple-600">Smart AI Insights</span>
-                    </h2>
-                    <p className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto">
-                        India's most comprehensive platform for virtual trading, stock analysis, and 
-                        AI-powered investment learning. Practice with virtual money using real market data.
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                        <button 
-                            onClick={() => setShowSignupModal(true)}
-                            className="bg-purple-600 text-white px-8 py-4 rounded-lg hover:bg-purple-700 font-semibold text-lg"
-                        >
-                            Start Learning Free
-                        </button>
-                        <button className="border border-gray-300 text-gray-700 px-8 py-4 rounded-lg hover:bg-gray-50 font-semibold text-lg">
-                            Explore Demo
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            {/* Features Grid - Pure White Background */}
-            <section className="py-16 px-6 bg-white">
-                <div className="max-w-6xl mx-auto">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                        <div className="text-center p-6 bg-white rounded-lg border border-gray-200 hover:shadow-sm transition-shadow">
-                            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                                <TrendingUp className="h-6 w-6 text-green-600" />
-                            </div>
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Virtual Trading</h3>
-                            <p className="text-gray-600 text-sm">Practice with ₹1,00,000 virtual money using real market data</p>
-                        </div>
-                        
-                        <div className="text-center p-6 bg-white rounded-lg border border-gray-200 hover:shadow-sm transition-shadow">
-                            <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                                <BarChart3 className="h-6 w-6 text-red-600" />
-                            </div>
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Stock Analysis</h3>
-                            <p className="text-gray-600 text-sm">Compare stocks and get detailed analysis of Indian markets</p>
-                        </div>
-                        
-                        <div className="text-center p-6 bg-white rounded-lg border border-gray-200 hover:shadow-sm transition-shadow">
-                            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                                <Bot className="h-6 w-6 text-purple-600" />
-                            </div>
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">AI-Powered Learning</h3>
-                            <p className="text-gray-600 text-sm">Smart insights and educational recommendations</p>
-                        </div>
-                        
-                        <div className="text-center p-6 bg-white rounded-lg border border-gray-200 hover:shadow-sm transition-shadow">
-                            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                                <BookOpen className="h-6 w-6 text-purple-600" />
-                            </div>
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Educational Platform</h3>
-                            <p className="text-gray-600 text-sm">Learn trading concepts with comprehensive resources</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Market Table Section */}
-            <section className="py-16 px-6 bg-gray-50">
-                <div className="max-w-6xl mx-auto">
-                    <div className="text-center mb-12">
-                        <h2 className="text-3xl font-bold text-gray-900 mb-4">Live Market Data</h2>
-                        <p className="text-gray-600">Real-time stock prices and market movements from Indian exchanges</p>
-                    </div>
-                    <MarketTable />
-                </div>
-            </section>
-
-            {/* Live Market News */}
-            <section className="py-16 px-6 bg-white">
-                <div className="max-w-6xl mx-auto">
-                    <div className="text-center mb-12">
-                        <h2 className="text-3xl font-bold text-gray-900 mb-4">Live Market News</h2>
-                        <p className="text-gray-600">Stay updated with the latest developments in Indian stock markets and global financial news</p>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {/* Indian Markets */}
-                        <div className="bg-white rounded-lg p-6 border border-gray-200">
-                            <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-xl font-semibold text-gray-900">Indian Markets</h3>
-                                <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium">NSE/BSE</span>
-                            </div>
-                            <div className="space-y-4">
-                                <div className="p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors" onClick={showLoginRequired}>
-                                    <div className="flex items-center space-x-2 mb-2">
-                                        <span className="bg-red-600 text-white px-2 py-1 rounded text-xs font-bold">Breaking</span>
-                                        <span className="text-sm text-gray-500">2 hours ago</span>
-                                    </div>
-                                    <h4 className="font-semibold text-gray-900 mb-1">Reliance Industries Q3 Results: Profit Jumps 15% YoY</h4>
-                                    <p className="text-gray-600 text-sm">RIL reports strong quarterly earnings driven by petrochemicals and retail segments...</p>
-                                </div>
-                                
-                                <div className="p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors" onClick={showLoginRequired}>
-                                    <div className="flex items-center space-x-2 mb-2">
-                                        <span className="bg-purple-600 text-white px-2 py-1 rounded text-xs font-bold">Markets</span>
-                                        <span className="text-sm text-gray-500">5 hours ago</span>
-                                    </div>
-                                    <h4 className="font-semibold text-gray-900 mb-1">Nifty 50 Hits New All-Time High as IT Stocks Rally</h4>
-                                    <p className="text-gray-600 text-sm">Index crosses 22,000 mark for the first time led by TCS and Infosys gains...</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Global Markets */}
-                        <div className="bg-white rounded-lg p-6 border border-gray-200">
-                            <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-xl font-semibold text-gray-900">Global Markets</h3>
-                                <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">International</span>
-                            </div>
-                            <div className="space-y-4">
-                                <div className="p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors" onClick={showLoginRequired}>
-                                    <div className="flex items-center space-x-2 mb-2">
-                                        <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-bold">US Markets</span>
-                                        <span className="text-sm text-gray-500">1 hour ago</span>
-                                    </div>
-                                    <h4 className="font-semibold text-gray-900 mb-1">S&P 500 Reaches Record High on Tech Rally</h4>
-                                    <p className="text-gray-600 text-sm">US markets surge as technology stocks lead gains amid positive earnings...</p>
-                                </div>
-                                
-                                <div className="p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors" onClick={showLoginRequired}>
-                                    <div className="flex items-center space-x-2 mb-2">
-                                        <span className="bg-purple-600 text-white px-2 py-1 rounded text-xs font-bold">Economy</span>
-                                        <span className="text-sm text-gray-500">3 hours ago</span>
-                                    </div>
-                                    <h4 className="font-semibold text-gray-900 mb-1">Federal Reserve Signals Potential Rate Cuts</h4>
-                                    <p className="text-gray-600 text-sm">Central bank hints at monetary policy changes affecting global markets...</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* AI Trading Advisor Preview */}
-            <section className="py-16 px-6 bg-gray-50">
-                <div className="max-w-4xl mx-auto">
-                    <div className="text-center mb-12">
-                        <h2 className="text-3xl font-bold text-gray-900 mb-4">AI Trading Advisor</h2>
-                        <p className="text-gray-600">Get personalized investment insights and trading recommendations powered by AI</p>
-                    </div>
-                    
-                    <div className="bg-white rounded-lg p-8 border border-gray-200">
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center space-x-3">
-                                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                                    <Bot className="h-6 w-6 text-purple-600" />
-                                </div>
-                                <span className="text-lg font-semibold text-gray-900">SmartStock AI</span>
-                            </div>
-                            <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">Online</span>
-                        </div>
-                        
-                        <div className="bg-purple-50 rounded-lg p-4 mb-6 border border-purple-100">
-                            <div className="flex items-start space-x-3">
-                                <Bot className="h-6 w-6 text-purple-600 mt-1 flex-shrink-0" />
-                                <div>
-                                    <p className="text-gray-900">Hello! I'm your AI trading assistant. I can help you analyze Indian stocks, provide investment insights, and guide your trading decisions. What would you like to know?</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div className="mb-6">
-                            <p className="text-sm text-gray-600 mb-3">Popular questions:</p>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                <button onClick={showLoginRequired} className="bg-purple-50 text-purple-700 px-4 py-2 rounded-lg text-sm hover:bg-purple-100 transition-colors text-left border border-purple-200">What's the outlook for RELIANCE?</button>
-                                <button onClick={showLoginRequired} className="bg-purple-50 text-purple-700 px-4 py-2 rounded-lg text-sm hover:bg-purple-100 transition-colors text-left border border-purple-200">Should I invest in TCS?</button>
-                                <button onClick={showLoginRequired} className="bg-purple-50 text-purple-700 px-4 py-2 rounded-lg text-sm hover:bg-purple-100 transition-colors text-left border border-purple-200">Analyze HDFC Bank performance</button>
-                                <button onClick={showLoginRequired} className="bg-purple-50 text-purple-700 px-4 py-2 rounded-lg text-sm hover:bg-purple-100 transition-colors text-left border border-purple-200">Best IPOs this month?</button>
-                            </div>
-                        </div>
-                        
-                        <div className="flex items-center space-x-3">
-                            <input 
-                                type="text" 
-                                placeholder="Ask me about Indian stocks, IPOs, or trading strategies..."
-                                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-50"
-                                onClick={showLoginRequired}
-                                readOnly
-                            />
-                            <button 
-                                onClick={showLoginRequired}
-                                className="bg-purple-600 text-white p-3 rounded-lg hover:bg-purple-700 transition-colors"
-                            >
-                                <MessageCircle className="h-5 w-5" />
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Footer */}
-            <footer className="bg-white border-t border-gray-200 py-12 px-6">
-                <div className="max-w-6xl mx-auto">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                        {/* Logo & Description */}
-                        <div className="md:col-span-2">
-                            <div className="flex items-center space-x-2 mb-4">
-                                <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-purple-600 rounded-lg flex items-center justify-center">
-                                    <TrendingUp className="h-5 w-5 text-white" />
-                                </div>
-                                <span className="text-xl font-bold text-gray-900">SmartStock</span>
-                            </div>
-                            <p className="text-gray-600 mb-6 max-w-md">
-                                India's premier virtual trading platform. Learn stock market investing with real market data, 
-                                AI-powered insights, and risk-free virtual money. Perfect for beginners and experienced traders.
-                            </p>
-                            <div className="flex space-x-4">
-                                <a 
-                                    href="https://twitter.com/smartstock" 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="text-gray-400 hover:text-purple-500 transition-colors"
-                                    aria-label="Follow us on Twitter"
-                                >
-                                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/>
-                                    </svg>
-                                </a>
-                                <a 
-                                    href="https://github.com/smartstock" 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="text-gray-400 hover:text-gray-900 transition-colors"
-                                    aria-label="View our GitHub"
-                                >
-                                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                                    </svg>
-                                </a>
-                                <a 
-                                    href="https://linkedin.com/company/smartstock" 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="text-gray-400 hover:text-purple-600 transition-colors"
-                                    aria-label="Connect on LinkedIn"
-                                >
-                                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                                    </svg>
-                                </a>
-                                <a 
-                                    href="mailto:support@smartstock.com"
-                                    className="text-gray-400 hover:text-green-600 transition-colors"
-                                    aria-label="Email us"
-                                >
-                                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-.904.732-1.636 1.636-1.636h.749L12 10.855l9.615-7.034h.749c.904 0 1.636.732 1.636 1.636z"/>
-                                    </svg>
-                                </a>
-                            </div>
-                        </div>
-
-                        {/* Platform Features */}
-                        <div>
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Features</h3>
-                            <ul className="space-y-3 text-gray-600">
-                                <li>
-                                    <button 
-                                        onClick={() => {
-                                            setShowLoginModal(true);
-                                        }}
-                                        className="hover:text-purple-600 transition-colors text-left"
-                                    >
-                                        Virtual Trading
+            </header>
+            <main>
+            {/*  Hero Section  */}
+            <section className="relative min-h-[870px] flex items-center overflow-hidden bg-white">
+            <div className="absolute inset-0 dot-pattern"></div>
+            <div className="max-w-7xl mx-auto px-8 w-full grid grid-cols-1 md:grid-cols-2 gap-12 relative z-10 py-12 md:py-20">
+            <div className="flex flex-col justify-center space-y-8">
+            <h1 className="text-5xl md:text-7xl font-bold font-headline leading-[1.1] text-[#141b2b]">
+                                    Learn Trading. <br/> Invest Smarter. <br/> <span className="text-[#630ed4]">Grow Wealth.</span>
+            </h1>
+            <p className="text-[#141b2b]-variant text-lg md:text-xl max-w-xl leading-relaxed">
+                                    Master the Indian stock market with real-time simulations, AI-driven insights, and a community of professional curators.
+                                </p>
+            <div className="flex flex-wrap gap-4">
+            <button className="bg-[#630ed4] text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all flex items-center gap-2 group">
+                                        Start Free Trial
+                                        <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+            </button>
+            <button className="bg-[#e9edff]-high text-[#630ed4] px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#e9edff] transition-all">
+                                        Watch Demo
                                     </button>
-                                </li>
-                                <li>
-                                    <button 
-                                        onClick={() => {
-                                            setShowLoginModal(true);
-                                        }}
-                                        className="hover:text-purple-600 transition-colors text-left"
-                                    >
-                                        Stock Comparison
-                                    </button>
-                                </li>
-                                <li>
-                                    <button 
-                                        onClick={() => {
-                                            setShowLoginModal(true);
-                                        }}
-                                        className="hover:text-purple-600 transition-colors text-left"
-                                    >
-                                        AI Trading Advisor
-                                    </button>
-                                </li>
-                                <li>
-                                    <button 
-                                        onClick={() => {
-                                            setShowLoginModal(true);
-                                        }}
-                                        className="hover:text-purple-600 transition-colors text-left"
-                                    >
-                                        IPO Analysis
-                                    </button>
-                                </li>
-                                <li>
-                                    <button 
-                                        onClick={() => {
-                                            setShowLoginModal(true);
-                                        }}
-                                        className="hover:text-purple-600 transition-colors text-left"
-                                    >
-                                        Portfolio Tracker
-                                    </button>
-                                </li>
-                            </ul>
-                        </div>
-
-                        {/* Support & Legal */}
-                        <div>
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Support</h3>
-                            <ul className="space-y-3 text-gray-600">
-                                <li>
-                                    <a 
-                                        href="#help" 
-                                        className="hover:text-purple-600 transition-colors"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            alert('Help Center: Contact us at support@smartstock.com for assistance with virtual trading, account setup, or technical issues.');
-                                        }}
-                                    >
-                                        Help Center
-                                    </a>
-                                </li>
-                                <li>
-                                    <a 
-                                        href="mailto:support@smartstock.com"
-                                        className="hover:text-purple-600 transition-colors"
-                                    >
-                                        Contact Us
-                                    </a>
-                                </li>
-                                <li>
-                                    <a 
-                                        href="#privacy" 
-                                        className="hover:text-purple-600 transition-colors"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            alert('Privacy Policy: We protect your data and use it only for educational trading simulation. No real financial information is stored.');
-                                        }}
-                                    >
-                                        Privacy Policy
-                                    </a>
-                                </li>
-                                <li>
-                                    <a 
-                                        href="#terms" 
-                                        className="hover:text-purple-600 transition-colors"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            alert('Terms of Service: This is an educational platform for virtual trading. No real money is involved. Use responsibly for learning purposes.');
-                                        }}
-                                    >
-                                        Terms of Service
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div className="border-t border-gray-200 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-                        <div className="text-gray-500 text-sm">
-                            © 2025 SmartStock India. All rights reserved. Educational virtual trading platform.
-                        </div>
-                        <div className="text-gray-500 text-sm mt-4 md:mt-0 flex items-center gap-4">
-                            <div className="flex items-center">
-                                <span className="mr-2">Made with</span>
-                                <svg className="h-4 w-4 text-red-500 mx-1" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
-                                </svg>
-                                <span>for learning traders in India</span>
+            </div>
+            <div className="flex flex-wrap gap-3 pt-4">
+            <span className="bg-[#6ffbbe] text-[#005236] px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm">verified</span> 500k+ Active Traders
+                                    </span>
+            <span className="bg-[#eaddff] text-[#5a00c6] px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm">auto_awesome</span> AI-First Platform
+                                    </span>
+            <span className="bg-[#a20017]-fixed text-[#ffffff]-fixed-variant px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm">military_tech</span> #1 Ranked Learning
+                                    </span>
+            </div>
+            </div>
+            <div className="relative flex items-center justify-center">
+            {/*  Floating Cards Wrapper  */}
+            <div className="relative w-full max-w-md">
+            {/*  RELIANCE.NS Card  */}
+            <div className="bg-white rounded-2xl shadow-xl p-6 border border-[#ccc3d8]/10 relative z-20 transform -rotate-3 hover:rotate-0 transition-transform duration-500">
+            <div className="flex justify-between items-start mb-6">
+            <div>
+            <h3 className="font-bold text-xl font-headline">RELIANCE.NS</h3>
+            <p className="text-xs text-[#141b2b]-variant font-medium">Reliance Industries Ltd.</p>
+            </div>
+            <span className="bg-[#6cf8bb] text-[#00714d] px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1">
+            <span className="material-symbols-outlined text-sm">trending_up</span> +2.45%
+                                            </span>
+            </div>
+            <div className="flex items-end gap-4 mb-6">
+            <span className="text-4xl font-bold font-headline">₹2,945.10</span>
+            <span className="text-[#006c49] font-bold text-sm mb-1">+₹70.20 Today</span>
+            </div>
+            <div className="h-24 w-full bg-[#e9edff]-low rounded-lg overflow-hidden flex items-end">
+            <svg className="w-full h-full" viewBox="0 0 400 100">
+            <path d="M0,80 Q50,75 100,60 T200,40 T300,50 T400,20" fill="none" stroke="#006c49" strokeWidth="3"></path>
+            <path d="M0,80 Q50,75 100,60 T200,40 T300,50 T400,20 V100 H0 Z" fill="url(#grad1)" opacity="0.1"></path>
+            <defs>
+            <linearGradient id="grad1" x1="0%" x2="0%" y1="0%" y2="100%">
+            <stop offset="0%" style={{ stopColor: '#006c49', stopOpacity: 1 }}></stop>
+            <stop offset="100%" style={{ stopColor: '#006c49', stopOpacity: 0 }}></stop>
+            </linearGradient>
+            </defs>
+            </svg>
+            </div>
+            </div>
+            {/*  Portfolio Card  */}
+            <div className="absolute -bottom-10 -right-4 md:-right-10 bg-[#630ed4]-container text-white p-6 rounded-2xl shadow-2xl z-30 transform rotate-6 hover:rotate-0 transition-transform duration-500 w-64">
+            <p className="text-xs font-medium opacity-80 uppercase tracking-widest mb-1">Portfolio Balance</p>
+            <h4 className="text-2xl font-bold mb-4">₹12,45,000.00</h4>
+            <div className="flex justify-between items-center bg-white/10 rounded-xl p-3">
+            <div className="text-center">
+            <p className="text-[10px] opacity-70">Day Gain</p>
+            <p className="text-xs font-bold">+₹14.2k</p>
+            </div>
+            <div className="h-8 w-px bg-white/20"></div>
+            <div className="text-center">
+            <p className="text-[10px] opacity-70">Wins</p>
+            <p className="text-xs font-bold">12/14</p>
+            </div>
+            </div>
+            </div>
+            {/*  Decorative circle  */}
+            <div className="absolute -top-10 -left-10 w-40 h-40 bg-[#630ed4]/10 rounded-full blur-3xl -z-10"></div>
+            <div className="absolute -bottom-20 -right-20 w-60 h-60 bg-[#006c49]/10 rounded-full blur-3xl -z-10"></div>
+            </div>
+            </div>
+            </div>
+            </section>
+            {/*  Feature Cards  */}
+            <section className="py-24 max-w-7xl mx-auto px-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {/*  Virtual Trading  */}
+            <div className="group bg-white border border-[#ccc3d8]/10 rounded-2xl p-8 hover:shadow-xl hover:-translate-y-2 hover:border-[#630ed4]/30 transition-all duration-300">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white mb-6">
+            <span className="material-symbols-outlined" data-icon="account_balance_wallet" style={{ fontVariationSettings: "'FILL' 1" }}>account_balance_wallet</span>
+            </div>
+            <h3 className="text-xl font-bold font-headline mb-3">Virtual Trading</h3>
+            <p className="text-[#141b2b]-variant text-sm mb-6 leading-relaxed">Practice with ₹1Cr virtual cash without risking real capital.</p>
+            <button className="text-[#630ed4] font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all" onClick={showLoginRequired}>
+            Explore <span className="material-symbols-outlined text-sm">arrow_forward</span>
+            </button>
+            </div>
+            {/*  Stock Analysis  */}
+            <div className="group bg-white border border-[#ccc3d8]/10 rounded-2xl p-8 hover:shadow-xl hover:-translate-y-2 hover:border-[#630ed4]/30 transition-all duration-300">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center text-white mb-6">
+            <span className="material-symbols-outlined" data-icon="analytics" style={{ fontVariationSettings: "'FILL' 1" }}>analytics</span>
+            </div>
+            <h3 className="text-xl font-bold font-headline mb-3">Stock Analysis</h3>
+            <p className="text-[#141b2b]-variant text-sm mb-6 leading-relaxed">Deep fundamental and technical data for 5000+ NSE/BSE stocks.</p>
+            <button className="text-[#630ed4] font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all" onClick={showLoginRequired}>
+            Explore <span className="material-symbols-outlined text-sm">arrow_forward</span>
+            </button>
+            </div>
+            {/*  AI-Powered Learning  */}
+            <div className="group bg-white border border-[#ccc3d8]/10 rounded-2xl p-8 hover:shadow-xl hover:-translate-y-2 hover:border-[#630ed4]/30 transition-all duration-300">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white mb-6">
+            <span className="material-symbols-outlined" data-icon="psychology" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
+            </div>
+            <h3 className="text-xl font-bold font-headline mb-3">AI Learning</h3>
+            <p className="text-[#141b2b]-variant text-sm mb-6 leading-relaxed">Personalized paths powered by our proprietary FinSage AI engine.</p>
+            <button className="text-[#630ed4] font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all" onClick={showLoginRequired}>
+            Explore <span className="material-symbols-outlined text-sm">arrow_forward</span>
+            </button>
+            </div>
+            {/*  Educational Platform  */}
+            <div className="group bg-white border border-[#ccc3d8]/10 rounded-2xl p-8 hover:shadow-xl hover:-translate-y-2 hover:border-[#630ed4]/30 transition-all duration-300">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white mb-6">
+            <span className="material-symbols-outlined" data-icon="school" style={{ fontVariationSettings: "'FILL' 1" }}>school</span>
+            </div>
+            <h3 className="text-xl font-bold font-headline mb-3">Education</h3>
+            <p className="text-[#141b2b]-variant text-sm mb-6 leading-relaxed">Curated courses from market veterans and financial analysts.</p>
+            <button className="text-[#630ed4] font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all" onClick={showLoginRequired}>
+            Explore <span className="material-symbols-outlined text-sm">arrow_forward</span>
+            </button>
+            </div>
+            </div>
+            </section>
+            {/*  Live Market Pulse  */}
+            <section className="py-24 bg-[#e9edff]-low">
+            <div className="max-w-7xl mx-auto px-8">
+            <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold font-headline mb-4">Live Market Pulse</h2>
+            <p className="text-[#141b2b]-variant max-w-2xl mx-auto">Real-time data from Indian and Global exchanges to keep you ahead of the curve.</p>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
+            {/*  Indian Stocks  */}
+            <div className="bg-white rounded-2xl p-8 shadow-sm">
+            <div className="flex justify-between items-center mb-8">
+            <h3 className="text-xl font-bold font-headline">Trending Indian Stocks</h3>
+            <span className="text-xs font-bold text-[#630ed4] uppercase">NSE/BSE</span>
+            </div>
+            <div className="space-y-6">
+            {/*  Stock Item  */}
+            <div className="flex items-center justify-between group cursor-pointer">
+            <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-[#e9edff]-high flex items-center justify-center font-bold text-[#630ed4]">R</div>
+            <div>
+            <p className="font-bold">RELIANCE</p>
+            <p className="text-[10px] text-[#141b2b]-variant">Energy &amp; Retail</p>
+            </div>
+            </div>
+            <div className="flex-1 px-8 hidden md:block">
+            <svg className="h-8 w-32" viewBox="0 0 100 20">
+            <path d="M0,15 Q25,10 50,15 T100,5" fill="none" stroke="#006c49" strokeWidth="1.5"></path>
+            </svg>
+            </div>
+            <div className="text-right">
+            <p className="font-bold">₹2,945.10</p>
+            <p className="text-[#006c49] text-xs font-bold">+2.45%</p>
+            </div>
+            </div>
+            {/*  Stock Item  */}
+            <div className="flex items-center justify-between group cursor-pointer">
+            <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-[#e9edff]-high flex items-center justify-center font-bold text-[#630ed4]">T</div>
+            <div>
+            <p className="font-bold">TCS</p>
+            <p className="text-[10px] text-[#141b2b]-variant">IT Services</p>
+            </div>
+            </div>
+            <div className="flex-1 px-8 hidden md:block">
+            <svg className="h-8 w-32" viewBox="0 0 100 20">
+            <path d="M0,5 Q25,15 50,10 T100,18" fill="none" stroke="#a20017" strokeWidth="1.5"></path>
+            </svg>
+            </div>
+            <div className="text-right">
+            <p className="font-bold">₹3,822.40</p>
+            <p className="text-[#a20017] text-xs font-bold">-0.12%</p>
+            </div>
+            </div>
+            {/*  Stock Item  */}
+            <div className="flex items-center justify-between group cursor-pointer">
+            <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-[#e9edff]-high flex items-center justify-center font-bold text-[#630ed4]">H</div>
+            <div>
+            <p className="font-bold">HDFCBANK</p>
+            <p className="text-[10px] text-[#141b2b]-variant">Banking</p>
+            </div>
+            </div>
+            <div className="flex-1 px-8 hidden md:block">
+            <svg className="h-8 w-32" viewBox="0 0 100 20">
+            <path d="M0,18 L20,12 L40,15 L60,8 L80,10 L100,2" fill="none" stroke="#006c49" strokeWidth="1.5"></path>
+            </svg>
+            </div>
+            <div className="text-right">
+            <p className="font-bold">₹1,442.85</p>
+            <p className="text-[#006c49] text-xs font-bold">+1.88%</p>
+            </div>
+            </div>
+            </div>
+            </div>
+            {/*  Global Markets  */}
+            <div className="bg-white rounded-2xl p-8 shadow-sm">
+            <div className="flex justify-between items-center mb-8">
+            <h3 className="text-xl font-bold font-headline">Global Indices</h3>
+            <span className="text-xs font-bold text-[#141b2b]-variant uppercase">Real-time</span>
+            </div>
+            <div className="grid grid-cols-2 gap-6">
+            <div className="p-4 rounded-xl bg-[#e9edff]-low">
+            <p className="text-xs font-bold text-[#141b2b]-variant mb-1 uppercase">S&amp;P 500</p>
+            <p className="text-xl font-bold">5,248.50</p>
+            <p className="text-[#006c49] text-xs font-bold">+0.56%</p>
+            </div>
+            <div className="p-4 rounded-xl bg-[#e9edff]-low">
+            <p className="text-xs font-bold text-[#141b2b]-variant mb-1 uppercase">NASDAQ</p>
+            <p className="text-xl font-bold">16,380.20</p>
+            <p className="text-[#006c49] text-xs font-bold">+1.12%</p>
+            </div>
+            <div className="p-4 rounded-xl bg-[#e9edff]-low">
+            <p className="text-xs font-bold text-[#141b2b]-variant mb-1 uppercase">DOW JONES</p>
+            <p className="text-xl font-bold">39,280.10</p>
+            <p className="text-[#a20017] text-xs font-bold">-0.05%</p>
+            </div>
+            <div className="p-4 rounded-xl bg-[#e9edff]-low">
+            <p className="text-xs font-bold text-[#141b2b]-variant mb-1 uppercase">FTSE 100</p>
+            <p className="text-xl font-bold">7,935.00</p>
+            <p className="text-[#006c49] text-xs font-bold">+0.33%</p>
+            </div>
+            </div>
+            </div>
+            </div>
+            {/*  Performance Cards  */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="bg-white rounded-2xl p-6 border border-[#ccc3d8]/10 flex items-center justify-between gap-6">
+            <div>
+            <p className="text-sm font-bold text-[#141b2b]-variant mb-2">NIFTY 50</p>
+            <h4 className="text-2xl font-bold font-headline mb-1">22,326.90</h4>
+            <span className="text-[#006c49] font-bold text-sm">+0.85% (Past Week)</span>
+            </div>
+            <div className="flex-1 h-16 max-w-[200px]">
+            <svg className="w-full h-full" viewBox="0 0 200 60">
+            <polyline fill="none" points="0,50 40,45 80,30 120,35 160,15 200,10" stroke="#006c49" strokeWidth="3" />
+            </svg>
+            </div>
+            </div>
+            <div className="bg-white rounded-2xl p-6 border border-[#ccc3d8]/10 flex items-center justify-between gap-6">
+            <div>
+            <p className="text-sm font-bold text-[#141b2b]-variant mb-2">S&amp;P 500</p>
+            <h4 className="text-2xl font-bold font-headline mb-1">5,248.50</h4>
+            <span className="text-[#006c49] font-bold text-sm">+1.24% (Past Week)</span>
+            </div>
+            <div className="flex-1 h-16 max-w-[200px]">
+            <svg className="w-full h-full" viewBox="0 0 200 60">
+            <polyline fill="none" points="0,40 40,42 80,25 120,28 160,10 200,5" stroke="#006c49" strokeWidth="3" />
+            </svg>
+            </div>
+            </div>
+            </div>
+            </div>
+            </section>
+            {/*  Live Market News  */}
+            <section className="py-24 max-w-7xl mx-auto px-8">
+            <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
+            <div>
+            <h2 className="text-4xl font-bold font-headline mb-2">Market Intelligence</h2>
+            <p className="text-[#141b2b]-variant">Stay updated with signals that actually move the needle.</p>
+            </div>
+            <button className="text-[#630ed4] font-bold flex items-center gap-1 hover:underline underline-offset-4">
+                                View All News <span className="material-symbols-outlined text-sm">arrow_right_alt</span>
+            </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/*  News Column 1  */}
+            <div className="space-y-6">
+            <div className="bg-white p-6 rounded-xl border-l-4 border-[#a20017] shadow-sm hover:shadow-md transition-all">
+            <div className="flex justify-between mb-3">
+            <span className="text-[10px] font-bold text-[#a20017] uppercase tracking-tighter bg-[#a20017]/10 px-2 py-0.5 rounded">Breaking News</span>
+            <span className="text-[10px] font-medium text-[#141b2b]-variant">10 Min Ago</span>
+            </div>
+            <h4 className="text-lg font-bold mb-3 leading-tight">RBI maintains repo rate at 6.5%, signals hawkish stance on inflation.</h4>
+            <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-[8px] text-white font-bold">ET</div>
+            <span className="text-xs font-medium text-[#141b2b]-variant">Economic Times</span>
+            </div>
+            </div>
+            <div className="bg-white p-6 rounded-xl border-l-4 border-[#630ed4] shadow-sm hover:shadow-md transition-all">
+            <div className="flex justify-between mb-3">
+            <span className="text-[10px] font-bold text-[#630ed4] uppercase tracking-tighter bg-[#630ed4]/10 px-2 py-0.5 rounded">Markets</span>
+            <span className="text-[10px] font-medium text-[#141b2b]-variant">1 Hour Ago</span>
+            </div>
+            <h4 className="text-lg font-bold mb-3 leading-tight">Nifty IT index drops 2% as global tech giants forecast lower growth.</h4>
+            <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded-full bg-orange-600 flex items-center justify-center text-[8px] text-white font-bold">B</div>
+            <span className="text-xs font-medium text-[#141b2b]-variant">Bloomberg Quint</span>
+            </div>
+            </div>
+            </div>
+            {/*  News Column 2  */}
+            <div className="space-y-6">
+            <div className="bg-white p-6 rounded-xl border-l-4 border-[#630ed4] shadow-sm hover:shadow-md transition-all">
+            <div className="flex justify-between mb-3">
+            <span className="text-[10px] font-bold text-[#630ed4] uppercase tracking-tighter bg-[#630ed4]/10 px-2 py-0.5 rounded">Markets</span>
+            <span className="text-[10px] font-medium text-[#141b2b]-variant">3 Hours Ago</span>
+            </div>
+            <h4 className="text-lg font-bold mb-3 leading-tight">Zomato hits all-time high as analysts upgrade price target to ₹250.</h4>
+            <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded-full bg-blue-800 flex items-center justify-center text-[8px] text-white font-bold">MC</div>
+            <span className="text-xs font-medium text-[#141b2b]-variant">MoneyControl</span>
+            </div>
+            </div>
+            <div className="bg-white p-6 rounded-xl border-l-4 border-[#630ed4] shadow-sm hover:shadow-md transition-all">
+            <div className="flex justify-between mb-3">
+            <span className="text-[10px] font-bold text-[#630ed4] uppercase tracking-tighter bg-[#630ed4]/10 px-2 py-0.5 rounded">Analysis</span>
+            <span className="text-[10px] font-medium text-[#141b2b]-variant">5 Hours Ago</span>
+            </div>
+            <h4 className="text-lg font-bold mb-3 leading-tight">Top 5 IPOs to watch out for in Q3 2024: From Fintech to Infrastructure.</h4>
+            <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-[8px] text-white font-bold">SM</div>
+            <span className="text-xs font-medium text-[#141b2b]-variant">SmartStock Insights</span>
+            </div>
+            </div>
+            </div>
+            </div>
+            </section>
+            {/*  AI Advisor Feature Showcase  */}
+            <section className="py-24 bg-white overflow-hidden">
+            <div className="max-w-7xl mx-auto px-8 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <div className="space-y-8">
+            <div className="inline-block bg-[#630ed4]/10 text-[#630ed4] px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest">Powered by FinSage AI</div>
+            <h2 className="text-4xl md:text-5xl font-bold font-headline leading-tight">Your Personal <br/> Quantitative Analyst.</h2>
+            <p className="text-[#141b2b]-variant text-lg">FinSage scans millions of data points across global markets to provide actionable clarity in plain English.</p>
+            <ul className="space-y-4">
+            <li className="flex items-center gap-3 font-medium">
+            <span className="material-symbols-outlined text-[#006c49]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                                        Real-time technical analysis on any stock ticker.
+                                    </li>
+            <li className="flex items-center gap-3 font-medium">
+            <span className="material-symbols-outlined text-[#006c49]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                                        IPO risk assessment &amp; subscription probability.
+                                    </li>
+            <li className="flex items-center gap-3 font-medium">
+            <span className="material-symbols-outlined text-[#006c49]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                                        Portfolio rebalancing alerts based on market volatility.
+                                    </li>
+            <li className="flex items-center gap-3 font-medium">
+            <span className="material-symbols-outlined text-[#006c49]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                                        Macro-economic impact summaries in 30 seconds.
+                                    </li>
+            </ul>
+            <button className="bg-[#630ed4] text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-xl transition-all flex items-center gap-2">
+                                    Try FinSage Free <span className="material-symbols-outlined">auto_awesome</span>
+            </button>
+            </div>
+            <div className="relative">
+            {/*  AI Chat UI Preview  */}
+            <div className="bg-[#e9edff]-low rounded-3xl p-4 md:p-8 shadow-2xl relative z-10 border border-[#ccc3d8]/10">
+            <div className="flex items-center gap-4 mb-8 border-b border-[#ccc3d8]/20 pb-4">
+            <div className="w-12 h-12 rounded-full bg-[#630ed4] flex items-center justify-center text-white">
+            <span className="material-symbols-outlined">smart_toy</span>
+            </div>
+            <div>
+            <h4 className="font-bold">FinSage Advisor</h4>
+            <span className="text-[10px] text-[#006c49] font-bold flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#006c49]"></span> Online &amp; Analyzing
+                                            </span>
+            </div>
+            </div>
+            <div className="space-y-6">
+            <div className="flex gap-3 max-w-[85%]">
+            <div className="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm text-sm leading-relaxed">
+                                                "Is HDFCBANK a good buy right now for a 6-month horizon?"
+                                            </div>
+            </div>
+            <div className="flex flex-row-reverse gap-3 ml-auto max-w-[85%]">
+            <div className="bg-[#630ed4] text-white p-4 rounded-2xl rounded-tr-none shadow-sm text-sm leading-relaxed">
+                                                "HDFCBANK is currently testing a major support level at ₹1,430. Technical indicators (RSI: 42) suggest it's approaching oversold territory. Fundamentals remain strong with 18% YoY credit growth. Risk: Moderate. Recommendation: Accumulate in tranches."
+                                            </div>
+            </div>
+            <div className="flex gap-3">
+            <div className="flex gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#630ed4]/40"></span>
+            <span className="w-2 h-2 rounded-full bg-[#630ed4]/40"></span>
+            <span className="w-2 h-2 rounded-full bg-[#630ed4]/40"></span>
+            </div>
+            </div>
+            </div>
+            </div>
+            {/*  Decorative Elements  */}
+            <div className="absolute -top-10 -right-10 w-64 h-64 bg-[#630ed4]/10 rounded-full blur-3xl -z-10"></div>
+            </div>
+            </div>
+            </section>
+            {/*  CTA Banner  */}
+            <section className="py-20 max-w-7xl mx-auto px-8">
+            <div className="bg-[#630ed4] rounded-[2rem] p-12 md:p-20 text-center relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
+            <div className="relative z-10 space-y-8">
+            <h2 className="text-4xl md:text-6xl font-bold font-headline text-white max-w-4xl mx-auto leading-tight">Start Your Trading Journey Today</h2>
+            <p className="text-white/80 text-xl max-w-2xl mx-auto">Join over 500,000 Indians who are learning to grow their wealth the smart way.</p>
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <button className="bg-white text-[#630ed4] px-10 py-5 rounded-2xl font-bold text-xl hover:bg-opacity-90 transition-all shadow-lg" onClick={() => navigate('/signup')}>Get Started Now</button>
+            <button className="bg-transparent border-2 border-white/30 text-white px-10 py-5 rounded-2xl font-bold text-xl hover:bg-white/10 transition-all">Download App</button>
+            </div>
+            </div>
+            </div>
+            </section>
+            </main>
+            {/*  Footer  */}
+            <footer className="bg-[#09090f] text-white pt-20 pb-10">
+            <div className="max-w-7xl mx-auto px-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-20">
+            <div className="space-y-6">
+            <div className="text-2xl font-bold text-[#630ed4] font-headline">SmartStock</div>
+            <p className="text-white/50 text-sm leading-relaxed max-w-xs">Curating financial clarity for the next generation of Indian investors. Experience the market like never before.</p>
+            <div className="flex gap-4">
+            <a className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-[#630ed4] transition-colors" href="#">
+            <img alt="X" className="w-5 h-5" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD5yV_QoHFHSiJ5pXSl8Vy_ARuHYiZBeaFtSLeTi9Tvn3CrbfRYmYQDgdaPZXLlKdfPamOvMSU_uXIsgCIvKMpsCDqrfdv5i45A8Cw7HWiNOeaniRnMhcIoyyF6V_E1sUTHX0g1Qz6PWzXstP5pqOmNNcyTpWHByPfaYnNDbqw4NL57jLV_tnzjHR9iEXm_-EzEwUnMplzBhA-vBeGIIGencDA8iq5pj5fa86DLQm4DBxZWLKfWX2PsbZ_5LunNMksxime7Egfvu7ls"/>
+            </a>
+            <a className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-[#630ed4] transition-colors" href="#">
+            <img alt="LinkedIn" className="w-5 h-5" src="https://lh3.googleusercontent.com/aida-public/AB6AXuASEvsVMrw96mIwrLx6ypHcrD3tmIGgZz_J2fmeFJYqYeuPxy1yiGdSLLt5ovPDetHP3db5k1FxhW1b4uAaZOXvXKbDZVHs7yY2HkjKQBWIEZrG0xQcGKqonaRiuSsu7Xbiasy19F30jpuRQggpUQ0D_PuuDJBHIvX6g6-9y71eALaCZLCUzmh4mdyd4qH3oH-As9v35Y2v-QIhvTz2gdPR85mVO5x2-9uBaip3JNFV6lWiDh5H5QI4AHbaogfceg6OVEDtuHfmkvkq"/>
+            </a>
+            <a className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-[#630ed4] transition-colors" href="#">
+            <img alt="Instagram" className="w-5 h-5" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDz-fHmXfMDtijho_PEBvY94sdz2cw_ASF9QQ08j79IrEiA3nOg7a5pTwdqTVrKm7GhVyhqMXHDsO12-bjvMcng1FKgncNDHY8l4EccVhWpmO57zh1stp5g2hTNztJaKO7parfcwvp2jeCI5B3ot_0hLPguWjlcFxus6utHb5PoCqTjzi-OBsLcxB8Un95ckzOEkpdX0Lc-QrYb32rrazwFbCI5SMjm3WM5bvkziskAe2mXvEji-AOr9k2CXzat32Opo7-HtL35v0Kj"/>
+            </a>
+            </div>
+            </div>
+            <div>
+            <h5 className="font-bold mb-6 text-white uppercase text-xs tracking-widest">Platform</h5>
+            <ul className="space-y-4 text-sm text-white/50">
+            <li><a className="hover:text-[#630ed4] transition-colors" href="#">Virtual Trading</a></li>
+            <li><a className="hover:text-[#630ed4] transition-colors" href="#">Stock Screener</a></li>
+            <li><button className="hover:text-[#630ed4] transition-colors" onClick={showLoginRequired}>AI Advisor</button></li>
+            <li><a className="hover:text-[#630ed4] transition-colors" href="#">Learning Hub</a></li>
+            </ul>
+            </div>
+            <div>
+            <h5 className="font-bold mb-6 text-white uppercase text-xs tracking-widest">Resources</h5>
+            <ul className="space-y-4 text-sm text-white/50">
+            <li><a className="hover:text-[#630ed4] transition-colors" href="#">Market News</a></li>
+            <li><a className="hover:text-[#630ed4] transition-colors" href="#">IPO Watchlist</a></li>
+            <li><a className="hover:text-[#630ed4] transition-colors" href="#">Educational Guides</a></li>
+            <li><a className="hover:text-[#630ed4] transition-colors" href="#">Community Forum</a></li>
+            </ul>
+            </div>
+            <div>
+            <h5 className="font-bold mb-6 text-white uppercase text-xs tracking-widest">Legal</h5>
+            <ul className="space-y-4 text-sm text-white/50">
+            <li><a className="hover:text-[#630ed4] transition-colors" href="#">Privacy Policy</a></li>
+            <li><a className="hover:text-[#630ed4] transition-colors" href="#">Terms of Service</a></li>
+            <li><a className="hover:text-[#630ed4] transition-colors" href="#">Risk Disclosure</a></li>
+            <li><a className="hover:text-[#630ed4] transition-colors" href="#">Contact Us</a></li>
+            </ul>
+            </div>
+            </div>
+            <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-white/40 text-xs">
+            <div>© 2024 SmartStock. Curating financial clarity.</div>
+            <div className="flex items-center gap-1 font-medium">
+                                Made with <span className="material-symbols-outlined text-[#a20017] text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>favorite</span> for India
                             </div>
-                            <button 
-                                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                                className="flex items-center gap-1 text-purple-600 hover:text-purple-700 transition-colors ml-4"
-                                aria-label="Scroll to top"
-                            >
-                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                                </svg>
-                                <span className="text-xs">Back to Top</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            </div>
+            </div>
             </footer>
 
-            {/* Login Modal */}
-            {showLoginModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg p-8 max-w-md w-full">
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-2xl font-bold text-gray-900">Welcome Back</h2>
-                            <button 
-                                onClick={() => {
-                                    setShowLoginModal(false);
-                                    setError('');
-                                    setLoginForm({ email: '', password: '' });
-                                }}
-                                className="text-gray-400 hover:text-gray-600"
-                            >
-                                <X className="h-6 w-6" />
-                            </button>
-                        </div>
-                        
-                        {error && (
-                            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-                                {error}
-                            </div>
-                        )}
-                        
-                        <form onSubmit={handleLogin} className="space-y-4">
-                            <div>
-                                <input 
-                                    type="email" 
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                    placeholder="Email address"
-                                    value={loginForm.email}
-                                    onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-                                    autoComplete="email"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <input 
-                                    type="password" 
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                    placeholder="Password"
-                                    value={loginForm.password}
-                                    onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                                    autoComplete="current-password"
-                                    required
-                                />
-                            </div>
-                            <button 
-                                type="submit"
-                                disabled={loading}
-                                className="w-full bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {loading ? 'Logging in...' : 'Login'}
-                            </button>
-                        </form>
-
-                        {/* Divider */}
-                        <div className="flex items-center my-4">
-                            <div className="flex-1 border-t border-gray-300"></div>
-                            <span className="px-4 text-gray-500 text-sm">or</span>
-                            <div className="flex-1 border-t border-gray-300"></div>
-                        </div>
-
-                        {/* Google Login Button */}
-                        <div id="google-signin-container" className="w-full">
-                            <button 
-                                type="button"
-                                className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                onClick={handleGoogleButtonClick}
-                                disabled={googleLoading}
-                            >
-                                <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
-                                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                                </svg>
-                                {googleLoading ? 'Signing in...' : 'Continue with Google'}
-                            </button>
-                        </div>
-                        
-                        <p className="text-center text-gray-600 mt-4">
-                            New to SmartStock? 
-                            <button 
-                                onClick={() => {
-                                    setShowLoginModal(false);
-                                    setShowSignupModal(true);
-                                    setError('');
-                                }}
-                                className="text-purple-600 hover:underline ml-1"
-                            >
-                                Sign up free
-                            </button>
-                        </p>
                     </div>
-                </div>
-            )}
-
-            {/* Signup Modal */}
-            {showSignupModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg p-8 max-w-md w-full">
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-2xl font-bold text-gray-900">Create Account</h2>
-                            <button 
-                                onClick={() => {
-                                    setShowSignupModal(false);
-                                    setError('');
-                                    setSignupForm({ name: '', email: '', password: '' });
-                                }}
-                                className="text-gray-400 hover:text-gray-600"
-                            >
-                                <X className="h-6 w-6" />
-                            </button>
-                        </div>
-                        
-                        {error && (
-                            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-                                {error}
-                            </div>
-                        )}
-                        
-                        <form onSubmit={handleSignup} className="space-y-4">
-                            <div>
-                                <input 
-                                    type="text" 
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                    placeholder="Full name"
-                                    value={signupForm.name}
-                                    onChange={(e) => setSignupForm({ ...signupForm, name: e.target.value })}
-                                    autoComplete="name"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <input 
-                                    type="email" 
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                    placeholder="Email address"
-                                    value={signupForm.email}
-                                    onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
-                                    autoComplete="email"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <input 
-                                    type="password" 
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                    placeholder="Create password (min 6 characters)"
-                                    value={signupForm.password}
-                                    onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
-                                    autoComplete="new-password"
-                                    required
-                                    minLength={6}
-                                />
-                            </div>
-                            <button 
-                                type="submit"
-                                disabled={loading}
-                                className="w-full bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {loading ? 'Creating Account...' : 'Create Account'}
-                            </button>
-                        </form>
-
-                        {/* Divider */}
-                        <div className="flex items-center my-4">
-                            <div className="flex-1 border-t border-gray-300"></div>
-                            <span className="px-4 text-gray-500 text-sm">or</span>
-                            <div className="flex-1 border-t border-gray-300"></div>
-                        </div>
-
-                        {/* Google Signup Button */}
-                        <div id="google-signup-container" className="w-full">
-                            <button 
-                                type="button"
-                                className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                onClick={handleGoogleButtonClick}
-                                disabled={googleLoading}
-                            >
-                                <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
-                                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                                </svg>
-                                {googleLoading ? 'Signing up...' : 'Sign up with Google'}
-                            </button>
-                        </div>
-                        
-                        <p className="text-center text-gray-600 mt-4">
-                            Already have an account? 
-                            <button 
-                                onClick={() => {
-                                    setShowSignupModal(false);
-                                    setShowLoginModal(true);
-                                    setError('');
-                                }}
-                                className="text-purple-600 hover:underline ml-1"
-                            >
-                                Login
-                            </button>
-                        </p>
-                    </div>
-                </div>
-            )}
-        </div>
     );
 };
 

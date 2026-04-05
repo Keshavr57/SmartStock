@@ -1,71 +1,74 @@
 import axios from "axios";
 
-// Simple config - no class needed
 const config = {
     apiKey: process.env.INDIAN_API_KEY,
     baseUrl: "https://stock.indianapi.in"
 };
 
+const POPULAR_NSE = [
+    { symbol: 'RELIANCE.NS', name: 'Reliance Industries' },
+    { symbol: 'TCS.NS', name: 'Tata Consultancy Services' },
+    { symbol: 'HDFCBANK.NS', name: 'HDFC Bank' },
+    { symbol: 'INFY.NS', name: 'Infosys' },
+    { symbol: 'ICICIBANK.NS', name: 'ICICI Bank' },
+    { symbol: 'BHARTIARTL.NS', name: 'Bharti Airtel' },
+    { symbol: 'SBIN.NS', name: 'State Bank of India' },
+    { symbol: 'ITC.NS', name: 'ITC Ltd' }
+];
+
 // Get trending Indian stocks for home page
 async function getTrendingStocks() {
     try {
-        console.log("Fetching trending Indian stocks...");
-        
-        // Get top gainers from Indian API
-        const response = await axios.get(`${config.baseUrl}/top-gainers`, {
-            headers: {
-                "X-Api-Key": config.apiKey
+        console.log("Fetching trending Indian stocks via Yahoo Finance...");
+
+        const promises = POPULAR_NSE.map(async ({ symbol, name }) => {
+            try {
+                const res = await axios.get(
+                    `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}`,
+                    {
+                        timeout: 5000,
+                        headers: { 'User-Agent': 'Mozilla/5.0' }
+                    }
+                );
+                const meta = res.data?.chart?.result?.[0]?.meta;
+                if (!meta?.regularMarketPrice) return null;
+                return {
+                    name,
+                    symbol: symbol.replace('.NS', ''),
+                    price: parseFloat(meta.regularMarketPrice.toFixed(2)),
+                    change: parseFloat((meta.regularMarketChangePercent || 0).toFixed(2)),
+                    vol: formatVolume(meta.regularMarketVolume || 0)
+                };
+            } catch {
+                return null;
             }
         });
 
-        if (response.data && response.data.length > 0) {
-            return response.data.slice(0, 6).map(stock => ({
-                name: stock.companyName || stock.name || stock.symbol,
-                symbol: stock.symbol,
-                price: parseFloat(stock.currentPrice || stock.price || 0),
-                change: parseFloat(stock.percentChange || stock.change || 0),
-                vol: formatVolume(stock.volume || stock.totalTradedVolume)
-            }));
+        const results = (await Promise.all(promises)).filter(Boolean);
+
+        if (results.length > 0) {
+            console.log(`✅ Yahoo Finance returned ${results.length} Indian stocks`);
+            return results;
         }
 
-        // Fallback: Get specific popular stocks
-        return await getPopularStocks();
+        // Last resort: static fallback
+        return getStaticFallback();
 
     } catch (error) {
-        console.error("Indian API trending stocks error:", error.message);
-        return await getPopularStocks();
+        console.error("getTrendingStocks error:", error.message);
+        return getStaticFallback();
     }
 }
 
-// Fallback method to get popular Indian stocks
-async function getPopularStocks() {
-    const popularSymbols = ["RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "BHARTIARTL"];
-    const stocks = [];
-
-    for (const symbol of popularSymbols) {
-        try {
-            const response = await axios.get(`${config.baseUrl}/stock`, {
-                params: { name: symbol },
-                headers: { "X-Api-Key": config.apiKey }
-            });
-
-            if (response.data) {
-                const stock = response.data;
-                stocks.push({
-                    name: stock.companyName || stock.name || symbol,
-                    symbol: symbol,
-                    price: parseFloat(stock.currentPrice || stock.price || 0),
-                    change: parseFloat(stock.percentChange || stock.change || 0),
-                    vol: formatVolume(stock.volume || stock.totalTradedVolume)
-                });
-            }
-        } catch (err) {
-            console.error(`Error fetching ${symbol}:`, err.message);
-            continue;
-        }
-    }
-
-    return stocks.length > 0 ? stocks : [];
+function getStaticFallback() {
+    return [
+        { name: "Reliance Industries", symbol: "RELIANCE", price: 1350.00, change: 0.5, vol: "15.2Cr" },
+        { name: "Tata Consultancy Services", symbol: "TCS", price: 3280.00, change: 1.2, vol: "8.9Cr" },
+        { name: "HDFC Bank", symbol: "HDFCBANK", price: 1650.00, change: -0.3, vol: "12.1Cr" },
+        { name: "Infosys", symbol: "INFY", price: 1480.00, change: 0.8, vol: "9.5Cr" },
+        { name: "ICICI Bank", symbol: "ICICIBANK", price: 1100.00, change: 1.1, vol: "10.2Cr" },
+        { name: "Bharti Airtel", symbol: "BHARTIARTL", price: 1750.00, change: 0.6, vol: "7.3Cr" }
+    ];
 }
 
 // Get upcoming IPOs from Indian API

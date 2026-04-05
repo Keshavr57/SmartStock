@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, Activity } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, Activity } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { authService } from '../../lib/auth';
 import { ENDPOINTS, API_CONFIG } from '../../lib/config';
@@ -233,12 +233,18 @@ const RealTimePnL: React.FC = () => {
     };
 
     const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: 'INR',
+        // Handle NaN, null, undefined values
+        if (isNaN(amount) || amount === null || amount === undefined) {
+            return '₹0.00';
+        }
+        
+        // Format with Indian locale and explicitly add ₹ symbol
+        const formatted = Math.abs(amount).toLocaleString('en-IN', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
-        }).format(amount);
+        });
+        
+        return `₹${formatted}`;
     };
 
     const formatPercent = (percent: number) => {
@@ -384,7 +390,7 @@ const RealTimePnL: React.FC = () => {
                                     {formatCurrency(pnlData.totalInvested)}
                                 </p>
                             </div>
-                            <DollarSign className="h-8 w-8 text-blue-500" />
+                            <Wallet className="h-8 w-8 text-blue-500" />
                         </div>
                     </div>
 

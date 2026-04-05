@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, PieChart, Activity, Clock, Search, Plus, Minus } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, PieChart, Activity, Clock, Search, Plus, Minus } from 'lucide-react';
 import TradingViewChart from '../components/trading/TradingViewChart';
 import OrderPanel from '../components/trading/OrderPanel';
 import PortfolioSummary from '../components/trading/PortfolioSummary';
@@ -10,7 +10,7 @@ import RealTimePnL from '../components/trading/RealTimePnL';
 import { authService } from '../lib/auth';
 import { api } from '../lib/api';
 import { ENDPOINTS } from '../lib/config';
-import { formatCurrency } from '../lib/currency';
+import { formatCurrency, formatCurrencyWithSign } from '../lib/currency';
 
 interface PortfolioData {
     balance: number;
@@ -35,7 +35,7 @@ interface SearchResult {
 }
 
 const VirtualTrading: React.FC = () => {
-    const [activeTab, setActiveTab] = useState('portfolio');
+    const [activeTab, setActiveTab] = useState('watchlist');
     const [selectedStock, setSelectedStock] = useState('RELIANCE.NS');
     const [portfolioData, setPortfolioData] = useState<PortfolioData | null>(null);
     const [marketStatus, setMarketStatus] = useState<MarketStatus | null>(null);
@@ -135,282 +135,172 @@ const VirtualTrading: React.FC = () => {
     };
 
     const tabs = [
-        { id: 'portfolio', label: 'Portfolio', icon: PieChart },
-        { id: 'pnl', label: 'Real-Time P&L', icon: Activity },
-        { id: 'holdings', label: 'Holdings', icon: DollarSign },
-        { id: 'watchlist', label: 'Watchlist', icon: Activity },
-        { id: 'transactions', label: 'Transactions', icon: Clock }
+        { id: 'watchlist', label: 'Watchlist' },
+        { id: 'holdings', label: 'Holdings' },
+        { id: 'transactions', label: 'History' },
+        { id: 'pnl', label: 'Real-Time P&L' }
     ];
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
-            <div className="max-w-6xl mx-auto">
-                {/* Header */}
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Virtual Trading</h1>
-                    <p className="text-gray-600">Practice trading with real market data</p>
-                    
-                    {/* Market Status */}
-                    {marketStatus && (
-                        <div className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg mt-4 ${
-                            marketStatus.isOpen ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                            <div className={`w-2 h-2 rounded-full ${
-                                marketStatus.isOpen ? 'bg-green-500' : 'bg-red-500'
-                            }`}></div>
-                            <span className="font-medium">{marketStatus.status}</span>
+        <section className="flex flex-col lg:flex-row min-h-[calc(100vh-64px)] bg-[#f9f9ff] dark:bg-slate-900 border-t dark:border-slate-800" id="virtual-trading">
+            <div className="flex-1 p-4 md:p-8 space-y-8 flex flex-col">
+                <div className="w-full relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <input
+                        type="text"
+                        placeholder="Search any Indian stock (e.g., RELIANCE, TCS)..."
+                        value={searchQuery}
+                        onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            handleSearch(e.target.value);
+                        }}
+                        className="w-full bg-white dark:bg-slate-800 border border-outline-variant/30 dark:border-slate-700 rounded-xl py-4 pl-12 pr-4 focus:ring-2 focus:ring-[#630ed4]/20 shadow-sm font-bold text-on-surface dark:text-white"
+                    />
+                    {searchResults.length > 0 && searchQuery && (
+                        <div className="absolute top-full left-0 right-0 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-xl z-20 mt-2 max-h-80 overflow-y-auto">
+                            {searchResults.map((stock: any) => (
+                                <button
+                                    key={stock.symbol}
+                                    onClick={() => handleStockSelect(stock.symbol)}
+                                    className="w-full px-6 py-4 text-left hover:bg-slate-50 dark:hover:bg-slate-700/50 border-b border-gray-100 dark:border-slate-700 last:border-0 transition-colors flex justify-between items-center"
+                                >
+                                    <div>
+                                        <div className="font-black text-gray-900 dark:text-white text-lg">{stock.symbol}</div>
+                                        <div className="text-xs font-bold text-gray-500 uppercase tracking-widest">{stock.name}</div>
+                                    </div>
+                                    {stock.price && (
+                                        <div className="text-right">
+                                            <div className="font-bold text-gray-900 dark:text-white text-lg">₹{stock.price}</div>
+                                            {stock.changePercent && (
+                                                <div className={`text-xs font-black ${stock.changePercent >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                                    {stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </button>
+                            ))}
                         </div>
                     )}
                 </div>
 
-                {/* Stock Search */}
-                <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="Search any Indian stock (e.g., RELIANCE, TCS, INFY, HDFC, SBI, Zomato, Paytm)"
-                            value={searchQuery}
-                            onChange={(e) => {
-                                setSearchQuery(e.target.value);
-                                handleSearch(e.target.value);
-                            }}
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                        
-                        {/* Search Results */}
-                        {searchResults.length > 0 && searchQuery && (
-                            <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 mt-1 max-h-80 overflow-y-auto">
-                                {searchResults.map((stock: any) => (
-                                    <button
-                                        key={stock.symbol}
-                                        onClick={() => handleStockSelect(stock.symbol)}
-                                        className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 transition-colors"
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <div className="font-medium text-gray-900">{stock.symbol}</div>
-                                                <div className="text-sm text-gray-600">{stock.name}</div>
-                                                {stock.sector && (
-                                                    <div className="text-xs text-gray-500">{stock.sector} • {stock.exchange || 'NSE'}</div>
-                                                )}
-                                            </div>
-                                            {stock.price && (
-                                                <div className="text-right">
-                                                    <div className="font-medium text-gray-900">₹{stock.price}</div>
-                                                    {stock.changePercent && (
-                                                        <div className={`text-sm ${
-                                                            stock.changePercent >= 0 ? 'text-green-600' : 'text-red-600'
-                                                        }`}>
-                                                            {stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                        
-                        {/* Popular Stocks (when no search) */}
-                        {!searchQuery && (
-                            <div className="mt-4">
-                                <h4 className="text-sm font-medium text-gray-700 mb-3">Popular Indian Stocks</h4>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                    {[
-                                        'RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS',
-                                        'SBIN.NS', 'ICICIBANK.NS', 'BHARTIARTL.NS', 'ITC.NS',
-                                        'MARUTI.NS', 'BAJFINANCE.NS', 'ZOMATO.NS', 'PAYTM.NS'
-                                    ].map((symbol) => (
-                                        <button
-                                            key={symbol}
-                                            onClick={() => handleStockSelect(symbol)}
-                                            className="px-3 py-2 text-sm bg-gray-100 hover:bg-blue-100 hover:text-blue-700 rounded-lg transition-colors text-left"
-                                        >
-                                            {symbol.replace('.NS', '')}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                        
-                        {/* No Results Message */}
-                        {searchQuery && searchResults.length === 0 && (
-                            <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 mt-1 p-4">
-                                <div className="text-center text-gray-600">
-                                    <Search className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                                    <p className="font-medium">No stocks found for "{searchQuery}"</p>
-                                    <p className="text-sm mt-1">Try searching for popular stocks like RELIANCE, TCS, HDFC, INFY, SBI, etc.</p>
-                                </div>
-                            </div>
-                        )}
+                {!searchQuery && (
+                    <div className="flex flex-wrap gap-2">
+                        {['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'SBIN.NS', 'ICICIBANK.NS', 'BHARTIARTL.NS'].map(sym => (
+                            <button 
+                                key={sym}
+                                onClick={() => handleStockSelect(sym)}
+                                className={`px-4 py-2 rounded-full border border-outline-variant/30 dark:border-slate-700 text-xs font-bold transition-all shadow-sm ${selectedStock === sym ? 'bg-[#630ed4] text-white border-[#630ed4]' : 'bg-white dark:bg-slate-800 text-on-surface dark:text-slate-300 hover:border-[#630ed4] hover:text-[#630ed4]'}`}
+                            >
+                                {sym.replace('.NS', '')}
+                            </button>
+                        ))}
                     </div>
-                </div>
+                )}
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Left Panel - Chart */}
-                    <div className="lg:col-span-2">
-                        <div className="bg-white rounded-lg border border-gray-200">
-                            <div className="p-6 border-b border-gray-200">
-                                <div className="flex items-center justify-between">
-                                    <h2 className="text-xl font-semibold text-gray-900">{selectedStock}</h2>
-                                    <div className="flex space-x-2">
-                                        <button
-                                            onClick={() => handleOrderClick('BUY')}
-                                            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                                        >
-                                            <Plus className="h-4 w-4" />
-                                            <span>Buy</span>
-                                        </button>
-                                        <button
-                                            onClick={() => handleOrderClick('SELL')}
-                                            className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                                        >
-                                            <Minus className="h-4 w-4" />
-                                            <span>Sell</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            <TradingViewChart symbol={selectedStock} height={500} />
-                        </div>
-                    </div>
-
-                    {/* Right Panel - Portfolio Summary */}
-                    <div>
-                        {portfolioData && <PortfolioSummary data={portfolioData} />}
-                    </div>
-                </div>
-
-                {/* Portfolio Stats Cards */}
-                {portfolioData && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
-                        <div className="bg-white rounded-lg border border-gray-200 p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Portfolio Value</p>
-                                    <p className="text-2xl font-bold text-gray-900">
-                                        {formatCurrency(portfolioData.totalValue || 0)}
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-1">Total worth (Cash + Holdings)</p>
-                                </div>
-                                <DollarSign className="h-8 w-8 text-blue-500" />
-                            </div>
-                        </div>
-                        
-                        <div className="bg-white rounded-lg border border-gray-200 p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Cash Balance</p>
-                                    <p className="text-2xl font-bold text-gray-900">
-                                        {formatCurrency(portfolioData.balance || 0)}
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-1">Available for trading</p>
-                                </div>
-                                <DollarSign className="h-8 w-8 text-green-500" />
-                            </div>
-                        </div>
-                        
-                        <div className="bg-white rounded-lg border border-gray-200 p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Invested Amount</p>
-                                    <p className="text-2xl font-bold text-gray-900">
-                                        {formatCurrency(portfolioData.invested || 0)}
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-1">Money invested in stocks</p>
-                                </div>
-                                <TrendingUp className="h-8 w-8 text-purple-500" />
-                            </div>
-                        </div>
-                        
-                        <div className="bg-white rounded-lg border border-gray-200 p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Total P&L</p>
-                                    <p className={`text-2xl font-bold ${
-                                        (portfolioData.totalPnL || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                                    }`}>
-                                        {(portfolioData.totalPnL || 0) >= 0 ? '+' : ''}{formatCurrency(portfolioData.totalPnL || 0)}
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        {(portfolioData.totalPnLPercent || 0) >= 0 ? '+' : ''}{(portfolioData.totalPnLPercent || 0).toFixed(2)}% overall return
-                                    </p>
-                                </div>
-                                {(portfolioData.totalPnL || 0) >= 0 ? (
-                                    <TrendingUp className="h-8 w-8 text-green-500" />
-                                ) : (
-                                    <TrendingDown className="h-8 w-8 text-red-500" />
+                <div className="bg-white dark:bg-slate-800 rounded-3xl border border-outline-variant/10 dark:border-slate-700 shadow-sm overflow-visible flex flex-col">
+                    <div className="p-8 border-b border-outline-variant/10 dark:border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <div className="flex items-center gap-3 mb-1">
+                                <h3 className="text-3xl font-black text-on-surface dark:text-white tracking-tight">{selectedStock}</h3>
+                                {marketStatus && (
+                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase ${marketStatus.isOpen ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-500'}`}>
+                                        {marketStatus.status}
+                                    </span>
                                 )}
                             </div>
                         </div>
                     </div>
-                )}
-
-                {/* Tabs Section */}
-                <div className="mt-8">
-                    <div className="bg-white rounded-lg border border-gray-200">
-                        <div className="border-b border-gray-200">
-                            <nav className="flex space-x-8 px-6">
-                                {tabs.map((tab) => {
-                                    const Icon = tab.icon;
-                                    return (
-                                        <button
-                                            key={tab.id}
-                                            onClick={() => setActiveTab(tab.id)}
-                                            className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm ${
-                                                activeTab === tab.id
-                                                    ? 'border-blue-500 text-blue-600'
-                                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                            }`}
-                                        >
-                                            <Icon className="h-5 w-5" />
-                                            <span>{tab.label}</span>
-                                        </button>
-                                    );
-                                })}
-                            </nav>
-                        </div>
-
-                        {/* Tab Content */}
-                        <div className="p-6">
-                            {activeTab === 'portfolio' && portfolioData && (
-                                <div className="text-center py-8">
-                                    <PieChart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Portfolio Overview</h3>
-                                    <p className="text-gray-600">Your portfolio statistics are displayed in the cards above</p>
-                                </div>
-                            )}
-                            
-                            {activeTab === 'pnl' && <RealTimePnL />}
-                            {activeTab === 'holdings' && <Holdings />}
-                            {activeTab === 'watchlist' && <Watchlist onStockSelect={handleStockSelect} />}
-                            {activeTab === 'transactions' && <TransactionHistory />}
-                        </div>
+                    
+                    <div className="p-2 h-96 relative overflow-hidden rounded-none">
+                        <TradingViewChart symbol={selectedStock} height={380} />
+                    </div>
+                    
+                    <div className="flex flex-col sm:flex-row gap-4 p-8 border-t border-outline-variant/10 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 rounded-b-3xl">
+                        <button onClick={() => handleOrderClick('BUY')} className="flex-1 bg-green-500 text-white py-4 rounded-xl font-black text-lg shadow-lg shadow-green-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2">
+                            <Plus className="w-5 h-5" /> BUY {selectedStock.split('.')[0]}
+                        </button>
+                        <button onClick={() => handleOrderClick('SELL')} className="flex-1 bg-red-500 text-white py-4 rounded-xl font-black text-lg shadow-lg shadow-red-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2">
+                            <Minus className="w-5 h-5" /> SELL {selectedStock.split('.')[0]}
+                        </button>
                     </div>
                 </div>
 
-                {/* Disclaimer */}
-                <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                    <p className="text-sm text-amber-800">
-                        <strong>Virtual Trading:</strong> This is a simulation using real market data. No actual money is involved. Use this platform to practice and learn trading strategies.
-                    </p>
-                </div>
-
-                {/* Portfolio Explanation */}
-                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h4 className="text-sm font-semibold text-blue-800 mb-2">Understanding Your Portfolio:</h4>
-                    <div className="text-xs text-blue-700 space-y-1">
-                        <p><strong>Portfolio Value:</strong> Your total worth (Cash + Current value of all holdings)</p>
-                        <p><strong>Cash Balance:</strong> Money available for new trades</p>
-                        <p><strong>Invested Amount:</strong> Total money you've spent buying stocks</p>
-                        <p><strong>Total P&L:</strong> Your profit or loss (Current value - Invested amount)</p>
+                <div className="bg-white dark:bg-slate-800 rounded-3xl border border-outline-variant/10 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col min-h-[400px]">
+                    <div className="flex gap-4 border-b border-outline-variant/30 dark:border-slate-700 px-6 pt-6">
+                        {tabs.map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`pb-4 px-2 font-black text-xs tracking-widest transition-all uppercase ${activeTab === tab.id ? 'border-b-2 border-[#630ed4] text-[#630ed4]' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="p-6 flex-1 bg-slate-50/30 dark:bg-slate-900/30">
+                        {activeTab === 'pnl' && <RealTimePnL />}
+                        {activeTab === 'holdings' && <Holdings />}
+                        {activeTab === 'watchlist' && <Watchlist onStockSelect={handleStockSelect} />}
+                        {activeTab === 'transactions' && <TransactionHistory />}
                     </div>
                 </div>
             </div>
 
-            {/* Order Panel Modal */}
+            {/* Virtual Portfolio Sidebar */}
+            <div className="w-full lg:w-96 bg-[#e9edff]-container-low dark:bg-slate-900/80 p-8 border-t lg:border-t-0 lg:border-l border-outline-variant/20 dark:border-slate-800 space-y-8 flex flex-col">
+                <div className="bg-[#630ed4] p-8 rounded-3xl text-white shadow-xl shadow-primary/20 relative overflow-hidden">
+                    <div className="relative z-10">
+                        <p className="text-[10px] uppercase font-black opacity-80 mb-1 tracking-widest">Virtual Account Value</p>
+                        <h3 className="text-4xl font-black tracking-tight">{formatCurrency(portfolioData?.totalValue || 0)}</h3>
+                        <div className="mt-6 flex justify-between items-end border-t border-white/20 pt-4">
+                            <span className="text-xs font-bold uppercase opacity-80">Total P&L</span>
+                            <span className={`font-black text-lg ${(portfolioData?.totalPnL || 0) >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                                {formatCurrencyWithSign(portfolioData?.totalPnL || 0)}
+                            </span>
+                        </div>
+                    </div>
+                    <div className="absolute right-0 bottom-0 opacity-10">
+                        <PieChart className="w-48 h-48 -mr-12 -mb-12" />
+                    </div>
+                </div>
+
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center px-2">
+                        <span className="text-on-surface-variant dark:text-slate-400 font-bold text-sm tracking-wide">Cash Balance</span>
+                        <span className="font-black text-on-surface dark:text-white text-lg">{formatCurrency(portfolioData?.balance || 0)}</span>
+                    </div>
+                    <div className="flex justify-between items-center px-2">
+                        <span className="text-on-surface-variant dark:text-slate-400 font-bold text-sm tracking-wide">Invested Assets</span>
+                        <span className="font-black text-on-surface dark:text-white text-lg">{formatCurrency(portfolioData?.invested || 0)}</span>
+                    </div>
+                    <div className="flex justify-between items-center px-2 pt-4 border-t border-outline-variant/20 dark:border-slate-700">
+                        <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Return %</span>
+                        <span className={`font-black text-lg ${(portfolioData?.totalPnLPercent || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            {(portfolioData?.totalPnLPercent || 0) >= 0 ? '+' : ''}{(portfolioData?.totalPnLPercent || 0).toFixed(2)}%
+                        </span>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mt-auto">
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-outline-variant/10 dark:border-slate-700 text-center">
+                        <p className="text-3xl font-black text-[#630ed4] mb-2">{portfolioData?.holdingsCount || 0}</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Holdings</p>
+                    </div>
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-outline-variant/10 dark:border-slate-700 text-center">
+                        <p className="text-3xl font-black text-[#630ed4] mb-2">{portfolioData?.transactionsCount || 0}</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Transactions</p>
+                    </div>
+                </div>
+
+                <div className="bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mt-4">
+                    <p className="text-xs font-medium text-blue-600 dark:text-blue-400 leading-relaxed text-center">
+                        <strong className="block mb-1 text-sm font-bold uppercase tracking-widest">Practice Account</strong>
+                        Prices reflect real-time live data for simulation. No real money used.
+                    </p>
+                </div>
+            </div>
+
             {showOrderPanel && (
                 <OrderPanel
                     symbol={selectedStock}
@@ -422,7 +312,7 @@ const VirtualTrading: React.FC = () => {
                     }}
                 />
             )}
-        </div>
+        </section>
     );
 };
 

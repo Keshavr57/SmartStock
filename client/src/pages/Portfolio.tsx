@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, PieChart, Activity, RefreshCw, BarChart3, User, Mail, Calendar, Settings } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, PieChart, Activity, RefreshCw, BarChart3, User, Mail, Calendar, Settings } from 'lucide-react';
 import RealTimePnL from '../components/trading/RealTimePnL';
 import { ENDPOINTS } from '../lib/config';
 import { api } from '../lib/api';
@@ -139,12 +139,13 @@ const Portfolio: React.FC = () => {
             return '₹0';
         }
         
-        return new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: 'INR',
+        // Format with Indian locale and explicitly add ₹ symbol
+        const formatted = Math.abs(amount).toLocaleString('en-IN', {
             minimumFractionDigits: 0,
             maximumFractionDigits: 0
-        }).format(amount);
+        });
+        
+        return `₹${formatted}`;
     };
 
     const tabs = [
@@ -156,326 +157,234 @@ const Portfolio: React.FC = () => {
 
     if (loading && !portfolioSummary) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="flex items-center space-x-2">
-                    <RefreshCw className="h-6 w-6 animate-spin text-blue-600" />
-                    <span className="text-gray-600">Loading your portfolio...</span>
+            <div className="min-h-screen bg-[#f9f9ff] dark:bg-slate-900 flex items-center justify-center">
+                <div className="flex flex-col items-center space-y-4">
+                    <RefreshCw className="h-10 w-10 animate-spin text-[#630ed4]" />
+                    <span className="text-gray-600 dark:text-gray-400 font-bold uppercase tracking-widest text-sm">Loading Portfolio</span>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <div className="bg-white shadow-sm border-b">
-                <div className="max-w-7xl mx-auto px-4 py-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-900">Portfolio</h1>
-                            <p className="text-gray-600 mt-1">Track your investments and performance</p>
+        <section className="p-4 md:p-8 space-y-8 bg-[#f9f9ff] dark:bg-slate-900 min-h-screen border-t dark:border-slate-800" id="portfolio">
+            <div className="flex justify-between items-center">
+                <h1 className="text-3xl font-black text-on-surface dark:text-white">Portfolio Dashboard</h1>
+                <button
+                    onClick={fetchPortfolioData}
+                    disabled={loading}
+                    className="flex items-center space-x-2 px-6 py-2 bg-[#630ed4] text-white rounded-lg hover:scale-105 transition-transform disabled:opacity-50 font-bold text-sm shadow-md"
+                >
+                    <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                    <span>Sync Data</span>
+                </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden hover:shadow-md transition-shadow">
+                    <div className="absolute inset-0 bg-gradient-to-br from-violet-50 to-transparent dark:from-violet-900/10 pointer-events-none" />
+                    <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Value</p>
+                        <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+                            <Wallet className="w-4 h-4 text-violet-600" />
                         </div>
-                        <button
-                            onClick={fetchPortfolioData}
-                            disabled={loading}
-                            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    </div>
+                    <h3 className="text-2xl font-black text-on-surface dark:text-white">
+                        {portfolioSummary ? formatCurrency(portfolioSummary.totalValue) : '₹0'}
+                    </h3>
+                </div>
+                <div className={`relative p-6 rounded-2xl shadow-sm border overflow-hidden hover:shadow-md transition-shadow ${(portfolioSummary?.totalPnL || 0) >= 0 ? 'bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-800/30' : 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-800/30'}`}>
+                    <div className="flex items-center justify-between mb-3">
+                        <p className={`text-xs font-bold uppercase tracking-widest ${(portfolioSummary?.totalPnL || 0) >= 0 ? 'text-green-600' : 'text-red-500'}`}>Total P&L</p>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${(portfolioSummary?.totalPnL || 0) >= 0 ? 'bg-green-100 dark:bg-green-900/40' : 'bg-red-100 dark:bg-red-900/40'}`}>
+                            {(portfolioSummary?.totalPnL || 0) >= 0 ? <TrendingUp className="w-4 h-4 text-green-600" /> : <TrendingDown className="w-4 h-4 text-red-500" />}
+                        </div>
+                    </div>
+                    <h3 className={`text-2xl font-black ${(portfolioSummary?.totalPnL || 0) >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                        {(portfolioSummary?.totalPnL || 0) >= 0 ? '+' : ''}{portfolioSummary ? formatCurrency(portfolioSummary.totalPnL) : '₹0'}
+                    </h3>
+                    <p className={`text-xs font-bold mt-1 ${(portfolioSummary?.totalPnL || 0) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                        {portfolioSummary ? (portfolioSummary.totalPnL >= 0 ? '+' : '') + portfolioSummary.totalPnLPercent.toFixed(2) + '%' : '0.00%'}
+                    </p>
+                </div>
+                <div className="relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden hover:shadow-md transition-shadow">
+                    <div className="absolute inset-0 bg-gradient-to-br from-amber-50 to-transparent dark:from-amber-900/10 pointer-events-none" />
+                    <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Available Balance</p>
+                        <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                            <Wallet className="w-4 h-4 text-amber-600" />
+                        </div>
+                    </div>
+                    <h3 className="text-2xl font-black text-on-surface dark:text-white">
+                        {portfolioSummary ? formatCurrency(portfolioSummary.availableBalance) : '₹1,00,000'}
+                    </h3>
+                </div>
+                <div className="relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden hover:shadow-md transition-shadow">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent dark:from-blue-900/10 pointer-events-none" />
+                    <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Active Holdings</p>
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                            <BarChart3 className="w-4 h-4 text-blue-600" />
+                        </div>
+                    </div>
+                    <h3 className="text-2xl font-black text-on-surface dark:text-white">
+                        {portfolioSummary ? portfolioSummary.holdingsCount : 0}
+                    </h3>
+                </div>
+            </div>
+
+            <div className="flex gap-8 border-b border-outline-variant/30 dark:border-slate-800">
+                {tabs.map((tab) => {
+                    const isActive = activeTab === tab.id;
+                    return (
+                        <button 
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`pb-4 font-black flex items-center gap-2 text-sm tracking-widest transition-all uppercase ${isActive ? 'border-b-2 border-[#630ed4] text-[#630ed4]' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
                         >
-                            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                            <span>Refresh</span>
+                            {tab.label}
                         </button>
-                    </div>
-                </div>
+                    );
+                })}
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 py-6">
-                {/* Portfolio Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        {/* Total Value */}
-                        <div className="bg-white rounded-lg shadow-sm p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Total Portfolio Value</p>
-                                    <p className="text-2xl font-bold text-gray-900">
-                                        {portfolioSummary ? formatCurrency(portfolioSummary.totalValue) : '₹0'}
-                                    </p>
+            <div className="mt-8">
+                {/* Profile Tab */}
+                {activeTab === 'profile' && (
+                    <div className="bg-[#e9edff]-container-low dark:bg-[#630ed4]/10 rounded-3xl p-6 lg:p-10 flex flex-col md:flex-row items-center justify-between overflow-hidden relative shadow-sm border border-outline-variant/10 dark:border-slate-800">
+                        <div className="flex flex-col sm:flex-row items-center gap-8 relative z-10 w-full mb-6 md:mb-0">
+                            {user?.avatar ? (
+                                <img src={user.avatar} alt="Profile" className="w-24 h-24 rounded-full border-4 border-white dark:border-slate-800 shadow-xl" />
+                            ) : (
+                                <div className="w-24 h-24 rounded-full border-4 border-white dark:border-slate-800 shadow-xl bg-[#630ed4] flex items-center justify-center text-white">
+                                    <User className="w-12 h-12" />
                                 </div>
-                                <PieChart className="h-8 w-8 text-blue-500" />
+                            )}
+                            <div className="space-y-1 text-center sm:text-left">
+                                <h3 className="text-2xl font-black text-on-surface dark:text-white">{user?.name || 'Guest'}</h3>
+                                <p className="text-sm font-medium text-on-surface-variant dark:text-slate-400">{user?.email}</p>
+                                <div className="flex flex-wrap justify-center sm:justify-start gap-2 pt-2">
+                                    <span className="px-3 py-1 bg-[#630ed4]/10 text-[#630ed4] dark:bg-[#630ed4]/20 dark:text-[#a975ff] text-[10px] font-black rounded-lg">VERIFIED</span>
+                                    <span className="px-3 py-1 bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400 text-[10px] font-black rounded-lg">ACTIVE INVESTOR</span>
+                                </div>
                             </div>
                         </div>
-
-                        {/* Total P&L */}
-                        <div className={`rounded-lg shadow-sm p-6 ${
-                            (portfolioSummary?.totalPnL || 0) >= 0 ? 'bg-green-50' : 'bg-red-50'
-                        }`}>
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Total P&L</p>
-                                    <p className={`text-2xl font-bold ${
-                                        (portfolioSummary?.totalPnL || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                                    }`}>
-                                        {portfolioSummary ? formatCurrency(portfolioSummary.totalPnL) : '₹0'}
-                                    </p>
-                                    <p className={`text-sm ${
-                                        (portfolioSummary?.totalPnL || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                                    }`}>
-                                        {portfolioSummary ? (portfolioSummary.totalPnL >= 0 ? '+' : '') + portfolioSummary.totalPnLPercent.toFixed(2) + '%' : '0.00%'}
-                                    </p>
-                                </div>
-                                {(portfolioSummary?.totalPnL || 0) >= 0 ? (
-                                    <TrendingUp className="h-8 w-8 text-green-500" />
-                                ) : (
-                                    <TrendingDown className="h-8 w-8 text-red-500" />
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Available Balance */}
-                        <div className="bg-white rounded-lg shadow-sm p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Available Balance</p>
-                                    <p className="text-2xl font-bold text-gray-900">
-                                        {portfolioSummary ? formatCurrency(portfolioSummary.availableBalance) : '₹1,00,000'}
-                                    </p>
-                                </div>
-                                <DollarSign className="h-8 w-8 text-green-500" />
-                            </div>
-                        </div>
-
-                        {/* Holdings Count */}
-                        <div className="bg-white rounded-lg shadow-sm p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Holdings</p>
-                                    <p className="text-2xl font-bold text-gray-900">
-                                        {portfolioSummary ? portfolioSummary.holdingsCount : 0}
-                                    </p>
-                                    <p className="text-sm text-gray-500">Active positions</p>
-                                </div>
-                                <BarChart3 className="h-8 w-8 text-purple-500" />
-                            </div>
+                        <div className="relative z-10 flex gap-4 w-full md:w-auto">
+                            <button className="flex-1 md:flex-none bg-[#630ed4] text-white px-8 py-3 rounded-xl font-black text-sm shadow-lg shadow-primary/20 hover:scale-105 transition-transform text-center">Settings</button>
                         </div>
                     </div>
+                )}
 
-                {/* Tabs */}
-                <div className="bg-white rounded-lg shadow-sm">
-                    <div className="border-b border-gray-200">
-                        <nav className="-mb-px flex space-x-8 px-6">
-                            {tabs.map((tab) => {
-                                const Icon = tab.icon;
-                                return (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => setActiveTab(tab.id)}
-                                        className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm ${
-                                            activeTab === tab.id
-                                                ? 'border-blue-500 text-blue-600'
-                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                        }`}
-                                    >
-                                        <Icon className="h-5 w-5" />
-                                        <span>{tab.label}</span>
-                                    </button>
-                                );
-                            })}
-                        </nav>
-                    </div>
-
-                    {/* Tab Content */}
-                    <div className="p-6">
-                        {activeTab === 'profile' && (
-                            <div className="space-y-6">
-                                <h3 className="text-lg font-semibold text-gray-900">User Profile</h3>
-                                
-                                {user ? (
-                                    <div className="max-w-2xl">
-                                        {/* Profile Header */}
-                                        <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-6 text-white mb-6">
-                                            <div className="flex items-center space-x-4">
-                                                {user.avatar ? (
-                                                    <img src={user.avatar} alt="Profile" className="h-16 w-16 rounded-full border-4 border-white" />
-                                                ) : (
-                                                    <div className="h-16 w-16 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
-                                                        <User className="h-8 w-8 text-white" />
-                                                    </div>
-                                                )}
-                                                <div>
-                                                    <h2 className="text-2xl font-bold">{user.name}</h2>
-                                                    <p className="text-blue-100">{user.email}</p>
-                                                </div>
+                {/* Overview Tab */}
+                {activeTab === 'overview' && (
+                    <div className="space-y-6">
+                        {holdings.length > 0 ? (
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                {holdings.slice(0, 6).map((holding, i) => (
+                                    <div key={i} className="bg-white dark:bg-slate-800 rounded-2xl p-8 border border-outline-variant/10 dark:border-slate-700 shadow-sm relative overflow-hidden group hover:border-[#630ed4]/30 transition-colors">
+                                        <div className="flex justify-between items-start mb-8 relative z-10">
+                                            <div>
+                                                <h4 className="text-2xl font-black text-on-surface dark:text-white uppercase">{holding.symbol}</h4>
+                                                <p className="text-xs font-bold text-slate-400 uppercase">{holding.quantity} Shares</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-2xl font-black text-on-surface dark:text-white">{formatCurrency(holding.marketValue)}</p>
+                                                <p className={`text-sm font-bold ${holding.pnl >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                                    {holding.pnl >= 0 ? '+' : ''}{formatCurrency(holding.pnl)} ({holding.pnlPercent.toFixed(2)}%)
+                                                </p>
                                             </div>
                                         </div>
-
-                                        {/* Profile Details */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <div className="bg-gray-50 rounded-lg p-4">
-                                                <div className="flex items-center space-x-3 mb-3">
-                                                    <Mail className="h-5 w-5 text-gray-600" />
-                                                    <span className="font-medium text-gray-900">Email</span>
-                                                </div>
-                                                <p className="text-gray-700">{user.email}</p>
+                                        <div className="grid grid-cols-3 gap-4 relative z-10">
+                                            <div>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Avg Price</p>
+                                                <p className="font-bold text-sm dark:text-slate-200">{formatCurrency(holding.avgPrice)}</p>
                                             </div>
-
-                                            <div className="bg-gray-50 rounded-lg p-4">
-                                                <div className="flex items-center space-x-3 mb-3">
-                                                    <DollarSign className="h-5 w-5 text-gray-600" />
-                                                    <span className="font-medium text-gray-900">Virtual Balance</span>
-                                                </div>
-                                                <p className="text-gray-700">₹{user.virtualBalance?.toLocaleString('en-IN') || '1,00,000'}</p>
+                                            <div>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Current Price</p>
+                                                <p className="font-bold text-sm dark:text-slate-200">{formatCurrency(holding.currentPrice)}</p>
                                             </div>
-
-                                            <div className="bg-gray-50 rounded-lg p-4">
-                                                <div className="flex items-center space-x-3 mb-3">
-                                                    <Calendar className="h-5 w-5 text-gray-600" />
-                                                    <span className="font-medium text-gray-900">Member Since</span>
-                                                </div>
-                                                <p className="text-gray-700">January 2025</p>
-                                            </div>
-
-                                            <div className="bg-gray-50 rounded-lg p-4">
-                                                <div className="flex items-center space-x-3 mb-3">
-                                                    <Activity className="h-5 w-5 text-gray-600" />
-                                                    <span className="font-medium text-gray-900">Account Type</span>
-                                                </div>
-                                                <p className="text-gray-700">Virtual Trading</p>
-                                            </div>
-                                        </div>
-
-                                        {/* Account Settings */}
-                                        <div className="mt-8">
-                                            <h4 className="text-lg font-semibold text-gray-900 mb-4">Account Settings</h4>
-                                            <div className="space-y-3">
-                                                <button className="w-full text-left p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors flex items-center space-x-3">
-                                                    <Settings className="h-5 w-5 text-gray-600" />
-                                                    <div>
-                                                        <p className="font-medium text-gray-900">Edit Profile</p>
-                                                        <p className="text-sm text-gray-600">Update your name and preferences</p>
-                                                    </div>
-                                                </button>
-                                                
-                                                <button className="w-full text-left p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors flex items-center space-x-3">
-                                                    <RefreshCw className="h-5 w-5 text-gray-600" />
-                                                    <div>
-                                                        <p className="font-medium text-gray-900">Reset Virtual Balance</p>
-                                                        <p className="text-sm text-gray-600">Reset to ₹1,00,000 starting balance</p>
-                                                    </div>
-                                                </button>
+                                            <div>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Invested Value</p>
+                                                <p className="font-bold text-sm dark:text-slate-200">{formatCurrency(holding.invested || (holding.avgPrice * holding.quantity))}</p>
                                             </div>
                                         </div>
                                     </div>
-                                ) : (
-                                    <div className="text-center py-8">
-                                        <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                        <p className="text-gray-600">Please login to view your profile</p>
-                                    </div>
-                                )}
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-20 px-6 text-center bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                                <div className="w-20 h-20 rounded-2xl bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center mb-5">
+                                    <Activity className="h-10 w-10 text-violet-300 dark:text-violet-600" />
+                                </div>
+                                <h3 className="text-xl font-black text-slate-800 dark:text-white mb-2">No Holdings Yet</h3>
+                                <p className="text-sm text-slate-400 mb-6 max-w-xs">Start with ₹1,00,000 virtual money and build your portfolio risk-free.</p>
+                                <a href="/virtual-trading" className="bg-[#630ed4] text-white px-7 py-3 rounded-xl font-black text-sm hover:bg-[#4d0aab] transition-colors shadow-md shadow-violet-200 dark:shadow-none">
+                                    Start Trading →
+                                </a>
                             </div>
                         )}
+                    </div>
+                )}
 
-                        {activeTab === 'overview' && (
-                            <div className="space-y-6">
-                                <h3 className="text-lg font-semibold text-gray-900">Portfolio Overview</h3>
-                                
-                                {holdings.length > 0 ? (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {holdings.slice(0, 6).map((holding) => (
-                                            <div key={holding.symbol} className="border border-gray-200 rounded-lg p-4">
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <h4 className="font-medium text-gray-900">{holding.symbol}</h4>
-                                                        <p className="text-sm text-gray-600">{holding.name}</p>
-                                                        <p className="text-xs text-gray-500">{holding.quantity} shares</p>
+                {/* Holdings Tab */}
+                {activeTab === 'holdings' && (
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-outline-variant/10 dark:border-slate-700 shadow-sm overflow-hidden">
+                        {holdings.length > 0 ? (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead className="bg-[#f9f9ff] dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
+                                        <tr>
+                                            <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">Symbol</th>
+                                            <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-right">Quantity</th>
+                                            <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-right">Avg Price</th>
+                                            <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-right">Current Price</th>
+                                            <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-right">Market Value</th>
+                                            <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-right">P&L</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
+                                        {holdings.map((holding) => (
+                                            <tr key={holding.symbol} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                                <td className="px-6 py-4">
+                                                    <div className="font-bold text-gray-900 dark:text-white uppercase">{holding.symbol}</div>
+                                                    <div className="text-xs text-gray-500">{holding.name}</div>
+                                                </td>
+                                                <td className="px-6 py-4 text-right font-medium dark:text-slate-300">{holding.quantity}</td>
+                                                <td className="px-6 py-4 text-right font-medium dark:text-slate-300">{formatCurrency(holding.avgPrice)}</td>
+                                                <td className="px-6 py-4 text-right font-medium dark:text-slate-300">{formatCurrency(holding.currentPrice)}</td>
+                                                <td className="px-6 py-4 text-right font-bold dark:text-white">{formatCurrency(holding.marketValue)}</td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <div className={`font-bold ${holding.pnl >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                                        {holding.pnl >= 0 ? '+' : ''}{formatCurrency(holding.pnl)}
                                                     </div>
-                                                    <div className="text-right">
-                                                        <p className="font-semibold text-gray-900">
-                                                            {formatCurrency(holding.marketValue)}
-                                                        </p>
-                                                        <p className={`text-sm ${
-                                                            holding.pnl >= 0 ? 'text-green-600' : 'text-red-600'
-                                                        }`}>
-                                                            {holding.pnl >= 0 ? '+' : ''}{formatCurrency(holding.pnl)}
-                                                        </p>
-                                                        <p className={`text-xs ${
-                                                            holding.pnl >= 0 ? 'text-green-600' : 'text-red-600'
-                                                        }`}>
-                                                            {holding.pnl >= 0 ? '+' : ''}{holding.pnlPercent.toFixed(2)}%
-                                                        </p>
+                                                    <div className={`text-xs font-bold ${holding.pnl >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                                        {holding.pnl >= 0 ? '+' : ''}{holding.pnlPercent.toFixed(2)}%
                                                     </div>
-                                                </div>
-                                            </div>
+                                                </td>
+                                            </tr>
                                         ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-8">
-                                        <PieChart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                        <p className="text-gray-600">No holdings found</p>
-                                        <p className="text-sm text-gray-500">Start trading to build your portfolio</p>
-                                    </div>
-                                )}
+                                    </tbody>
+                                </table>
                             </div>
-                        )}
-
-                        {activeTab === 'holdings' && (
-                            <div className="space-y-6">
-                                <h3 className="text-lg font-semibold text-gray-900">All Holdings</h3>
-                                
-                                {holdings.length > 0 ? (
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full">
-                                            <thead className="bg-gray-50">
-                                                <tr>
-                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th>
-                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
-                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Avg Price</th>
-                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Current Price</th>
-                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Market Value</th>
-                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">P&L</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-gray-200">
-                                                {holdings.map((holding) => (
-                                                    <tr key={holding.symbol} className="hover:bg-gray-50">
-                                                        <td className="px-4 py-4">
-                                                            <div>
-                                                                <div className="font-medium text-gray-900">{holding.symbol}</div>
-                                                                <div className="text-sm text-gray-600">{holding.name}</div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-4 py-4 text-gray-900">{holding.quantity}</td>
-                                                        <td className="px-4 py-4 text-gray-900">{formatCurrency(holding.avgPrice)}</td>
-                                                        <td className="px-4 py-4 text-gray-900">{formatCurrency(holding.currentPrice)}</td>
-                                                        <td className="px-4 py-4 text-gray-900">{formatCurrency(holding.marketValue)}</td>
-                                                        <td className="px-4 py-4">
-                                                            <div className={`${holding.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                                <div className="font-medium">
-                                                                    {holding.pnl >= 0 ? '+' : ''}{formatCurrency(holding.pnl)}
-                                                                </div>
-                                                                <div className="text-sm">
-                                                                    {holding.pnl >= 0 ? '+' : ''}{holding.pnlPercent.toFixed(2)}%
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-8">
-                                        <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                        <p className="text-gray-600">No holdings found</p>
-                                    </div>
-                                )}
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-20 text-center">
+                                <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-4">
+                                    <Activity className="h-8 w-8 text-slate-300 dark:text-slate-500" />
+                                </div>
+                                <p className="font-black text-slate-700 dark:text-white mb-1">No Holdings Yet</p>
+                                <p className="text-sm text-slate-400 mb-5">Go to Virtual Trading to buy your first stock</p>
+                                <a href="/virtual-trading" className="bg-[#630ed4] text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-[#4d0aab] transition-colors">Start Trading</a>
                             </div>
-                        )}
-
-                        {activeTab === 'pnl' && (
-                            <RealTimePnL />
                         )}
                     </div>
-                </div>
+                )}
+
+                {/* Real-Time PnL Tab */}
+                {activeTab === 'pnl' && (
+                    <RealTimePnL />
+                )}
             </div>
-        </div>
+        </section>
     );
 };
 

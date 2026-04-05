@@ -71,15 +71,13 @@ interface ComprehensiveComparisonTableProps {
 export default function ComprehensiveComparisonTable({ data, loading }: ComprehensiveComparisonTableProps) {
   const formatCurrency = (value: number | null, symbol?: string) => {
     if (value === null || value === undefined || typeof value !== 'number') return 'N/A';
-    const isIndian = symbol?.includes('.NS') || symbol?.includes('.BO');
-    const prefix = isIndian ? '₹' : '$';
+    const prefix = '₹';
     return `${prefix}${value.toLocaleString()}`;
   };
 
   const formatLargeCurrency = (value: number | null, symbol?: string) => {
     if (value === null || value === undefined || typeof value !== 'number') return 'N/A';
-    const isIndian = symbol?.includes('.NS') || symbol?.includes('.BO');
-    const prefix = isIndian ? '₹' : '$';
+    const prefix = '₹';
     
     if (value >= 1e12) return `${prefix}${(value / 1e12).toFixed(1)}T`;
     if (value >= 1e9) return `${prefix}${(value / 1e9).toFixed(1)}B`;

@@ -1,18 +1,3 @@
-import {
-    LayoutDashboard,
-    BarChart2,
-    TrendingUp,
-    Wallet,
-    Newspaper,
-    Cpu,
-    ArrowLeftRight,
-    X,
-    Activity,
-    User,
-    LogOut
-} from "lucide-react"
-import { cn } from "../lib/utils"
-import { Button } from "./ui/button"
 import { useState, useEffect } from "react"
 
 interface SidebarProps {
@@ -20,23 +5,10 @@ interface SidebarProps {
     currentPage: string
 }
 
-const sidebarItems = [
-    { icon: LayoutDashboard, label: "Home", id: "Home" },
-    { icon: ArrowLeftRight, label: "Compare", id: "Compare" },
-    { icon: Activity, label: "Virtual Trading", id: "VirtualTrading" },
-    { icon: Cpu, label: "AI Advisor", id: "AI" },
-    { icon: Newspaper, label: "News", id: "News" },
-    { icon: TrendingUp, label: "IPOs", id: "IPOs" },
-    { icon: BarChart2, label: "Learn", id: "Learn" },
-    { icon: Wallet, label: "Portfolio", id: "Portfolio" },
-]
-
 export function Sidebar({ onPageChange, currentPage }: SidebarProps) {
-    const [isCollapsed, setIsCollapsed] = useState(false)
     const [user, setUser] = useState<any>(null)
 
     useEffect(() => {
-        // Get user from localStorage
         const userData = localStorage.getItem('user')
         if (userData) {
             setUser(JSON.parse(userData))
@@ -49,134 +21,77 @@ export function Sidebar({ onPageChange, currentPage }: SidebarProps) {
         localStorage.setItem('isAuthenticated', 'false')
         window.location.reload()
     }
-    
-    if (isCollapsed) {
-        return (
-            <aside className="hidden md:flex w-16 flex-col border-r bg-white dark:bg-zinc-950 h-[calc(100vh-64px)] p-2 sticky top-16">
-                <div className="space-y-2 flex-1">
-                    {sidebarItems.map((item) => (
-                        <Button
-                            key={item.label}
-                            variant={currentPage === item.id ? "default" : "ghost"}
-                            size="sm"
-                            className={cn(
-                                "w-full h-12 p-0 flex items-center justify-center",
-                                currentPage === item.id && "bg-primary text-primary-foreground"
-                            )}
-                            onClick={() => onPageChange(item.id)}
-                            title={item.label}
-                        >
-                            <item.icon className="h-5 w-5" />
-                        </Button>
-                    ))}
-                </div>
-                
-                {/* User Profile - Collapsed */}
-                <div className="space-y-2">
-                    {user && (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="w-full h-12 p-0 flex items-center justify-center"
-                            title={`Profile: ${user.name}`}
-                        >
-                            {user.avatar ? (
-                                <img src={user.avatar} alt="Profile" className="h-8 w-8 rounded-full" />
-                            ) : (
-                                <User className="h-5 w-5" />
-                            )}
-                        </Button>
-                    )}
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full h-12 p-0 flex items-center justify-center"
-                        onClick={() => setIsCollapsed(false)}
-                        title="Expand Sidebar"
-                    >
-                        <LayoutDashboard className="h-5 w-5" />
-                    </Button>
-                </div>
-            </aside>
-        )
-    }
+
+    const items = [
+        { id: "Home", icon: "dashboard", label: "Dashboard" },
+        { id: "Compare", icon: "compare_arrows", label: "Compare" },
+        { id: "VirtualTrading", icon: "query_stats", label: "Virtual Trading" },
+        { id: "AI", icon: "psychology", label: "AI Advisor" },
+        { id: "News", icon: "newspaper", label: "News" },
+        { id: "IPOs", icon: "analytics", label: "IPOs" },
+        { id: "Learn", icon: "school", label: "Learn" },
+        { id: "Portfolio", icon: "inventory_2", label: "Portfolio" }
+    ];
 
     return (
-        <aside className="hidden md:flex w-56 flex-col border-r bg-white dark:bg-zinc-950 h-[calc(100vh-64px)] sticky top-16">
-            <div className="p-4 border-b border-gray-200 dark:border-zinc-800">
-                <div className="flex items-center justify-between">
-                    <h2 className="font-semibold text-gray-900 dark:text-white">Navigation</h2>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setIsCollapsed(true)}
-                        className="h-8 w-8 p-0"
-                    >
-                        <X className="h-4 w-4" />
-                    </Button>
+        <nav className="h-screen w-64 fixed left-0 top-0 border-r-0 bg-slate-50 dark:bg-slate-900 flex flex-col py-6 z-50 shadow-sm border-r border-gray-200 dark:border-zinc-800">
+            <style>
+                {`
+                .material-symbols-outlined {
+                    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+                }
+                `}
+            </style>
+            <div className="px-6 mb-8 cursor-pointer" onClick={() => onPageChange("Home")}>
+                <div className="flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-lg bg-[#630ed4] flex items-center justify-center text-white">
+                        <span className="material-symbols-outlined text-sm">trending_up</span>
+                    </span>
+                    <div>
+                        <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">SmartStock</h1>
+                        <p className="text-[10px] text-slate-500 font-medium tracking-wider uppercase">Premium Market Insights</p>
+                    </div>
                 </div>
             </div>
             
-            <div className="flex-1 p-3">
-                <div className="space-y-1">
-                    {sidebarItems.map((item) => (
-                        <Button
-                            key={item.label}
-                            variant={currentPage === item.id ? "default" : "ghost"}
-                            className={cn(
-                                "w-full justify-start gap-3 h-10 px-3",
-                                currentPage === item.id 
-                                    ? "bg-primary text-primary-foreground font-medium" 
-                                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
-                            )}
+            <div className="flex-1 space-y-1">
+                {items.map(item => {
+                    const isActive = currentPage === item.id;
+                    return (
+                        <a 
+                            key={item.id}
                             onClick={() => onPageChange(item.id)}
+                            className={`flex items-center gap-3 px-4 py-3 rounded-lg mx-2 my-1 font-medium text-sm transition-colors cursor-pointer ${
+                                isActive 
+                                    ? "bg-slate-900 dark:bg-slate-800 text-white" 
+                                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800"
+                            }`}
                         >
-                            <item.icon className="h-4 w-4" />
-                            <span className="text-sm">{item.label}</span>
-                        </Button>
-                    ))}
-                </div>
+                            <span className="material-symbols-outlined" data-icon={item.icon}>{item.icon}</span>
+                            <span>{item.label}</span>
+                        </a>
+                    )
+                })}
             </div>
-
-            {/* User Profile Section */}
-            <div className="p-4 border-t border-gray-200 dark:border-zinc-800">
+            
+            <div className="px-2 pt-4 border-t border-slate-200 dark:border-slate-800 mt-auto">
                 {user ? (
-                    <div className="space-y-3">
-                        {/* User Info */}
-                        <div className="flex items-center gap-3 p-2 rounded-lg bg-gray-50 dark:bg-zinc-800">
-                            {user.avatar ? (
-                                <img src={user.avatar} alt="Profile" className="h-10 w-10 rounded-full" />
-                            ) : (
-                                <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center">
-                                    <User className="h-5 w-5 text-white" />
-                                </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                    {user.name}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                    ₹{user.virtualBalance?.toLocaleString('en-IN') || '1,00,000'}
-                                </p>
-                            </div>
+                    <>
+                        <div className="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-300">
+                            <span className="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+                            <span className="font-medium text-sm">{user.name}</span>
                         </div>
-                        
-                        {/* Logout Button */}
-                        <Button 
-                            variant="ghost" 
-                            className="w-full justify-start gap-3 h-10 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                            onClick={handleLogout}
-                        >
-                            <LogOut className="h-4 w-4" />
-                            <span className="text-sm">Logout</span>
-                        </Button>
-                    </div>
+                        <button onClick={handleLogout} className="w-full text-left flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors font-medium text-sm">
+                            <span className="material-symbols-outlined">logout</span>
+                            Logout
+                        </button>
+                    </>
                 ) : (
-                    <div className="text-center">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Not logged in</p>
+                    <div className="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-300">
+                        <span className="font-medium text-sm">Guest Mode</span>
                     </div>
                 )}
             </div>
-        </aside>
+        </nav>
     )
 }

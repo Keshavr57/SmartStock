@@ -11,6 +11,8 @@ import News from "@/pages/News"
 import VirtualTrading from "@/pages/VirtualTrading"
 import Portfolio from "@/pages/Portfolio"
 import Landing from "@/pages/Landing"
+import Login from "@/pages/Login"
+import Signup from "@/pages/Signup"
 import { Footer } from "@/components/Footer"
 import { Button } from "@/components/ui/button"
 import { Menu } from "lucide-react"
@@ -127,7 +129,13 @@ function AppContent() {
 
     // If not authenticated, show landing page
     if (!isAuthenticated) {
-        return <Landing onLogin={handleLogin} />
+        return (
+            <Routes>
+                <Route path="/login" element={<Login onLogin={handleLogin} />} />
+                <Route path="/signup" element={<Signup onLogin={handleLogin} />} />
+                <Route path="*" element={<Landing onLogin={handleLogin} />} />
+            </Routes>
+        )
     }
 
     return (
@@ -143,16 +151,17 @@ function AppContent() {
             <div className="flex">
                 {showSidebar && <Sidebar onPageChange={handlePageChange} currentPage={currentPage} />}
                 
-                <main className="flex-1 min-h-[calc(100vh-64px)] flex flex-col relative">
+                <main className={`flex-1 flex flex-col ${showSidebar ? "md:ml-64" : ""} pt-16 min-h-screen relative`}>
                     {/* Toggle Sidebar Button */}
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="absolute top-4 left-4 z-10 lg:flex"
-                        onClick={() => setShowSidebar(!showSidebar)}
-                    >
-                        <Menu className="h-4 w-4" />
-                    </Button>
+                    <div className="fixed top-4 left-4 z-50 md:hidden">
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setShowSidebar(!showSidebar)}
+                        >
+                            <Menu className="h-4 w-4" />
+                        </Button>
+                    </div>
                     
                     <div className="flex-1">
                         <Routes>
