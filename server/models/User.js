@@ -27,31 +27,19 @@ const userSchema = new mongoose.Schema({
     },
     virtualBalance: {
         type: Number,
-        default: 100000 // ₹1,00,000 starting balance
+        default: 100000, // ₹1,00,000 starting balance
+        min: 0
     },
+    // Open positions. Cash + holdings live on the user document so an order is a single versioned write.
     portfolio: [{
-        symbol: String,
-        quantity: Number,
-        avgPrice: Number,
+        symbol: { type: String, required: true },
+        quantity: { type: Number, required: true, min: 1 },
+        avgPrice: { type: Number, required: true, min: 0 },
         purchaseDate: Date
     }],
     watchlist: [{
         symbol: String,
         addedDate: {
-            type: Date,
-            default: Date.now
-        }
-    }],
-    transactions: [{
-        type: {
-            type: String,
-            enum: ['BUY', 'SELL'],
-            required: true
-        },
-        symbol: String,
-        quantity: Number,
-        price: Number,
-        date: {
             type: Date,
             default: Date.now
         }
@@ -68,7 +56,9 @@ const userSchema = new mongoose.Schema({
         }
     }
 }, {
-    timestamps: true
+    timestamps: true,
+    // Concurrent orders on the same user fail with VersionError instead of overwriting each other.
+    optimisticConcurrency: true
 });
 
 // Index for better query performance

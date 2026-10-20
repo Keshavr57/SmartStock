@@ -21,16 +21,6 @@ async function getStockChart(symbol, period = '1d', interval = '5m') {
         const yahooSymbol = convertToYahooSymbol(symbol);
         let chartData = await getYahooChartData(yahooSymbol, period, interval);
         
-        if (!chartData || !chartData.candles || chartData.candles.length === 0) {
-            console.log(`⚠️ Yahoo Finance failed for ${symbol}, trying alternative sources`);
-            chartData = await getAlternativeChartData(symbol, period);
-        }
-        
-        if (!chartData || !chartData.candles || chartData.candles.length === 0) {
-            console.log(`⚠️ No chart data available for ${symbol}, generating realistic fallback`);
-            chartData = await generateRealisticChartData(symbol, period);
-        }
-        
         if (chartData && chartData.candles && chartData.candles.length > 0) {
             chartData.indicators = calculateTechnicalIndicators(chartData.candles);
             cache[cacheKey] = { data: chartData, timestamp: Date.now() };
@@ -49,9 +39,6 @@ async function getStockChart(symbol, period = '1d', interval = '5m') {
 // Get Yahoo Finance chart data
 async function getYahooChartData(yahooSymbol, period, interval) {
     try {
-        const period1 = getPeriodStart(period);
-        const period2 = Math.floor(Date.now() / 1000);
-        
         const response = await axios.get(`https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}`, {
             params: {
                 interval: interval,
@@ -82,9 +69,10 @@ async function getYahooChartData(yahooSymbol, period, interval) {
         })).filter(candle => candle.open && candle.high && candle.low && candle.close);
 
         const currentPrice = meta.regularMarketPrice || candles[candles.length - 1]?.close;
-        const previousClose = meta.previousClose;
-        const change = currentPrice - previousClose;
-        const changePercent = (change / previousClose) * 100;
+        // previousClose is only present for 1d ranges; otherwise use the close before the range start.
+        const previousClose = meta.previousClose ?? meta.chartPreviousClose ?? null;
+        const change = previousClose ? currentPrice - previousClose : null;
+        const changePercent = previousClose ? (change / previousClose) * 100 : null;
 
         return {
             symbol: yahooSymbol,
@@ -105,141 +93,6 @@ async function getYahooChartData(yahooSymbol, period, interval) {
         return null;
     }
 }
-
-// Alternative chart data source
-async function getAlternativeChartData(symbol, period) {
-    try {
-        const { default: comprehensiveStockService } = await import('./stock.service.js');
-        const stockData = await comprehensiveStockService.getComprehensiveStockData(symbol);
-        
-        if (!stockData.lastTradedPrice && !stockData.currentPrice) {
-            return null;
-        }
-        
-        const currentPrice = stockData.lastTradedPrice || stockData.currentPrice;
-        const previousClose = currentPrice - (stockData.oneDayChange || 0);
-        
-        return generateHistoricalDataFromCurrentPrice(symbol, currentPrice, previousClose, period);
-        
-    } catch (error) {
-        console.log(`Alternative chart data error for ${symbol}:`, error.message);
-        return null;
-    }
-}
-
-// Generate realistic chart data
-async function generateRealisticChartData(symbol, period) {
-    try {
-        const { default: comprehensiveStockService } = await import('./stock.service.js');
-        const fallbackPrice = comprehensiveStockService.generateFallbackPrice ? 
-            comprehensiveStockService.generateFallbackPrice(symbol) : 
-            getBasicFallbackPrice(symbol);
-        
-        return generateHistoricalDataFromCurrentPrice(symbol, fallbackPrice, fallbackPrice * 0.98, period);
-        
-    } catch (error) {
-        console.log(`Realistic chart generation error for ${symbol}:`, error.message);
-        return null;
-    }
-}
-
-// Generate historical data from current price
-function generateHistoricalDataFromCurrentPrice(symbol, currentPrice, previousClose, period) {
-    const periodDays = getPeriodDays(period);
-    const candlesCount = Math.min(periodDays * 24, 1000);
-    const candles = [];
-    
-    let price = previousClose;
-    const volatility = getSymbolVolatility(symbol);
-    const trend = (currentPrice - previousClose) / candlesCount;
-    
-    const now = Date.now();
-    const intervalMs = (periodDays * 24 * 60 * 60 * 1000) / candlesCount;
-    
-    for (let i = 0; i < candlesCount; i++) {
-        const time = now - (candlesCount - i) * intervalMs;
-        
-        const randomChange = (Math.random() - 0.5) * volatility * price;
-        const trendChange = trend * (1 + (Math.random() - 0.5) * 0.5);
-        
-        const open = price;
-        const close = Math.max(0.01, price + randomChange + trendChange);
-        
-        const range = volatility * price * 0.5;
-        const high = Math.max(open, close) + Math.random() * range;
-        const low = Math.min(open, close) - Math.random() * range;
-        
-        const baseVolume = getBaseVolume(symbol);
-        const volume = Math.floor(baseVolume * (0.5 + Math.random()));
-        
-        candles.push({
-            time: Math.floor(time),
-            open: Math.round(open * 100) / 100,
-            high: Math.round(high * 100) / 100,
-            low: Math.round(Math.max(0.01, low) * 100) / 100,
-            close: Math.round(close * 100) / 100,
-            volume: volume
-        });
-        
-        price = close;
-    }
-    
-    if (candles.length > 0) {
-        candles[candles.length - 1].close = currentPrice;
-        candles[candles.length - 1].high = Math.max(candles[candles.length - 1].high, currentPrice);
-        candles[candles.length - 1].low = Math.min(candles[candles.length - 1].low, currentPrice);
-    }
-    
-    return {
-        symbol: symbol,
-        name: symbol.replace('.NS', '').replace('.BO', ''),
-        currentPrice: currentPrice,
-        previousClose: previousClose,
-        change: currentPrice - previousClose,
-        changePercent: ((currentPrice - previousClose) / previousClose) * 100,
-        high: Math.max(...candles.map(c => c.high)),
-        low: Math.min(...candles.map(c => c.low)),
-        volume: candles[candles.length - 1]?.volume || 1000000,
-        candles: candles,
-        dataSource: 'generated_realistic'
-    };
-}
-
-// Helper functions
-function getSymbolVolatility(symbol) {
-    if (symbol.includes('BANK')) return 0.02;
-    if (symbol.includes('TECH') || symbol.includes('IT')) return 0.025;
-    if (symbol.includes('PHARMA')) return 0.03;
-    if (symbol.includes('AUTO')) return 0.035;
-    if (symbol.includes('METAL') || symbol.includes('STEEL')) return 0.04;
-    return 0.025;
-}
-
-function getBaseVolume(symbol) {
-    const largeCapSymbols = ['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS'];
-    if (largeCapSymbols.some(s => symbol.includes(s.replace('.NS', '')))) {
-        return 5000000 + Math.random() * 10000000;
-    }
-    return 1000000 + Math.random() * 3000000;
-}
-
-function getBasicFallbackPrice(symbol) {
-    if (symbol.includes('RELIANCE')) return 1285;
-    if (symbol.includes('TCS')) return 3140;
-    if (symbol.includes('HDFC')) return 1740;
-    if (symbol.includes('INFY')) return 1875;
-    if (symbol.includes('SBI')) return 997;
-    return 500 + Math.random() * 1000;
-}
-
-function getPeriodDays(period) {
-    const periodMap = {
-        '1d': 1, '5d': 5, '1mo': 30, '3mo': 90, '6mo': 180, '1y': 365, '5y': 1825
-    };
-    return periodMap[period] || 1;
-}
-
-
 
 // Calculate technical indicators
 function calculateTechnicalIndicators(candles) {
@@ -366,20 +219,11 @@ function convertToYahooSymbol(symbol) {
         'SBIN': 'SBIN.NS', 'LT': 'LT.NS', 'WIPRO': 'WIPRO.NS', 'MARUTI': 'MARUTI.NS'
     };
     
-    return symbolMap[symbol] || (symbol.includes('.') ? symbol : `${symbol}.NS`);
+    if (symbolMap[symbol]) return symbolMap[symbol];
+    // Indices (^NSEI), crypto pairs (BTC-USD) and already-suffixed symbols pass through unchanged.
+    if (symbol.startsWith('^') || symbol.includes('.') || symbol.includes('-')) return symbol;
+    return `${symbol}.NS`;
 }
-
-function getPeriodStart(period) {
-    const now = Date.now();
-    const periods = {
-        '1d': 24 * 60 * 60 * 1000, '5d': 5 * 24 * 60 * 60 * 1000, '1mo': 30 * 24 * 60 * 60 * 1000,
-        '3mo': 90 * 24 * 60 * 60 * 1000, '6mo': 180 * 24 * 60 * 60 * 1000, '1y': 365 * 24 * 60 * 60 * 1000,
-        '5y': 5 * 365 * 24 * 60 * 60 * 1000
-    };
-    
-    return Math.floor((now - (periods[period] || periods['1d'])) / 1000);
-}
-
 
 // Get watchlist data
 async function getWatchlistData(symbols) {

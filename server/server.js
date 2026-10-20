@@ -1,106 +1,34 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
+// Must be the first import: loads .env before any module reads process.env.
+import 'dotenv/config';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import connectDB from './config/db.js';
 import keepAliveService from './utils/keepAlive.js';
-import performanceMonitor from './middleware/performanceMonitor.js';
+import { createApp, allowedOrigins } from './app.js';
+import { getIpoBoard } from './features/ipo/ipo.service.js';
+import { getLatestNews, computePendingReactions } from './features/news/news.service.js';
 
-// Import routes from organized features
-import stockRoutes from './features/stocks/stock.routes.js';
-import ipoRoutes from './features/ipo/ipo.routes.js';
-import newsRoutes from './features/news/news.routes.js';
-import learningRoutes from './features/learning/learning.routes.js';
-import tradingRoutes from './features/trading/trading.routes.js';
-import marketRoutes from './features/market/market.routes.js';
-import authRoutes from './features/auth/auth.routes.js';
-import chatRoutes from './features/chat/chat.routes.js';
+// Fail fast on missing configuration instead of crashing mid-request.
+const REQUIRED_ENV = ['MONGO_URI', 'JWT_SECRET'];
+const missing = REQUIRED_ENV.filter(key => !process.env[key]);
+if (missing.length > 0) {
+    console.error(`❌ Missing required environment variables: ${missing.join(', ')}`);
+    process.exit(1);
+}
+if (process.env.JWT_SECRET.length < 32) {
+    console.warn('⚠️ JWT_SECRET is shorter than 32 characters; use a long random value in production.');
+}
 
-dotenv.config();
-
-// Debug: Log environment variables
-console.log('🔍 Environment Check:', {
-    ALLOWED_ORIGINS_RAW: process.env.ALLOWED_ORIGINS,
-    ALLOWED_ORIGINS_EXISTS: !!process.env.ALLOWED_ORIGINS,
-    NODE_ENV: process.env.NODE_ENV,
-    PORT: process.env.PORT
-});
-
-const app = express();
+const app = createApp();
 const httpServer = createServer(app);
 
-// CORS Configuration - Enhanced for production
-const allowedOrigins = process.env.ALLOWED_ORIGINS 
-    ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
-    : [
-        'https://smart-stock-ku3d.vercel.app',
-        'http://localhost:5173', 
-        'http://localhost:3000', 
-        'http://localhost:3001',
-        'http://localhost:3002'
-    ];
+connectDB();
 
-console.log('🌐 CORS Configuration:', {
-    ALLOWED_ORIGINS: allowedOrigins,
-    NODE_ENV: process.env.NODE_ENV || 'development'
-});
-
-// Enable CORS with proper configuration
-app.use(cors({
-    origin: function(origin, callback) {
-        // Allow requests with no origin (like mobile apps, curl, Postman)
-        if (!origin) {
-            return callback(null, true);
-        }
-        
-        // Check if origin is in allowed list
-        if (allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true);
-        } else {
-            console.log('❌ CORS blocked origin:', origin);
-            console.log('✅ Allowed origins:', allowedOrigins);
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-    exposedHeaders: ['Content-Range', 'X-Content-Range'],
-    maxAge: 86400 // 24 hours
-}));
-
-// Handle preflight requests explicitly
-app.options('*', cors());
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Performance monitoring
-app.use(performanceMonitor);
-
-// Request logging middleware
-app.use((req, res, next) => {
-    console.log(`📥 ${req.method} ${req.path} - Origin: ${req.headers.origin || 'none'}`);
-    next();
-});
-
-// Connect to Database
-connectDB(); // Enable MongoDB connection for fundamentals data
-
-// Socket.IO Setup with enhanced CORS
 const io = new Server(httpServer, {
     cors: {
-        origin: function(origin, callback) {
-            if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-                callback(null, true);
-            } else {
-                callback(new Error('Not allowed by CORS'));
-            }
-        },
+        origin: allowedOrigins,
         methods: ['GET', 'POST'],
-        credentials: true,
-        allowedHeaders: ['Content-Type', 'Authorization']
+        credentials: true
     },
     transports: ['websocket', 'polling']
 });
@@ -108,91 +36,8 @@ const io = new Server(httpServer, {
 global.io = io;
 
 io.on('connection', (socket) => {
-    console.log('🔌 Client connected:', socket.id);
-    
     socket.on('join-ipo-updates', () => {
         socket.join('ipo-updates');
-        console.log('📊 Client joined IPO updates room');
-    });
-    
-    socket.on('disconnect', () => {
-        console.log('🔌 Client disconnected:', socket.id);
-    });
-});
-
-// API Routes - Organized by Feature
-app.use('/api', stockRoutes);           // Handles /api/compare
-app.use('/api/ipo', ipoRoutes);
-app.use('/api/news', newsRoutes);
-app.use('/api/learning', learningRoutes);
-app.use('/api/trading', tradingRoutes); // Handles /api/trading/*
-app.use('/api/market', marketRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/chat', chatRoutes);
-
-// Health Check with warmup capabilities
-app.get('/api/health', async (req, res) => {
-    const startTime = Date.now();
-    
-    try {
-        // Quick DB ping to ensure connection is ready
-        const dbStatus = await checkDatabaseConnection();
-        
-        const responseTime = Date.now() - startTime;
-        
-        res.json({ 
-            status: 'ok', 
-            message: 'Server is running',
-            timestamp: new Date().toISOString(),
-            responseTime: `${responseTime}ms`,
-            database: dbStatus ? 'connected' : 'disconnected',
-            uptime: process.uptime(),
-            features: [
-                'stocks',
-                'ipo', 
-                'news',
-                'learning',
-                'trading',
-                'market',
-                'auth',
-                'chat'
-            ]
-        });
-    } catch (error) {
-        res.status(503).json({
-            status: 'error',
-            message: 'Server starting up...',
-            error: error.message
-        });
-    }
-});
-
-// Quick database connection check
-async function checkDatabaseConnection() {
-    try {
-        const mongoose = await import('mongoose');
-        return mongoose.default.connection.readyState === 1;
-    } catch (error) {
-        return false;
-    }
-}
-
-// Root Route
-app.get('/', (req, res) => {
-    res.json({ 
-        message: 'SmartStock API - Organized by Features',
-        version: '2.0',
-        structure: 'Feature-based architecture',
-        endpoints: {
-            stocks: '/api/compare',
-            ipo: '/api/ipo',
-            news: '/api/news',
-            learning: '/api/learning',
-            trading: '/api/trading',
-            market: '/api/market',
-            auth: '/api/auth',
-            chat: '/api/chat'
-        }
     });
 });
 
@@ -200,29 +45,39 @@ const PORT = process.env.PORT || 5050;
 
 httpServer.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
-    console.log('Socket.IO enabled for real-time trading');
-    
-    // Start keep-alive service to prevent cold starts
     keepAliveService.start();
+    // Warm the IPO board (dozens of NSE calls) so the first visitor doesn't wait for it.
+    setTimeout(() => getIpoBoard().catch(err => console.warn('IPO warm-up failed:', err.message)), 3000);
+    startNewsPipeline();
 });
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-    console.log('🛑 SIGTERM received, shutting down gracefully...');
+// Keeps the news event-study dataset growing: store fresh headlines, then measure reactions of older ones.
+const NEWS_PIPELINE_MS = 30 * 60 * 1000;
+function startNewsPipeline() {
+    const run = async () => {
+        try {
+            await getLatestNews();
+            const { done } = await computePendingReactions(300);
+            if (done) console.log(`📰 Measured ${done} news price reactions`);
+        } catch (error) {
+            console.warn('News pipeline run failed:', error.message);
+        }
+    };
+    setTimeout(run, 60 * 1000);
+    setInterval(run, NEWS_PIPELINE_MS).unref();
+}
+
+const shutdown = (signal) => {
+    console.log(`🛑 ${signal} received, shutting down gracefully...`);
     keepAliveService.stop();
-    httpServer.close(() => {
-        console.log('✅ Server closed');
-        process.exit(0);
-    });
+    httpServer.close(() => process.exit(0));
+};
+// A stray rejected promise (e.g. a flaky upstream API) should be logged, not take down every route.
+process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled promise rejection:', reason);
 });
 
-process.on('SIGINT', () => {
-    console.log('🛑 SIGINT received, shutting down gracefully...');
-    keepAliveService.stop();
-    httpServer.close(() => {
-        console.log('✅ Server closed');
-        process.exit(0);
-    });
-});
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 export default app;

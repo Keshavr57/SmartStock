@@ -1,24 +1,17 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import mongoose from 'mongoose';
 import { OAuth2Client } from 'google-auth-library';
 import User from '../../models/User.js';
 import { ensureConnection } from '../../config/db.js';
+import { getTransactions } from '../trading/trading.service.js';
 
 const router = express.Router();
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Helper function to get JWT_SECRET with validation
-const getJWTSecret = () => {
-    const JWT_SECRET = process.env.JWT_SECRET;
-    if (!JWT_SECRET) {
-        console.error('❌ CRITICAL: JWT_SECRET environment variable is not set!');
-        console.error('Please set JWT_SECRET in your .env file');
-        process.exit(1);
-    }
-    return JWT_SECRET;
-};
+// Presence is checked at startup in server.js.
+const getJWTSecret = () => process.env.JWT_SECRET;
 
 // Optimized database connection check
 const ensureDatabaseConnection = async () => {
@@ -135,7 +128,11 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 
-        // Check password
+        // Google-only accounts have no password; treat like a wrong password.
+        if (!user.password) {
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
+
         const isValidPassword = await bcrypt.compare(password, user.password);
         if (!isValidPassword) {
             return res.status(401).json({ error: 'Invalid email or password' });
@@ -202,7 +199,12 @@ router.post('/google', async (req, res) => {
         });
 
         const payload = ticket.getPayload();
-        const { sub: googleId, email, name, picture } = payload;
+        const { sub: googleId, email, name, picture, email_verified: emailVerified } = payload;
+
+        // Linking by email is only safe when Google has verified the address.
+        if (!emailVerified) {
+            return res.status(400).json({ success: false, error: 'Google account email is not verified' });
+        }
 
         console.log('Google OAuth payload:', { googleId, email, name });
 
@@ -366,7 +368,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
                 avatar: user.avatar,
                 portfolio: user.portfolio,
                 watchlist: user.watchlist,
-                transactions: user.transactions.slice(-10) // Last 10 transactions
+                transactions: await getTransactions(user._id, 10)
             }
         });
     } catch (error) {

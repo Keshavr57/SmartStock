@@ -51,24 +51,12 @@ async function getTrendingStocks() {
             return results;
         }
 
-        // Last resort: static fallback
-        return getStaticFallback();
+        return [];
 
     } catch (error) {
         console.error("getTrendingStocks error:", error.message);
-        return getStaticFallback();
+        return [];
     }
-}
-
-function getStaticFallback() {
-    return [
-        { name: "Reliance Industries", symbol: "RELIANCE", price: 1350.00, change: 0.5, vol: "15.2Cr" },
-        { name: "Tata Consultancy Services", symbol: "TCS", price: 3280.00, change: 1.2, vol: "8.9Cr" },
-        { name: "HDFC Bank", symbol: "HDFCBANK", price: 1650.00, change: -0.3, vol: "12.1Cr" },
-        { name: "Infosys", symbol: "INFY", price: 1480.00, change: 0.8, vol: "9.5Cr" },
-        { name: "ICICI Bank", symbol: "ICICIBANK", price: 1100.00, change: 1.1, vol: "10.2Cr" },
-        { name: "Bharti Airtel", symbol: "BHARTIARTL", price: 1750.00, change: 0.6, vol: "7.3Cr" }
-    ];
 }
 
 // Get upcoming IPOs from Indian API

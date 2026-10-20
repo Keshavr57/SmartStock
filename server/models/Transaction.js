@@ -1,36 +1,36 @@
 import mongoose from 'mongoose';
 
+// Append-only ledger of executed orders.
 const transactionSchema = new mongoose.Schema({
   userId: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
     required: true
   },
   symbol: {
     type: String,
     required: true
   },
-  name: {
+  name: String,
+  side: {
     type: String,
+    enum: ['BUY', 'SELL'],
     required: true
   },
-  type: {
+  orderType: {
     type: String,
-    enum: ['stock', 'crypto'],
-    required: true
-  },
-  action: {
-    type: String,
-    enum: ['buy', 'sell'],
-    required: true
+    enum: ['MARKET'],
+    default: 'MARKET'
   },
   quantity: {
     type: Number,
     required: true,
-    min: 0.000001
+    min: 1
   },
   price: {
     type: Number,
-    required: true
+    required: true,
+    min: 0
   },
   totalAmount: {
     type: Number,
@@ -40,32 +40,27 @@ const transactionSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  // Cash impact on the account: negative for buys, positive for sells.
   netAmount: {
     type: Number,
     required: true
   },
-  timestamp: {
+  // Profit realised by a SELL against the average buy price (fees included).
+  realizedPnL: {
+    type: Number,
+    default: null
+  },
+  balanceAfter: {
+    type: Number,
+    required: true
+  },
+  priceSource: String,
+  executedAt: {
     type: Date,
     default: Date.now
-  },
-  status: {
-    type: String,
-    enum: ['completed', 'pending', 'failed'],
-    default: 'completed'
-  },
-  riskLevel: {
-    type: String,
-    enum: ['Low', 'Medium', 'High'],
-    default: 'Medium'
-  },
-  aiRecommendation: {
-    type: String,
-    default: ''
   }
 });
 
-// Index for efficient queries
-transactionSchema.index({ userId: 1, timestamp: -1 });
-transactionSchema.index({ symbol: 1, timestamp: -1 });
+transactionSchema.index({ userId: 1, executedAt: -1 });
 
 export default mongoose.model('Transaction', transactionSchema);

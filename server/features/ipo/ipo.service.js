@@ -1,451 +1,279 @@
 import axios from 'axios';
-import * as cheerio from 'cheerio';
+import mongoose from 'mongoose';
+import { istDateKey } from '../../utils/marketHours.js';
 
-// Cache configuration
-const CACHE_TIMEOUT = 10 * 60 * 1000; // 10 minutes
-const cache = { ipos: null, timestamp: 0 };
+// IPO board built only from NSE's official public APIs (plus Yahoo for post-listing prices).
+// Shows: open issues, upcoming issues, and issues that closed within the last CLOSED_WINDOW_DAYS.
 
-// User agent for web scraping
-const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+const NSE_API = 'https://www.nseindia.com/api';
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+const CLOSED_WINDOW_DAYS = 30;
+const BOARD_TTL_MS = 10 * 60 * 1000;
+const EQUITY_TYPES = new Set(['EQ', 'BE', 'SME']); // public-past-issues also lists bonds/debt (DEBT, N*, Y*...)
+const MONTHS = { JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5, JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11 };
+
+let boardCache = { at: 0, board: null };
+const detailCache = new Map(); // symbol -> { at, ttl, detail }
+
+async function nseGet(path) {
+    const res = await axios.get(`${NSE_API}${path}`, {
+        timeout: 15000,
+        headers: { 'User-Agent': UA, Accept: 'application/json', Referer: 'https://www.nseindia.com/market-data/all-upcoming-issues-ipo' }
+    });
+    return res.data;
+}
+
+// NSE dates look like "19-Oct-2026" or "16-OCT-2026"; returns the IST calendar day as YYYY-MM-DD.
+export function parseNseDate(value) {
+    const m = /^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/.exec(String(value || '').trim());
+    if (!m) return null;
+    const month = MONTHS[m[2].toUpperCase()];
+    if (month === undefined) return null;
+    return `${m[3]}-${String(month + 1).padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+}
+
+// "Rs.665 to Rs.700" -> { min: 665, max: 700 }; "Rs.1000" -> { min: 1000, max: 1000 }
+export function parsePriceBand(value) {
+    const nums = String(value || '').replace(/,/g, '').match(/\d+(\.\d+)?/g)?.map(Number) || [];
+    if (nums.length === 0) return null;
+    return { min: Math.min(...nums), max: Math.max(...nums) };
+}
+
+const toNumber = (v) => {
+    const n = Number(String(v ?? '').replace(/,/g, '').trim());
+    return Number.isFinite(n) && String(v ?? '').trim() !== '' ? n : null;
+};
+const round = (n, d = 2) => (n == null ? null : Math.round(n * 10 ** d) / 10 ** d);
+const addDays = (dateKey, days) => {
+    const d = new Date(`${dateKey}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + days);
+    return d.toISOString().slice(0, 10);
+};
+
+export function statusFor(openDate, closeDate, todayKey) {
+    if (openDate && openDate > todayKey) return 'upcoming';
+    if (closeDate && closeDate < todayKey) return 'closed';
+    return 'open';
+}
+
+// Subscription-based demand reading. QIB demand is the strongest institutional signal.
+export function demandSignal(subscription) {
+    const total = subscription?.total;
+    if (total == null || total === 0) return null;
+    const qib = subscription.qib ?? 0;
+    if (total < 1) return { level: 'Undersubscribed', tone: 'negative' };
+    if (total >= 50 || qib >= 75) return { level: 'Very strong', tone: 'positive' };
+    if (total >= 10 || qib >= 20) return { level: 'Strong', tone: 'positive' };
+    if (total >= 3) return { level: 'Moderate', tone: 'neutral' };
+    return { level: 'Weak', tone: 'negative' };
+}
+
+function parseSubscription(activeCat) {
+    const rows = activeCat?.dataList || [];
+    const find = (pred) => toNumber(rows.find(pred)?.noOfTotalMeant);
+    const sub = {
+        qib: find(r => r.srNo === '1'),
+        nii: find(r => r.srNo === '2'),
+        retail: find(r => r.srNo === '3'),
+        employee: find(r => r.srNo === '4'),
+        total: find(r => r.category === 'Total')
+    };
+    for (const k of Object.keys(sub)) sub[k] = round(sub[k]);
+    sub.updatedAt = activeCat?.updateTime?.replace(/^Updated as on\s*/i, '') || null;
+    sub.sharesOffered = toNumber(rows.find(r => r.category === 'Total')?.noOfShareOffered) || null;
+    // NSE reports 0.00 before bidding opens and for SME issues it does not publish; treat as unknown, not "0x".
+    return sub.total ? sub : null;
+}
+
+function parseIssueInfo(dataList = []) {
+    const get = (title) => dataList.find(x => (x.title || '').trim().toLowerCase().startsWith(title.toLowerCase()))?.value?.replace(/^"|"$/g, '').trim() || null;
+    const bidLot = get('Bid Lot') || get('Lot Size'); // mainboard vs SME wording
+    const issueSizeText = get('Issue Size');
+    const sharesInText = issueSizeText?.match(/([\d,]{6,})\s*(?:equity\s*)?shares/i)?.[1];
+    return {
+        lotSize: bidLot ? toNumber(bidLot.match(/[\d,]+/)?.[0]) : null,
+        sharesFromText: sharesInText ? toNumber(sharesInText) : null,
+        faceValue: get('Face Value'),
+        issueType: get('Issue Type'),
+        issueSizeText,
+        leadManagers: get('Book Running Lead Managers'),
+        registrar: get('Name of the Registrar'),
+        rhpUrl: get('Red Herring Prospectus') || get('Prospectus'),
+        employeeDiscount: get('Discount')
+    };
+}
+
+async function getIpoDetail(symbol, series, status) {
+    const key = `${symbol}:${series}`;
+    const cached = detailCache.get(key);
+    if (cached && Date.now() - cached.at < cached.ttl) return cached.detail;
+    try {
+        const data = await nseGet(`/ipo-detail?symbol=${encodeURIComponent(symbol)}&series=${encodeURIComponent(series)}`);
+        const detail = { ...parseIssueInfo(data?.issueInfo?.dataList), subscription: parseSubscription(data?.activeCat) };
+        // Live issues change through the day; closed ones are final.
+        const ttl = status === 'open' ? 10 * 60 * 1000 : status === 'upcoming' ? 2 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+        detailCache.set(key, { at: Date.now(), ttl, detail });
+        return detail;
+    } catch (error) {
+        console.warn(`NSE IPO detail failed for ${symbol}: ${error.message}`);
+        return cached?.detail || null;
+    }
+}
+
+// Listing-day open and latest price for an IPO that has listed.
+async function getListingPerformance(symbol, issuePrice, listingDate) {
+    if (!issuePrice || !listingDate) return null;
+    try {
+        const res = await axios.get(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}.NS`, {
+            params: { range: '3mo', interval: '1d' },
+            headers: { 'User-Agent': UA },
+            timeout: 8000
+        });
+        const result = res.data?.chart?.result?.[0];
+        const quote = result?.indicators?.quote?.[0];
+        const times = result?.timestamp || [];
+        const idx = times.findIndex(t => istDateKey(new Date(t * 1000)) >= listingDate);
+        if (idx < 0) return null;
+        const listingOpen = quote.open[idx];
+        const current = result.meta?.regularMarketPrice;
+        if (!listingOpen || !current) return null;
+        return {
+            listingOpen: round(listingOpen),
+            listingGainPercent: round(((listingOpen - issuePrice) / issuePrice) * 100),
+            currentPrice: round(current),
+            currentReturnPercent: round(((current - issuePrice) / issuePrice) * 100)
+        };
+    } catch {
+        return null;
+    }
+}
+
+async function buildBoard() {
+    const todayKey = istDateKey(new Date());
+    const closedSince = addDays(todayKey, -CLOSED_WINDOW_DAYS);
+
+    const [currentRes, upcomingRes, pastRes] = await Promise.allSettled([
+        nseGet('/ipo-current-issue'),
+        nseGet('/all-upcoming-issues?category=ipo'),
+        nseGet('/public-past-issues')
+    ]);
+    if ([currentRes, upcomingRes, pastRes].every(r => r.status === 'rejected')) {
+        throw new Error(`NSE IPO APIs unavailable: ${currentRes.reason?.message}`);
+    }
+    const asList = (r) => (r.status === 'fulfilled' && Array.isArray(r.value) ? r.value : []);
+
+    const bySymbol = new Map();
+    const upsert = (symbol, patch) => bySymbol.set(symbol, { ...(bySymbol.get(symbol) || { symbol }), ...patch });
+
+    for (const x of asList(upcomingRes)) {
+        upsert(x.symbol, {
+            name: x.companyName, series: x.series, openDate: parseNseDate(x.issueStartDate), closeDate: parseNseDate(x.issueEndDate),
+            priceBand: parsePriceBand(x.issuePrice), sharesOffered: toNumber(x.issueSize)
+        });
+    }
+    for (const x of asList(currentRes)) {
+        upsert(x.symbol, {
+            name: x.companyName, series: x.series, openDate: parseNseDate(x.issueStartDate), closeDate: parseNseDate(x.issueEndDate),
+            priceBand: parsePriceBand(x.issuePrice), sharesOffered: toNumber(x.issueSize) ?? toNumber(x.noOfSharesOffered),
+            totalSubscription: round(toNumber(x.noOfTime))
+        });
+    }
+    for (const x of asList(pastRes)) {
+        if (!EQUITY_TYPES.has(String(x.securityType).trim())) continue;
+        const closeDate = parseNseDate(x.ipoEndDate);
+        if (!closeDate || closeDate < closedSince) continue;
+        const existing = bySymbol.get(x.symbol);
+        upsert(x.symbol, {
+            name: existing?.name || x.company,
+            series: existing?.series || (x.securityType === 'SME' ? 'SME' : 'EQ'),
+            openDate: existing?.openDate || parseNseDate(x.ipoStartDate),
+            closeDate: existing?.closeDate || closeDate,
+            priceBand: existing?.priceBand || parsePriceBand(x.priceRange),
+            issuePrice: toNumber(x.issuePrice),
+            listingDate: parseNseDate(x.listingDate)
+        });
+    }
+
+    const ipos = [...bySymbol.values()]
+        .map(ipo => ({ ...ipo, status: statusFor(ipo.openDate, ipo.closeDate, todayKey) }))
+        .filter(ipo => ipo.status !== 'closed' || (ipo.closeDate && ipo.closeDate >= closedSince));
+
+    const enriched = await Promise.all(ipos.map(async (ipo) => {
+        const series = ipo.series === 'SME' ? 'SME' : 'EQ';
+        const detail = await getIpoDetail(ipo.symbol, series, ipo.status);
+        const subscription = detail?.subscription || (ipo.totalSubscription ? { total: ipo.totalSubscription } : null);
+        const upper = ipo.priceBand?.max ?? null;
+        const sharesOffered = ipo.sharesOffered ?? subscription?.sharesOffered ?? detail?.sharesFromText ?? null;
+        const listed = ipo.listingDate && ipo.listingDate <= todayKey;
+        const listing = listed ? await getListingPerformance(ipo.symbol, ipo.issuePrice || upper, ipo.listingDate) : null;
+        return {
+            symbol: ipo.symbol,
+            name: ipo.name,
+            type: series === 'SME' ? 'SME' : 'Mainboard',
+            status: ipo.status,
+            openDate: ipo.openDate,
+            closeDate: ipo.closeDate,
+            listingDate: ipo.listingDate || null,
+            listed: Boolean(listed),
+            priceBand: ipo.priceBand,
+            issuePrice: ipo.issuePrice ?? null,
+            lotSize: detail?.lotSize ?? null,
+            minInvestment: detail?.lotSize && upper ? detail.lotSize * upper : null,
+            sharesOffered,
+            issueSizeCr: sharesOffered && upper ? round((sharesOffered * upper) / 1e7) : null,
+            faceValue: detail?.faceValue ?? null,
+            issueType: detail?.issueType ?? null,
+            leadManagers: detail?.leadManagers ?? null,
+            registrar: detail?.registrar ?? null,
+            rhpUrl: detail?.rhpUrl ?? null,
+            subscription,
+            demand: demandSignal(subscription),
+            listing
+        };
+    }));
+
+    const order = { open: 0, upcoming: 1, closed: 2 };
+    enriched.sort((a, b) => order[a.status] - order[b.status]
+        || (a.status === 'closed' ? (b.closeDate || '').localeCompare(a.closeDate || '') : (a.openDate || '').localeCompare(b.openDate || '')));
+
+    return {
+        ipos: enriched,
+        counts: {
+            open: enriched.filter(i => i.status === 'open').length,
+            upcoming: enriched.filter(i => i.status === 'upcoming').length,
+            closed: enriched.filter(i => i.status === 'closed').length
+        },
+        closedWindowDays: CLOSED_WINDOW_DAYS,
+        source: 'NSE India',
+        lastUpdated: new Date().toISOString()
+    };
+}
+
+const snapshots = () => mongoose.connection.db.collection('ipo_snapshots');
 
 /**
- * Main function to get current IPOs from multiple sources
+ * Returns the IPO board. Live from NSE (cached 10 min). If NSE is unreachable (it sometimes blocks
+ * cloud IPs), serves the last good snapshot saved in MongoDB and marks it as stale.
  */
-async function getCurrentIPOs() {
+export async function getIpoBoard({ forceRefresh = false } = {}) {
+    if (!forceRefresh && boardCache.board && Date.now() - boardCache.at < BOARD_TTL_MS) return boardCache.board;
     try {
-        // Check cache first
-        if (cache.ipos && (Date.now() - cache.timestamp) < CACHE_TIMEOUT) {
-            console.log('⚡ Using cached IPO data');
-            return cache.ipos;
+        const board = await buildBoard();
+        boardCache = { at: Date.now(), board };
+        if (mongoose.connection.readyState === 1) {
+            snapshots().updateOne({ _id: 'latest' }, { $set: { board, savedAt: new Date() } }, { upsert: true })
+                .catch(err => console.warn('Could not save IPO snapshot:', err.message));
         }
-
-        console.log('🔥 Fetching LIVE IPO data from sources...');
-        
-        let allIPOs = [];
-
-        // Source 1: Chittorgarh (Most reliable for Indian IPOs)
-        try {
-            const chittorgarhIPOs = await fetchFromChittorgarh();
-            if (chittorgarhIPOs && chittorgarhIPOs.length > 0) {
-                console.log(`✅ Chittorgarh: ${chittorgarhIPOs.length} IPOs`);
-                allIPOs = [...chittorgarhIPOs];
-            }
-        } catch (error) {
-            console.log('Chittorgarh failed:', error.message);
-        }
-
-        // Source 2: IPOWatch
-        try {
-            const ipoWatchIPOs = await fetchFromIPOWatch();
-            if (ipoWatchIPOs && ipoWatchIPOs.length > 0) {
-                console.log(`✅ IPOWatch: ${ipoWatchIPOs.length} IPOs`);
-                // Merge without duplicates
-                ipoWatchIPOs.forEach(ipo => {
-                    if (!allIPOs.some(existing => isSameIPO(existing, ipo))) {
-                        allIPOs.push(ipo);
-                    }
-                });
-            }
-        } catch (error) {
-            console.log('IPOWatch failed:', error.message);
-        }
-
-        // Source 3: Investing.com India
-        try {
-            const investingIPOs = await fetchFromInvesting();
-            if (investingIPOs && investingIPOs.length > 0) {
-                console.log(`✅ Investing.com: ${investingIPOs.length} IPOs`);
-                investingIPOs.forEach(ipo => {
-                    if (!allIPOs.some(existing => isSameIPO(existing, ipo))) {
-                        allIPOs.push(ipo);
-                    }
-                });
-            }
-        } catch (error) {
-            console.log('⚠️ Investing.com failed:', error.message);
-        }
-
-        // If all sources fail, throw error
-        if (allIPOs.length === 0) {
-            throw new Error('No IPO data available from any source');
-        }
-
-        // Add risk assessment to each IPO
-        allIPOs = allIPOs.map(ipo => ({
-            ...ipo,
-            ...calculateRiskAssessment(ipo)
-        }));
-
-        // Sort by date (open IPOs first, then upcoming, then closed)
-        allIPOs.sort((a, b) => {
-            const statusOrder = { 'Open': 1, 'Upcoming': 2, 'Closed': 3, 'Listed': 4 };
-            return (statusOrder[a.status] || 5) - (statusOrder[b.status] || 5);
-        });
-
-        console.log(`✅ Total IPOs fetched: ${allIPOs.length}`);
-
-        // Cache the results
-        cache.ipos = allIPOs;
-        cache.timestamp = Date.now();
-
-        return allIPOs;
-
+        return board;
     } catch (error) {
-        console.error('❌ Error fetching IPO data:', error.message);
-        
-        // Return cached data if available, even if expired
-        if (cache.ipos) {
-            console.log('⚠️ Returning stale cached data');
-            return cache.ipos;
+        console.error('IPO board refresh failed:', error.message);
+        if (boardCache.board) return { ...boardCache.board, stale: true };
+        if (mongoose.connection.readyState === 1) {
+            const snap = await snapshots().findOne({ _id: 'latest' }).catch(() => null);
+            if (snap?.board) return { ...snap.board, stale: true };
         }
-        
         throw error;
     }
 }
 
-/**
- * Fetch IPOs from Chittorgarh.com
- */
-async function fetchFromChittorgarh() {
-    const response = await axios.get('https://www.chittorgarh.com/ipo/ipo_dashboard.asp', {
-        headers: { 'User-Agent': USER_AGENT },
-        timeout: 10000
-    });
-
-    const $ = cheerio.load(response.data);
-    const ipos = [];
-
-    // Parse upcoming IPOs table
-    $('table.table').each((_, table) => {
-        $(table).find('tr').each((index, row) => {
-            if (index === 0) return; // Skip header
-
-            const cells = $(row).find('td');
-            if (cells.length < 4) return;
-
-            const name = $(cells[0]).text().trim();
-            const openDate = $(cells[1]).text().trim();
-            const closeDate = $(cells[2]).text().trim();
-            const price = $(cells[3]).text().trim();
-            const issueSize = $(cells[4])?.text().trim() || 'TBA';
-            const type = $(cells[5])?.text().trim() || 'Mainboard';
-
-            if (name && name.length > 3) {
-                ipos.push({
-                    name,
-                    symbol: extractSymbol(name),
-                    openDate: formatDate(openDate),
-                    closeDate: formatDate(closeDate),
-                    priceBand: price || 'TBA',
-                    issueSize: issueSize || 'TBA',
-                    lotSize: 'TBA',
-                    status: determineStatus(openDate, closeDate),
-                    type: type.includes('SME') ? 'SME' : 'Mainboard',
-                    sector: 'Unknown',
-                    listingDate: 'TBA',
-                    gmp: 'N/A',
-                    subscription: 'N/A',
-                    source: 'Chittorgarh'
-                });
-            }
-        });
-    });
-
-    return ipos;
-}
-
-/**
- * Fetch IPOs from IPOWatch.in
- */
-async function fetchFromIPOWatch() {
-    const response = await axios.get('https://ipowatch.in/upcoming-ipo-calendar-ipo-list/', {
-        headers: { 'User-Agent': USER_AGENT },
-        timeout: 10000
-    });
-
-    const $ = cheerio.load(response.data);
-    const ipos = [];
-
-    $('table tbody tr').each((_, row) => {
-        const cells = $(row).find('td');
-        if (cells.length < 4) return;
-
-        const name = $(cells[0]).text().trim();
-        const dates = $(cells[1]).text().trim();
-        const price = $(cells[2]).text().trim();
-        const status = $(cells[3]).text().trim();
-
-        if (name && name.length > 3 && !name.includes('Company')) {
-            const [openDate, closeDate] = extractDateRange(dates);
-            
-            ipos.push({
-                name,
-                symbol: extractSymbol(name),
-                openDate,
-                closeDate,
-                priceBand: price || 'TBA',
-                issueSize: 'TBA',
-                lotSize: 'TBA',
-                status: mapStatus(status),
-                type: 'Mainboard',
-                sector: 'Unknown',
-                listingDate: 'TBA',
-                gmp: 'N/A',
-                subscription: 'N/A',
-                source: 'IPOWatch'
-            });
-        }
-    });
-
-    return ipos;
-}
-
-/**
- * Fetch IPOs from Investing.com India
- */
-async function fetchFromInvesting() {
-    try {
-        const response = await axios.get('https://in.investing.com/equities/india-ipos', {
-            headers: { 'User-Agent': USER_AGENT },
-            timeout: 10000
-        });
-
-        const $ = cheerio.load(response.data);
-        const ipos = [];
-
-        $('table.genTbl tr').each((index, row) => {
-            if (index === 0) return; // Skip header
-
-            const cells = $(row).find('td');
-            if (cells.length < 3) return;
-
-            const name = $(cells[0]).text().trim();
-            const dates = $(cells[1]).text().trim();
-            const price = $(cells[2]).text().trim();
-
-            if (name && name.length > 3) {
-                const [openDate, closeDate] = extractDateRange(dates);
-                
-                ipos.push({
-                    name,
-                    symbol: extractSymbol(name),
-                    openDate,
-                    closeDate,
-                    priceBand: price || 'TBA',
-                    issueSize: 'TBA',
-                    lotSize: 'TBA',
-                    status: determineStatus(openDate, closeDate),
-                    type: 'Mainboard',
-                    sector: 'Unknown',
-                    listingDate: 'TBA',
-                    gmp: 'N/A',
-                    subscription: 'N/A',
-                    source: 'Investing.com'
-                });
-            }
-        });
-
-        return ipos;
-    } catch (error) {
-        console.log('⚠️ Investing.com scraping failed:', error.message);
-        return [];
-    }
-}
-
-/**
- * Helper: Check if two IPOs are the same
- */
-function isSameIPO(ipo1, ipo2) {
-    const name1 = ipo1.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const name2 = ipo2.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-    return name1 === name2 || name1.includes(name2) || name2.includes(name1);
-}
-
-/**
- * Helper: Extract symbol from company name
- */
-function extractSymbol(name) {
-    return name
-        .replace(/Limited|Ltd|Private|Pvt|IPO/gi, '')
-        .replace(/[^A-Z]/g, '')
-        .substring(0, 10)
-        .toUpperCase();
-}
-
-/**
- * Helper: Format date string
- */
-function formatDate(dateStr) {
-    if (!dateStr || dateStr === 'TBA') return 'TBA';
-    
-    // Try to parse and format consistently
-    const cleaned = dateStr.trim();
-    if (cleaned.match(/^\d{1,2}[-\/]\d{1,2}[-\/]\d{4}$/)) {
-        return cleaned;
-    }
-    
-    return cleaned;
-}
-
-/**
- * Helper: Extract date range from string
- */
-function extractDateRange(dateStr) {
-    if (!dateStr) return ['TBA', 'TBA'];
-    
-    // Pattern: "DD MMM - DD MMM YYYY" or "DD-DD MMM YYYY"
-    const rangeMatch = dateStr.match(/(\d{1,2})\s*(\w+)?\s*-\s*(\d{1,2})\s*(\w+)\s*(\d{4})/);
-    if (rangeMatch) {
-        const [, day1, month1, day2, month2, year] = rangeMatch;
-        const m1 = month1 || month2;
-        return [
-            `${day1} ${m1} ${year}`,
-            `${day2} ${month2} ${year}`
-        ];
-    }
-    
-    return [dateStr, dateStr];
-}
-
-/**
- * Helper: Determine IPO status based on dates
- */
-function determineStatus(openDate, closeDate) {
-    if (openDate === 'TBA' || closeDate === 'TBA') return 'Upcoming';
-    
-    try {
-        const today = new Date();
-        const open = new Date(openDate);
-        const close = new Date(closeDate);
-        
-        if (today >= open && today <= close) return 'Open';
-        if (today < open) return 'Upcoming';
-        if (today > close) return 'Closed';
-    } catch (error) {
-        // Date parsing failed
-    }
-    
-    return 'Upcoming';
-}
-
-/**
- * Helper: Map status string
- */
-function mapStatus(status) {
-    const s = status.toLowerCase();
-    if (s.includes('open') || s.includes('live')) return 'Open';
-    if (s.includes('closed') || s.includes('completed')) return 'Closed';
-    if (s.includes('upcoming') || s.includes('forthcoming')) return 'Upcoming';
-    if (s.includes('listed')) return 'Listed';
-    return 'Upcoming';
-}
-
-/**
- * Calculate risk assessment for IPO
- */
-function calculateRiskAssessment(ipo) {
-    let riskScore = 0;
-    const riskFactors = [];
-    
-    // Factor 1: Type
-    if (ipo.type === 'SME') {
-        riskScore += 1.5;
-        riskFactors.push('SME segment (higher volatility)');
-    } else {
-        riskScore += 0.5;
-    }
-    
-    // Factor 2: Issue size
-    const issueSize = extractIssueSize(ipo.issueSize);
-    if (issueSize > 0 && issueSize < 100) {
-        riskScore += 1;
-        riskFactors.push('Small issue size');
-    } else if (issueSize >= 1000) {
-        riskScore += 0.5;
-        riskFactors.push('Large issue size');
-    }
-    
-    // Factor 3: Price band availability
-    if (ipo.priceBand === 'TBA') {
-        riskScore += 0.5;
-        riskFactors.push('Price not yet announced');
-    }
-    
-    // Determine risk level
-    let riskLevel, riskIcon, riskColor;
-    if (riskScore <= 1) {
-        riskLevel = 'Low';
-        riskIcon = '🟢';
-        riskColor = 'green';
-    } else if (riskScore <= 2) {
-        riskLevel = 'Medium';
-        riskIcon = '🟡';
-        riskColor = 'yellow';
-    } else {
-        riskLevel = 'High';
-        riskIcon = '🔴';
-        riskColor = 'red';
-    }
-    
-    return {
-        riskLevel,
-        riskIcon,
-        riskColor,
-        riskScore: Math.round(riskScore * 10) / 10,
-        riskFactors: riskFactors.length > 0 ? riskFactors : ['Standard market risks']
-    };
-}
-
-/**
- * Helper: Extract numeric issue size
- */
-function extractIssueSize(sizeStr) {
-    if (!sizeStr || sizeStr === 'TBA') return 0;
-    
-    const numMatch = sizeStr.match(/[\d,]+\.?\d*/);
-    if (!numMatch) return 0;
-    
-    const num = parseFloat(numMatch[0].replace(/,/g, ''));
-    
-    if (sizeStr.toLowerCase().includes('cr')) return num;
-    if (sizeStr.toLowerCase().includes('lakh')) return num / 100;
-    
-    return num;
-}
-
-/**
- * Clear cache
- */
-function clearCache() {
-    cache.ipos = null;
-    cache.timestamp = 0;
-    console.log('🗑️ IPO cache cleared');
-}
-
-/**
- * Fast IPO data fetch (uses cache aggressively)
- */
-async function fetchFastIPOData() {
-    return await getCurrentIPOs();
-}
-
-/**
- * Background refresh
- */
-async function refreshIPOsInBackground() {
-    try {
-        console.log('🔄 Background IPO refresh started...');
-        clearCache();
-        await getCurrentIPOs();
-        console.log('✅ Background IPO refresh completed');
-    } catch (error) {
-        console.error('❌ Background refresh failed:', error.message);
-    }
-}
-
-export default {
-    getCurrentIPOs,
-    refreshIPOsInBackground,
-    fetchFastIPOData,
-    clearCache
-};
+export default { getIpoBoard };

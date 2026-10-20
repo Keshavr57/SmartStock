@@ -6,8 +6,10 @@ let connectionPromise = null;
 const connectDB = async () => {
   try {
     // Prevent multiple simultaneous connection attempts
+    // connectDB never rejects (failures are retried below), so swallow the in-flight attempt's error here;
+    // returning the raw promise caused an unhandled rejection that crashed the process.
     if (isConnecting && connectionPromise) {
-      return connectionPromise;
+      return connectionPromise.then(() => {}, () => {});
     }
 
     // If already connected, return immediately

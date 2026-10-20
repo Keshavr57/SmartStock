@@ -1,9 +1,11 @@
 import express from 'express';
 import marketService from './market.service.js';
 import chartService from '../stocks/chart.service.js';
-import { getAllIndianStocks, getStocksByCategory, searchStocks, POPULAR_STOCKS, STOCK_METADATA } from '../stocks/stocksList.js';
+import { getAllIndianStocks, getStocksByCategory, POPULAR_STOCKS, STOCK_METADATA } from '../stocks/stocksList.js';
+import { searchUniverse } from '../stocks/universe.service.js';
 import { getMarketHistory } from './market.controller.js';
-import { getTopMovers, getMarketStatus } from './topMovers.service.js';
+import { getTopMovers } from './topMovers.service.js';
+import { getMarketStatus } from '../../utils/marketHours.js';
 
 const router = express.Router();
 
@@ -45,28 +47,15 @@ router.get('/stocks/category/:category', async (req, res) => {
     }
 });
 
-// Search stocks
+// Search every NSE-listed equity by ticker, company name or common alias (e.g. "zomato" -> ETERNAL).
 router.get('/stocks/search', async (req, res) => {
-    try {
-        const { q } = req.query;
-        if (!q || q.length < 2) {
-            return res.status(400).json({ status: "error", message: "Search query must be at least 2 characters" });
-        }
-        
-        const stocks = searchStocks(q);
-        res.json({ 
-            status: "success", 
-            query: q,
-            count: stocks.length,
-            data: stocks.slice(0, 50).map(symbol => ({ // Limit to 50 results
-                symbol,
-                name: STOCK_METADATA[symbol]?.name || symbol.replace('.NS', ''),
-                sector: STOCK_METADATA[symbol]?.sector || 'Unknown'
-            }))
-        });
-    } catch (error) {
-        res.status(500).json({ status: "error", message: "Failed to search stocks" });
+    const q = String(req.query.q || '').trim().slice(0, 50);
+    if (q.length < 1) {
+        return res.status(400).json({ status: "error", message: "Search query is required" });
     }
+    const limit = Math.min(Number(req.query.limit) || 10, 25);
+    const data = await searchUniverse(q, limit);
+    res.json({ status: "success", query: q, count: data.length, data });
 });
 
 // Get popular stocks
@@ -95,171 +84,47 @@ router.get('/landing-data', async (req, res) => {
     }
 });
 
+// Indian benchmarks only: the app trades NSE stocks, so foreign/crypto benchmarks are noise here.
+const MARKET_CHARTS = [
+    { key: 'nifty', name: 'NIFTY 50', symbol: '^NSEI', color: '#2563eb' },
+    { key: 'banknifty', name: 'NIFTY BANK', symbol: '^NSEBANK', color: '#10b981' },
+    { key: 'sensex', name: 'BSE SENSEX', symbol: '^BSESN', color: '#f59e0b' },
+    { key: 'niftyit', name: 'NIFTY IT', symbol: '^CNXIT', color: '#8b5cf6' }
+];
+
+// Last 7 daily closes for the headline indices. Unavailable series come back empty, never synthesised.
 router.get('/charts', async (req, res) => {
-    try {
-        console.log("📊 Fetching market charts data...");
-        
-        // Generate fallback chart data
-        const generateFallbackData = (basePrice, symbol) => {
-            const data = [];
-            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-            
-            for (let i = 0; i < 7; i++) {
-                const variation = (Math.random() - 0.5) * 0.02; // ±1% variation
-                const price = Math.round(basePrice * (1 + variation));
-                data.push({
-                    name: days[i],
-                    value: price,
-                    change: variation * 100
-                });
-            }
-            return data;
+    const results = await Promise.allSettled(
+        MARKET_CHARTS.map(c => chartService.getStockChart(c.symbol, '1mo', '1d'))
+    );
+
+    const charts = {};
+    MARKET_CHARTS.forEach((chart, i) => {
+        const value = results[i].status === 'fulfilled' ? results[i].value : null;
+        const ok = value && !value.error && value.candles?.length > 1;
+        // Daily % change from the last two closes (the chart's own change spans the whole month).
+        const [prev, last] = ok ? value.candles.slice(-2) : [];
+        const dailyChange = ok ? Math.round(((last.close - prev.close) / prev.close) * 10000) / 100 : null;
+        charts[chart.key] = {
+            name: chart.name,
+            symbol: chart.symbol,
+            color: chart.color,
+            currentPrice: ok ? value.currentPrice : null,
+            change: dailyChange,
+            available: Boolean(ok),
+            data: ok ? value.candles.slice(-7).map(candle => ({
+                name: new Date(candle.time).toLocaleDateString('en-US', { weekday: 'short' }),
+                value: Math.round(candle.close)
+            })) : []
         };
+    });
 
-        // Try to get real data, fallback to mock data
-        const [niftyData, sp500Data, btcData, sensexData] = await Promise.allSettled([
-            chartService.getStockChart('^NSEI', '7d'),
-            chartService.getStockChart('^GSPC', '7d'),
-            chartService.getCryptoChart('BTC', '7d'),
-            chartService.getStockChart('^BSESN', '7d')
-        ]);
-
-        const chartsData = {
-            success: true,
-            charts: {
-                nifty: {
-                    name: 'NIFTY 50',
-                    symbol: '^NSEI',
-                    currentPrice: niftyData.status === 'fulfilled' && niftyData.value.currentPrice ? 
-                        niftyData.value.currentPrice : 24150,
-                    change: niftyData.status === 'fulfilled' && niftyData.value.changePercent ? 
-                        niftyData.value.changePercent : 0.5,
-                    color: '#2563eb',
-                    data: niftyData.status === 'fulfilled' && niftyData.value.candles?.length > 0 ? 
-                        niftyData.value.candles.slice(-7).map((candle, index) => ({
-                            name: new Date(candle.time).toLocaleDateString('en-US', { weekday: 'short' }),
-                            value: Math.round(candle.close),
-                            change: niftyData.value.changePercent
-                        })) : generateFallbackData(24150, 'NIFTY')
-                },
-                sp500: {
-                    name: 'S&P 500',
-                    symbol: '^GSPC',
-                    currentPrice: sp500Data.status === 'fulfilled' && sp500Data.value.currentPrice ? 
-                        sp500Data.value.currentPrice : 5900,
-                    change: sp500Data.status === 'fulfilled' && sp500Data.value.changePercent ? 
-                        sp500Data.value.changePercent : 0.3,
-                    color: '#10b981',
-                    data: sp500Data.status === 'fulfilled' && sp500Data.value.candles?.length > 0 ? 
-                        sp500Data.value.candles.slice(-7).map((candle, index) => ({
-                            name: new Date(candle.time).toLocaleDateString('en-US', { weekday: 'short' }),
-                            value: Math.round(candle.close),
-                            change: sp500Data.value.changePercent
-                        })) : generateFallbackData(5900, 'SP500')
-                },
-                sensex: {
-                    name: 'BSE Sensex',
-                    symbol: '^BSESN',
-                    currentPrice: sensexData.status === 'fulfilled' && sensexData.value.currentPrice ? 
-                        sensexData.value.currentPrice : 79500,
-                    change: sensexData.status === 'fulfilled' && sensexData.value.changePercent ? 
-                        sensexData.value.changePercent : 0.8,
-                    color: '#f59e0b',
-                    data: sensexData.status === 'fulfilled' && sensexData.value.candles?.length > 0 ? 
-                        sensexData.value.candles.slice(-7).map((candle, index) => ({
-                            name: new Date(candle.time).toLocaleDateString('en-US', { weekday: 'short' }),
-                            value: Math.round(candle.close),
-                            change: sensexData.value.changePercent
-                        })) : generateFallbackData(79500, 'SENSEX')
-                },
-                btc: {
-                    name: 'Bitcoin',
-                    symbol: 'BTC',
-                    currentPrice: btcData.status === 'fulfilled' && btcData.value.currentPrice ? 
-                        btcData.value.currentPrice : 95000,
-                    change: btcData.status === 'fulfilled' && btcData.value.changePercent ? 
-                        btcData.value.changePercent : 1.2,
-                    color: '#f59e0b',
-                    data: btcData.status === 'fulfilled' && btcData.value.candles?.length > 0 ? 
-                        btcData.value.candles.slice(-7).map((candle, index) => ({
-                            name: new Date(candle.time).toLocaleDateString('en-US', { weekday: 'short' }),
-                            value: Math.round(candle.close),
-                            change: btcData.value.changePercent
-                        })) : generateFallbackData(95000, 'BTC')
-                }
-            }
-        };
-
-        console.log("✅ Market charts data prepared with fallbacks");
-        res.json({
-            status: 'success',
-            ...chartsData
-        });
-
-    } catch (error) {
-        console.error("❌ Market charts error:", error.message);
-        
-        // Return complete fallback data
-        const generateFallbackData = (basePrice) => {
-            const data = [];
-            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-            
-            for (let i = 0; i < 7; i++) {
-                const variation = (Math.random() - 0.5) * 0.02;
-                const price = Math.round(basePrice * (1 + variation));
-                data.push({
-                    name: days[i],
-                    value: price,
-                    change: variation * 100
-                });
-            }
-            return data;
-        };
-
-        res.json({
-            status: 'success',
-            success: true,
-            charts: {
-                nifty: {
-                    name: 'NIFTY 50',
-                    symbol: '^NSEI',
-                    currentPrice: 24150,
-                    change: 0.5,
-                    color: '#2563eb',
-                    data: generateFallbackData(24150)
-                },
-                sp500: {
-                    name: 'S&P 500',
-                    symbol: '^GSPC',
-                    currentPrice: 5900,
-                    change: 0.3,
-                    color: '#10b981',
-                    data: generateFallbackData(5900)
-                },
-                sensex: {
-                    name: 'BSE Sensex',
-                    symbol: '^BSESN',
-                    currentPrice: 79500,
-                    change: 0.8,
-                    color: '#f59e0b',
-                    data: generateFallbackData(79500)
-                },
-                btc: {
-                    name: 'Bitcoin',
-                    symbol: 'BTC',
-                    currentPrice: 95000,
-                    change: 1.2,
-                    color: '#f59e0b',
-                    data: generateFallbackData(95000)
-                }
-            }
-        });
-    }
+    res.json({ status: 'success', success: true, charts });
 });
 
 router.get('/history', getMarketHistory);
 
-// Real-time top movers (gainers and losers) - With fallback for now
+// Real-time top movers (gainers and losers); empty lists when no source answers
 router.get('/top-movers', async (req, res) => {
     try {
         console.log('🔥 Fetching top movers (trying real APIs first)...');
@@ -268,7 +133,7 @@ router.get('/top-movers', async (req, res) => {
             status: 'success',
             data: data,
             timestamp: new Date().toISOString(),
-            source: 'fallback_data_until_live_api_found'
+            source: data.unavailable ? 'unavailable' : 'live'
         });
     } catch (error) {
         console.error('❌ Top movers API error:', error.message);

@@ -75,69 +75,15 @@ export const fetchYahooHistory = async (symbol, range = "1mo") => {
 
     const result = response.data?.chart?.result?.[0];
     if (!result || !result.timestamp || !result.indicators?.quote?.[0]) {
-      return generateFallbackHistoryData(symbol);
+      return [];
     }
 
     const quotes = result.indicators.quote[0];
-    return result.timestamp.map((time, index) => ({
-      date: new Date(time * 1000),
-      price: quotes.close[index] || 0
-    }));
+    return result.timestamp
+      .map((time, index) => ({ date: new Date(time * 1000), price: quotes.close[index] }))
+      .filter(point => point.price != null);
   } catch (err) {
-    return generateFallbackHistoryData(symbol);
+    console.warn(`Yahoo history failed for ${symbol}: ${err.message}`);
+    return [];
   }
-};
-
-// Generate realistic fallback historical data
-const generateFallbackHistoryData = (symbol) => {
-  const basePrice = getBasePriceForSymbol(symbol);
-  const data = [];
-  const now = new Date();
-  
-  // Generate 30 days of data
-  for (let i = 29; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
-    
-    // Generate realistic price movement (±2% daily volatility)
-    const volatility = 0.02;
-    const randomChange = (Math.random() - 0.5) * 2 * volatility;
-    const price = basePrice * (1 + randomChange * (i / 30)); // Slight trend over time
-    
-    data.push({
-      date: date,
-      price: Math.round(price * 100) / 100
-    });
-  }
-  
-  return data;
-};
-
-// Get realistic base prices for common symbols
-const getBasePriceForSymbol = (symbol) => {
-  const basePrices = {
-    'RELIANCE.NS': 1458,
-    'TCS.NS': 3197,
-    'INFY.NS': 1608,
-    'HDFCBANK.NS': 925,
-    'ICICIBANK.NS': 1285,
-    'ITC.NS': 485,
-    'HINDUNILVR.NS': 2385,
-    'SBIN.NS': 1030,
-    'BHARTIARTL.NS': 1685,
-    'KOTAKBANK.NS': 1785,
-    'LT.NS': 3685,
-    'ASIANPAINT.NS': 2420,
-    'MARUTI.NS': 11200,
-    'TITAN.NS': 3280,
-    'WIPRO.NS': 295,
-    'TECHM.NS': 1680,
-    'ULTRACEMCO.NS': 11800,
-    'NESTLEIND.NS': 2180,
-    'POWERGRID.NS': 285,
-    'NTPC.NS': 285,
-    'BAJFINANCE.NS': 945,
-  };
-  
-  return basePrices[symbol] || 1000;
 };

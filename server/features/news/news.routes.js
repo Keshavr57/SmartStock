@@ -4,7 +4,8 @@ import {
     getTrendingNews, 
     getNewsBySentiment, 
     getNewsByImpact, 
-    getNewsAnalytics 
+    getNewsAnalytics,
+    getSymbolNews
 } from './news.controller.js';
 
 // GET /api/news/trending - All news with sentiment analysis
@@ -15,6 +16,9 @@ router.get('/sentiment/:sentiment', getNewsBySentiment);
 
 // GET /api/news/impact/:impact - Filter by market impact (high/medium/low)
 router.get('/impact/:impact', getNewsByImpact);
+
+// GET /api/news/symbol/:symbol - Stored headlines about one stock
+router.get('/symbol/:symbol', getSymbolNews);
 
 // GET /api/news/analytics - News analytics and statistics
 router.get('/analytics', getNewsAnalytics);

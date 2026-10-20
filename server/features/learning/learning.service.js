@@ -1,10 +1,4 @@
-import axios from 'axios';
 import { COMPREHENSIVE_LESSONS, LEARNING_CATEGORIES, DIFFICULTY_LEVELS } from './lessons.data.js';
-
-// Simple config - no class
-const config = {
-    aiServiceUrl: process.env.AI_SERVICE_URL || 'https://smartstock-ai-service.onrender.com'
-};
 
 // Get all lessons organized by difficulty
 function getAllLessons() {
@@ -58,59 +52,26 @@ function getLearningPath(userLevel = 'beginner') {
     return paths[userLevel] || paths.beginner;
 }
 
-// Get detailed lesson content with AI enhancement
+// Lesson content is curated Markdown (deterministic and fast). The AI service indexes the same
+// content for retrieval, so answers in the AI Advisor stay consistent with what lessons teach.
 async function getLessonContent(lessonId) {
     const lesson = findLessonById(lessonId);
     if (!lesson) {
         throw new Error("Lesson not found");
     }
-
-    try {
-        // Try to get AI-enhanced content
-        const response = await axios.post(`${config.aiServiceUrl}/process`, {
-            message: `${lesson.prompt} 
-
-            Structure your response as follows:
-            1. Brief introduction (2-3 sentences)
-            2. Main concepts with examples
-            3. Practical tips for Indian investors
-            4. Common mistakes to avoid
-            
-            Keep it engaging and under 300 words. Use bullet points where appropriate.`,
-            user_id: "comprehensive_learning"
-        }, { timeout: 8000 });
-
-        return {
-            id: lesson.id,
-            title: lesson.title,
-            difficulty: lesson.difficulty,
-            duration: lesson.duration,
-            category: lesson.category,
-            description: lesson.description,
-            content: response.data.answer,
-            keyPoints: lesson.keyPoints,
-            isAiGenerated: true,
-            nextLessons: getNextLessons(lessonId),
-            relatedLessons: getRelatedLessons(lessonId)
-        };
-
-    } catch (error) {
-        console.warn(`⚠️ AI Service unavailable for lesson ${lessonId}. Using fallback content.`);
-        
-        return {
-            id: lesson.id,
-            title: lesson.title,
-            difficulty: lesson.difficulty,
-            duration: lesson.duration,
-            category: lesson.category,
-            description: lesson.description,
-            content: generateGenericContent(lesson),
-            keyPoints: lesson.keyPoints,
-            isAiGenerated: false,
-            nextLessons: getNextLessons(lessonId),
-            relatedLessons: getRelatedLessons(lessonId)
-        };
-    }
+    return {
+        id: lesson.id,
+        title: lesson.title,
+        difficulty: lesson.difficulty,
+        duration: lesson.duration,
+        category: lesson.category,
+        description: lesson.description,
+        content: generateGenericContent(lesson),
+        keyPoints: lesson.keyPoints,
+        isAiGenerated: false,
+        nextLessons: getNextLessons(lessonId),
+        relatedLessons: getRelatedLessons(lessonId)
+    };
 }
 
 // Find lesson by ID across all difficulty levels
@@ -365,7 +326,7 @@ You want to buy Reliance at ₹2,500:
 2. Order reaches NSE computer
 3. NSE matches with someone selling at ₹2,500
 4. Trade executed in milliseconds!
-5. Shares credited to your demat account in 2 days (T+2)
+5. Shares credited to your demat account the next trading day (T+1)
 
 ## Understanding Market Indices
 
@@ -458,14 +419,13 @@ You can't directly trade on NSE/BSE. You need a broker (like Zerodha, Groww, Ups
 
 **Worst Time**: First and last 15 minutes (too volatile for beginners)
 
-## Settlement Cycle: T+2
+## Settlement Cycle: T+1
 
-When you buy shares:
+Indian equities settle on T+1 (fully in place since January 2023):
 - **T (Trade Day)**: You buy on Monday
-- **T+1**: Tuesday (processing)
-- **T+2**: Wednesday (shares in your demat account)
+- **T+1**: Tuesday, shares are credited to your demat account and the seller receives the money
 
-You can sell only after shares reach your demat account!
+Shares bought today can be sold before they reach your demat (BTST), but that carries a risk of short delivery, so beginners should wait for the credit.
 
 ## Real-Life Trading Example
 
@@ -504,7 +464,7 @@ A: Rare, but trading halts until systems restore. Your money is safe.
 • Trading hours: 9:15 AM - 3:30 PM, Monday-Friday
 • SEBI regulates and protects investors
 • Need a broker to trade (can't trade directly)
-• Shares credited in T+2 days
+• Shares credited the next trading day (T+1)
 • Sensex and Nifty show overall market health
 
 ## Your Action Steps
@@ -513,7 +473,7 @@ A: Rare, but trading halts until systems restore. Your money is safe.
 2. Watch Sensex/Nifty movement for a week
 3. Note market timings in your calendar
 4. Choose a broker (compare fees and features)
-5. Understand T+2 settlement before trading
+5. Understand T+1 settlement before trading
 
 Remember: Understanding how exchanges work gives you confidence. You're not gambling; you're participating in a well-regulated system!`,
 

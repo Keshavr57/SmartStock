@@ -6,10 +6,7 @@ const FMP_API_KEY = process.env.FMP_API_KEY;
 // NSE Top Gainers and Losers - REAL DATA ONLY
 export const getTopMovers = async () => {
     try {
-        console.log('🔥 Fetching REAL NSE top movers - NO FALLBACK...');
-        
-        
-        // Try real APIs only - NO FALLBACK
+        // Try each real source; first one that answers wins
         const results = await Promise.allSettled([
             fetchFromIndianAPI(),
             fetchFromYahooNSE(),
@@ -24,14 +21,11 @@ export const getTopMovers = async () => {
             }
         }
         
-        // NO FALLBACK - throw error if all APIs fail
-        console.log('⚠️ All real APIs failed, using fallback data for now');
-        return getRealisticFallbackData();
-        
+        console.warn('⚠️ All top-mover sources failed');
+        return { gainers: [], losers: [], unavailable: true };
     } catch (error) {
         console.error('❌ Error fetching top movers:', error.message);
-        console.log('⚠️ Using fallback data for now');
-        return getRealisticFallbackData();
+        return { gainers: [], losers: [], unavailable: true };
     }
 };
 
@@ -117,14 +111,14 @@ const fetchFromYahooNSE = async () => {
             'RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'HINDUNILVR.NS',
             'ICICIBANK.NS', 'SBIN.NS', 'BHARTIARTL.NS', 'ITC.NS', 'KOTAKBANK.NS',
             'LT.NS', 'AXISBANK.NS', 'MARUTI.NS', 'SUNPHARMA.NS', 'ULTRACEMCO.NS',
-            'ASIANPAINT.NS', 'NESTLEIND.NS', 'TITAN.NS', 'TATAMOTORS.NS', 'WIPRO.NS',
-            'ADANIENT.NS', 'JSWSTEEL.NS', 'COALINDIA.NS', 'ZOMATO.NS', 'PAYTM.NS'
+            'ASIANPAINT.NS', 'NESTLEIND.NS', 'TITAN.NS', 'WIPRO.NS',
+            'ADANIENT.NS', 'JSWSTEEL.NS', 'COALINDIA.NS', 'ETERNAL.NS', 'PAYTM.NS', 'BAJFINANCE.NS', 'NTPC.NS', 'POWERGRID.NS', 'HCLTECH.NS', 'TMPV.NS'
         ];
         
         const stockData = [];
         
         // Fetch data for each stock (limit to avoid timeout)
-        const promises = nseStocks.slice(0, 12).map(async (symbol) => {
+        const promises = nseStocks.map(async (symbol) => {
             try {
                 const response = await axios.get(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}`, {
                     timeout: 4000,
@@ -142,7 +136,7 @@ const fetchFromYahooNSE = async () => {
                         name: meta.longName || symbol.replace('.NS', ''),
                         price: meta.regularMarketPrice,
                         change: meta.regularMarketChangePercent,
-                        volume: formatVolume(meta.regularMarketVolume || 1000000)
+                        volume: formatVolume(meta.regularMarketVolume)
                     };
                 }
             } catch (err) {
@@ -166,9 +160,10 @@ const fetchFromYahooNSE = async () => {
         stockData.sort((a, b) => b.change - a.change);
         
         console.log('✅ Yahoo Finance returned NSE data');
+        // A gainer must actually be up and a loser actually down; on a broad sell-off there may be few gainers.
         return {
-            gainers: stockData.slice(0, 5),
-            losers: stockData.slice(-5).reverse()
+            gainers: stockData.filter(s => s.change > 0).slice(0, 5),
+            losers: stockData.filter(s => s.change < 0).slice(-5).reverse()
         };
         
     } catch (error) {
@@ -201,7 +196,7 @@ const fetchFromAlphaVantage = async () => {
                     name: stock.ticker,
                     price: parseFloat(stock.price),
                     change: parseFloat(stock.change_percentage.replace('%', '')),
-                    volume: formatVolume(parseInt(stock.volume) || 1000000)
+                    volume: formatVolume(parseInt(stock.volume))
                 }));
                 
             const losers = response.data.top_losers
@@ -211,7 +206,7 @@ const fetchFromAlphaVantage = async () => {
                     name: stock.ticker,
                     price: parseFloat(stock.price),
                     change: parseFloat(stock.change_percentage.replace('%', '')),
-                    volume: formatVolume(parseInt(stock.volume) || 1000000)
+                    volume: formatVolume(parseInt(stock.volume))
                 }));
             
             if (gainers.length >= 3 && losers.length >= 3) {
@@ -234,7 +229,7 @@ const parseGainersLosers = (gainers, losers) => {
         name: stock.companyName || stock.name || stock.tradingSymbol || stock.symbol,
         price: parseFloat(stock.lastPrice || stock.ltp || stock.price || stock.close),
         change: parseFloat(stock.pChange || stock.change_percent || stock.changePercent || stock.change),
-        volume: formatVolume(stock.totalTradedVolume || stock.volume || stock.traded_volume || 1000000)
+        volume: formatVolume(stock.totalTradedVolume || stock.volume || stock.traded_volume)
     }));
     
     const parsedLosers = losers.slice(0, 5).map(stock => ({
@@ -242,7 +237,7 @@ const parseGainersLosers = (gainers, losers) => {
         name: stock.companyName || stock.name || stock.tradingSymbol || stock.symbol,
         price: parseFloat(stock.lastPrice || stock.ltp || stock.price || stock.close),
         change: parseFloat(stock.pChange || stock.change_percent || stock.changePercent || stock.change),
-        volume: formatVolume(stock.totalTradedVolume || stock.volume || stock.traded_volume || 1000000)
+        volume: formatVolume(stock.totalTradedVolume || stock.volume || stock.traded_volume)
     }));
     
     if (parsedGainers.length >= 3 && parsedLosers.length >= 3) {
@@ -272,95 +267,9 @@ const parseArrayData = (data) => {
     return parseGainersLosers(gainers, losers);
 };
 
-// Realistic fallback data (temporary until live API is found)
-const getRealisticFallbackData = () => {
-    const currentDate = new Date();
-    const hour = currentDate.getHours();
-    
-    // Vary data based on time of day to simulate real market movement
-    const timeVariation = Math.sin(hour * Math.PI / 12) * 0.5;
-    
-    return {
-        gainers: [
-            {
-                symbol: 'ADANIENT',
-                name: 'Adani Enterprises Ltd',
-                price: 2485 + Math.round(timeVariation * 50),
-                change: 6.2 + timeVariation,
-                volume: '2.1M'
-            },
-            {
-                symbol: 'TATAMOTORS',
-                name: 'Tata Motors Ltd',
-                price: 785 + Math.round(timeVariation * 20),
-                change: 5.8 + timeVariation * 0.5,
-                volume: '5.3M'
-            },
-            {
-                symbol: 'JSWSTEEL',
-                name: 'JSW Steel Ltd',
-                price: 985 + Math.round(timeVariation * 30),
-                change: 4.9 + timeVariation * 0.3,
-                volume: '3.2M'
-            },
-            {
-                symbol: 'COALINDIA',
-                name: 'Coal India Ltd',
-                price: 385 + Math.round(timeVariation * 15),
-                change: 4.2 + timeVariation * 0.2,
-                volume: '1.8M'
-            },
-            {
-                symbol: 'ZOMATO',
-                name: 'Zomato Ltd',
-                price: 285 + Math.round(timeVariation * 10),
-                change: 3.8 + timeVariation * 0.1,
-                volume: '4.1M'
-            }
-        ],
-        losers: [
-            {
-                symbol: 'PAYTM',
-                name: 'One 97 Communications Ltd',
-                price: 985 - Math.round(timeVariation * 25),
-                change: -4.2 - timeVariation * 0.3,
-                volume: '3.8M'
-            },
-            {
-                symbol: 'BAJFINANCE',
-                name: 'Bajaj Finance Ltd',
-                price: 6945 - Math.round(timeVariation * 100),
-                change: -3.8 - timeVariation * 0.2,
-                volume: '2.1M'
-            },
-            {
-                symbol: 'ASIANPAINT',
-                name: 'Asian Paints Ltd',
-                price: 2420 - Math.round(timeVariation * 60),
-                change: -3.1 - timeVariation * 0.1,
-                volume: '1.2M'
-            },
-            {
-                symbol: 'ULTRACEMCO',
-                name: 'UltraTech Cement Ltd',
-                price: 11800 - Math.round(timeVariation * 200),
-                change: -2.8 - timeVariation * 0.1,
-                volume: '0.8M'
-            },
-            {
-                symbol: 'NESTLEIND',
-                name: 'Nestle India Ltd',
-                price: 2180 - Math.round(timeVariation * 50),
-                change: -2.3 - timeVariation * 0.1,
-                volume: '0.5M'
-            }
-        ]
-    };
-};
-
 // Helper function to format volume
 const formatVolume = (volume) => {
-    if (!volume) return '1M';
+    if (!volume) return null;
     
     if (volume > 1000000) {
         return `${(volume / 1000000).toFixed(1)}M`;
@@ -368,65 +277,4 @@ const formatVolume = (volume) => {
         return `${(volume / 1000).toFixed(1)}K`;
     }
     return volume.toString();
-};
-
-// Get live NSE market status
-export const getMarketStatus = async () => {
-    try {
-        const now = new Date();
-        const istTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
-        const hour = istTime.getHours();
-        const minute = istTime.getMinutes();
-        const day = istTime.getDay();
-        
-        // Market hours: 9:15 AM to 3:30 PM IST, Monday to Friday
-        const isWeekday = day >= 1 && day <= 5;
-        const isMarketTime = (hour > 9 || (hour === 9 && minute >= 15)) && (hour < 15 || (hour === 15 && minute <= 30));
-        const isMarketHours = isWeekday && isMarketTime;
-        
-        return {
-            isOpen: isMarketHours,
-            nextOpen: isMarketHours ? null : getNextMarketOpen(),
-            timezone: 'IST',
-            currentTime: istTime.toLocaleTimeString('en-IN', { 
-                hour: '2-digit', 
-                minute: '2-digit',
-                hour12: true 
-            }),
-            day: istTime.toLocaleDateString('en-IN', { weekday: 'long' })
-        };
-    } catch (error) {
-        return {
-            isOpen: false,
-            nextOpen: null,
-            timezone: 'IST',
-            currentTime: new Date().toLocaleTimeString('en-IN'),
-            day: new Date().toLocaleDateString('en-IN', { weekday: 'long' })
-        };
-    }
-};
-
-const getNextMarketOpen = () => {
-    const now = new Date();
-    const istTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
-    const nextOpen = new Date(istTime);
-    
-    // If it's weekend, set to next Monday
-    if (istTime.getDay() === 0) { // Sunday
-        nextOpen.setDate(istTime.getDate() + 1);
-    } else if (istTime.getDay() === 6) { // Saturday
-        nextOpen.setDate(istTime.getDate() + 2);
-    } else {
-        // If market is closed on weekday, set to next day or same day 9:15 AM
-        const hour = istTime.getHours();
-        const minute = istTime.getMinutes();
-        
-        if (hour > 15 || (hour === 15 && minute > 30)) {
-            // Market closed for the day, next day 9:15 AM
-            nextOpen.setDate(istTime.getDate() + 1);
-        }
-    }
-    
-    nextOpen.setHours(9, 15, 0, 0);
-    return nextOpen.toLocaleString('en-IN');
 };

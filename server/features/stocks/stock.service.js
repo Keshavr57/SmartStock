@@ -129,27 +129,9 @@ async function getIndianStockData(symbol, result) {
             return result;
         }
         
-        // ALL APIs FAILED - use fallback price
-        console.log(`❌ ALL APIs FAILED for ${symbol}, using fallback price`);
-        const fallbackPrice = generateFallbackPrice(symbol);
-        result.lastTradedPrice = fallbackPrice;
-        result.oneDayChange = (Math.random() - 0.5) * fallbackPrice * 0.03;
-        result.oneDayChangePercent = (result.oneDayChange / fallbackPrice) * 100;
-        result.name = symbol.replace('.NS', '').replace('.BO', '');
-        
-        console.log(`⚠️ Using fallback price for ${symbol}: ₹${fallbackPrice}`);
-        
         return result;
     } catch (error) {
         console.log(`❌ Error processing Indian stock ${symbol}:`, error.message);
-        
-        // Last resort fallback
-        const fallbackPrice = generateFallbackPrice(symbol);
-        result.lastTradedPrice = fallbackPrice;
-        result.oneDayChange = (Math.random() - 0.5) * fallbackPrice * 0.03;
-        result.oneDayChangePercent = (result.oneDayChange / fallbackPrice) * 100;
-        result.name = symbol.replace('.NS', '').replace('.BO', '');
-        
         return result;
     }
 }
@@ -361,7 +343,7 @@ async function getYahooPriceData(symbol) {
                         regularMarketPrice: price,
                         regularMarketChange: change,
                         regularMarketChangePercent: changePercent,
-                        regularMarketVolume: meta.regularMarketVolume || 1000000,
+                        regularMarketVolume: meta.regularMarketVolume ?? null,
                         fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh,
                         fiftyTwoWeekLow: meta.fiftyTwoWeekLow,
                         previousClose: previousClose,
@@ -676,35 +658,14 @@ async function getYahooProfile(symbol) {
 }
 
 // Helper functions
-function generateFallbackPrice(symbol) {
-    // Updated fallback prices based on user corrections (January 2025)
-    const priceMap = {
-        'SBIN.NS': 997, 'TCS.NS': 3140, 'RELIANCE.NS': 1458, 'HDFCBANK.NS': 1740, 'INFY.NS': 1875,
-        'ICICIBANK.NS': 1285, 'MARUTI.NS': 11200, 'BAJFINANCE.NS': 945, 'WIPRO.NS': 295, 'HCLTECH.NS': 1875,
-        'BHARTIARTL.NS': 1685, 'ITC.NS': 485, 'HINDUNILVR.NS': 2385, 'KOTAKBANK.NS': 1785, 'AXISBANK.NS': 1125,
-        'LT.NS': 3685, 'SUNPHARMA.NS': 1185, 'ULTRACEMCO.NS': 11800, 'ASIANPAINT.NS': 2420, 'NESTLEIND.NS': 2180,
-        'TITAN.NS': 3280, 'TATAMOTORS.NS': 785, 'TATASTEEL.NS': 145, 'JSWSTEEL.NS': 985, 'ADANIENT.NS': 2485,
-        'COALINDIA.NS': 385, 'NTPC.NS': 285, 'POWERGRID.NS': 285, 'ONGC.NS': 245, 'BPCL.NS': 285, 'IOC.NS': 135
-    };
-    
-    if (priceMap[symbol]) return priceMap[symbol];
-    
-    if (symbol.includes('BANK')) return 200 + Math.random() * 1500;
-    if (symbol.includes('TECH')) return 1000 + Math.random() * 3000;
-    if (symbol.includes('PHARMA')) return 800 + Math.random() * 1200;
-    if (symbol.includes('AUTO')) return 2000 + Math.random() * 10000;
-    
-    return 100 + Math.random() * 1000;
-}
-
 function calculateRSI(currentPrice, sma) {
-    if (!currentPrice || !sma) return Math.random() * 100;
+    if (!currentPrice || !sma) return null;
     const deviation = ((currentPrice - sma) / sma) * 100;
     return Math.max(0, Math.min(100, 50 + deviation));
 }
 
 function calculateMACD(currentPrice, shortMA, longMA) {
-    if (!currentPrice || !shortMA || !longMA) return (Math.random() - 0.5) * 10;
+    if (!currentPrice || !shortMA || !longMA) return null;
     return shortMA - longMA;
 }
 
