@@ -4,17 +4,23 @@ services:
     env: python
     region: oregon
     plan: free
-    
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
-    
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
-      - key: PORT
-        value: 10000
+      - key: PYTHON_VERSION
+        value: 3.11.9
       - key: GROQ_API_KEY
-        scope: run
         sync: false
-    
-    healthCheckPath: /
-    healthCheckStartupTimeout: 30
-    healthCheckInterval: 30
+      - key: JWT_SECRET          # must equal the backend's JWT_SECRET
+        sync: false
+      - key: MONGO_URI
+        sync: false
+      - key: BACKEND_URL         # e.g. https://smartstock-backend.onrender.com/api
+        sync: false
+      - key: ALLOWED_ORIGINS     # comma-separated frontend origins
+        sync: false
+      - key: LLM_MODEL
+        value: openai/gpt-oss-120b
+      - key: LLM_FALLBACK_MODEL
+        value: openai/gpt-oss-20b
+    healthCheckPath: /health
