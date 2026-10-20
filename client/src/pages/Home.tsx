@@ -1,319 +1,247 @@
-import { MarketTable } from "@/components/MarketTable"
-import { TrendingUp, Activity, BarChart3, ArrowUpRight, RefreshCw, TrendingDown, Wallet, Target, Zap } from "lucide-react"
-import { useState, useEffect } from "react"
-import { authService } from "../lib/auth"
-import { formatCurrency, formatPercentage } from "../lib/currency"
-import { api, getTopMovers, getMarketStatus } from "../lib/api"
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ArrowRight, CandlestickChart, Rocket } from 'lucide-react'
+import { api } from '@/lib/api'
+import {
+    fetchAccount, fetchMarketStatus, fetchPositions, fetchQuotes, price, rupees, signedPct, signedRupees, ticker, trendClass, usePolling
+} from '@/lib/market'
+import type { AccountSummary, MarketStatus, Position, Quote } from '@/lib/market'
+import { Badge, Button, Delta, DeltaPill, EmptyState, Page, Panel, PanelHeader, Segmented, Skeleton, Sparkline, tableCell, tableHead } from '@/components/ds'
 
-interface PortfolioData {
-    totalValue: number;
-    totalInvested: number;
-    totalPnL: number;
-    totalPnLPercent: number;
-    availableBalance: number;
-    holdingsCount: number;
-    dayPnL: number;
-    dayPnLPercent: number;
+const INDICES = [
+    { symbol: '^NSEI', label: 'NIFTY 50' },
+    { symbol: '^NSEBANK', label: 'NIFTY BANK' },
+    { symbol: '^BSESN', label: 'SENSEX' },
+    { symbol: '^CNXIT', label: 'NIFTY IT' }
+]
+
+interface Mover { symbol: string; name: string; price: number; change: number }
+interface NewsItem { id: string; title: string; link: string; source: string; publishedAt: string; sentiment: string; symbols: string[] }
+interface Ipo { symbol: string; name: string; status: string; type: string; openDate: string | null; closeDate: string | null; priceBand: { min: number; max: number } | null; subscription: { total: number | null } | null }
+
+const greeting = () => {
+    const hour = Number(new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour: 'numeric', hour12: false }))
+    return hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+}
+const firstName = () => {
+    try { return (JSON.parse(localStorage.getItem('user') || '{}').name || '').split(' ')[0] } catch { return '' }
+}
+const shortDate = (key: string | null) => key ? new Date(`${key}T00:00:00+05:30`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'TBA'
+const timeAgo = (iso: string) => {
+    const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000)
+    if (mins < 60) return `${Math.max(mins, 1)}m`
+    if (mins < 1440) return `${Math.round(mins / 60)}h`
+    return `${Math.round(mins / 1440)}d`
 }
 
-interface Transaction {
-    type: 'BUY' | 'SELL';
-    symbol: string;
-    quantity: number;
-    price: number;
-    date?: string;
-    timestamp?: string;
-    createdAt?: string;
-}
-
-interface Stock {
-    symbol: string;
-    name: string;
-    price: number;
-    change: number;
-    volume: string;
-}
-
-interface TopMoversData {
-    gainers: Stock[];
-    losers: Stock[];
-}
-
-function Home() {
-    const [portfolioData, setPortfolioData] = useState<PortfolioData>({
-        totalValue: 0, totalInvested: 0, totalPnL: 0, totalPnLPercent: 0,
-        availableBalance: 100000, holdingsCount: 0, dayPnL: 0, dayPnLPercent: 0
-    });
-    const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
-    const [topMovers, setTopMovers] = useState<TopMoversData>({ gainers: [], losers: [] });
-    const [marketStatus, setMarketStatus] = useState<any>({ isOpen: false });
-    const [loading, setLoading] = useState(true);
-
-    const fetchUserData = async () => {
-        try {
-            const userData = localStorage.getItem('user');
-            if (!userData) { setLoading(false); return; }
-            const currentUser = JSON.parse(userData);
-            const userId = currentUser.id;
-            const response = await api.get(`/trading/portfolio/${userId}`);
-            const data = response.data;
-            if (data.status === 'success' && data.data) {
-                const p = data.data;
-                setPortfolioData({
-                    totalValue: p.totalValue || 0, totalInvested: p.totalInvested || 0,
-                    totalPnL: p.totalPnL || 0, totalPnLPercent: p.totalPnLPercent || 0,
-                    availableBalance: p.availableBalance || p.virtualBalance || 100000,
-                    holdingsCount: p.holdingsCount || 0, dayPnL: p.dayPnL || 0, dayPnLPercent: p.dayPnLPercent || 0
-                });
-            }
-            const txResponse = await api.get(`/trading/transactions/${userId}?limit=5`);
-            const txData = txResponse.data;
-            if (txData.status === 'success' && txData.data) setRecentTransactions(txData.data.slice(0, 5));
-        } catch (error) {
-            console.error('Failed to fetch portfolio:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchTopMovers = async () => {
-        try {
-            const res = await getTopMovers();
-            const movers = res?.data || res;
-            if (movers?.gainers && movers?.losers) setTopMovers(movers);
-        } catch (error) { console.error('Failed to fetch top movers:', error); }
-    };
-
-    const fetchMarketStatus = async () => {
-        try {
-            const data = await getMarketStatus();
-            if (data) setMarketStatus(data);
-        } catch (error) { console.error('Failed to fetch market status:', error); }
-    };
-
+function IndexCard({ symbol, label, quote }: { symbol: string; label: string; quote?: Quote }) {
+    const [series, setSeries] = useState<number[]>([])
     useEffect(() => {
-        fetchUserData(); fetchTopMovers(); fetchMarketStatus();
-        const interval = setInterval(() => { fetchTopMovers(); fetchMarketStatus(); }, 30000);
-        return () => clearInterval(interval);
-    }, []);
-
+        api.get(`/trading/chart/${encodeURIComponent(symbol)}`, { params: { timeframe: '1D' } })
+            .then(res => setSeries((res.data?.data?.candles ?? []).map((c: { close: number }) => c.close)))
+            .catch(() => setSeries([]))
+    }, [symbol])
     return (
-        <section className="p-4 md:p-8 space-y-6 bg-gray-50 dark:bg-gray-900 min-h-screen" id="dashboard">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border ${marketStatus.isOpen ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-600'}`}>
-                    <span className={`w-2 h-2 rounded-full ${marketStatus.isOpen ? 'bg-green-500 animate-pulse' : 'bg-red-400'}`}></span>
-                    NSE {marketStatus.isOpen ? 'Open' : 'Closed'}
+        <Panel className="p-4">
+            <div className="flex items-start justify-between gap-2">
+                <div>
+                    <p className="text-xs font-medium text-zinc-500">{label}</p>
+                    <p className="mt-1 text-lg font-semibold tabular-nums">{quote ? price(quote.price) : <Skeleton className="h-6 w-24" />}</p>
+                    <p className="text-xs tabular-nums mt-0.5">
+                        <span className={trendClass(quote?.change)}>{signedRupees(quote?.change).replace('₹', '')}</span>{' '}
+                        <span className={trendClass(quote?.changePercent)}>({signedPct(quote?.changePercent)})</span>
+                    </p>
                 </div>
-                <button onClick={() => { fetchTopMovers(); fetchMarketStatus(); }}
-                    className="flex items-center gap-2 text-slate-400 hover:text-[#630ed4] font-bold text-xs uppercase tracking-widest transition-colors">
-                    <RefreshCw className="h-3.5 w-3.5" /> Refresh
-                </button>
+                <Sparkline values={series} width={88} height={40} className="mt-1" />
             </div>
-
-            {/* Stat Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                <div className="relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden hover:shadow-md transition-shadow">
-                    <div className="absolute inset-0 bg-gradient-to-br from-violet-50 to-transparent dark:from-violet-900/10 pointer-events-none" />
-                    <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Portfolio Value</span>
-                        <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
-                            <Wallet className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-                        </div>
-                    </div>
-                    <h3 className="text-2xl font-black text-slate-900 dark:text-white">{loading ? '...' : formatCurrency(portfolioData.totalValue)}</h3>
-                    {!loading && (
-                        <div className={`mt-2 flex items-center gap-1 text-xs font-bold ${portfolioData.totalPnL >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                            {portfolioData.totalPnL >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                            {portfolioData.totalPnL >= 0 ? '+' : ''}{formatCurrency(portfolioData.totalPnL)} overall
-                        </div>
-                    )}
-                </div>
-
-                <div className={`relative p-6 rounded-2xl shadow-sm border overflow-hidden hover:shadow-md transition-shadow ${portfolioData.dayPnL >= 0 ? 'bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-800/30' : 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-800/30'}`}>
-                    <div className="flex items-center justify-between mb-3">
-                        <span className={`text-xs font-bold uppercase tracking-wider ${portfolioData.dayPnL >= 0 ? 'text-green-600' : 'text-red-500'}`}>Today P&L</span>
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${portfolioData.dayPnL >= 0 ? 'bg-green-100 dark:bg-green-900/40' : 'bg-red-100 dark:bg-red-900/40'}`}>
-                            {portfolioData.dayPnL >= 0 ? <TrendingUp className="w-4 h-4 text-green-600" /> : <TrendingDown className="w-4 h-4 text-red-500" />}
-                        </div>
-                    </div>
-                    <h3 className={`text-2xl font-black ${portfolioData.dayPnL >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{loading ? '...' : formatCurrency(portfolioData.dayPnL)}</h3>
-                    <div className={`mt-2 text-xs font-bold ${portfolioData.dayPnL >= 0 ? 'text-green-600' : 'text-red-500'}`}>{portfolioData.dayPnL >= 0 ? '+' : ''}{formatPercentage(portfolioData.dayPnLPercent)}</div>
-                </div>
-
-                <div className="relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden hover:shadow-md transition-shadow">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent dark:from-blue-900/10 pointer-events-none" />
-                    <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Positions</span>
-                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                            <Target className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                        </div>
-                    </div>
-                    <h3 className="text-2xl font-black text-slate-900 dark:text-white">{loading ? '...' : portfolioData.holdingsCount}</h3>
-                    <p className="mt-2 text-xs text-slate-400 font-medium">stocks in portfolio</p>
-                </div>
-
-                <div className="relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden hover:shadow-md transition-shadow">
-                    <div className="absolute inset-0 bg-gradient-to-br from-amber-50 to-transparent dark:from-amber-900/10 pointer-events-none" />
-                    <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Available Balance</span>
-                        <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                            <Wallet className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                        </div>
-                    </div>
-                    <h3 className="text-2xl font-black text-slate-900 dark:text-white">{loading ? '...' : formatCurrency(portfolioData.availableBalance)}</h3>
-                    <p className="mt-2 text-xs font-bold text-[#630ed4] flex items-center gap-1"><Zap className="w-3 h-3" /> Virtual Credits</p>
-                </div>
-            </div>
-
-            {/* Quick Insights */}
-            {!loading && portfolioData.holdingsCount > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="bg-white dark:bg-slate-800 rounded-xl px-5 py-4 border border-slate-100 dark:border-slate-700 flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center shrink-0">
-                            <BarChart3 className="w-5 h-5 text-violet-600" />
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Invested</p>
-                            <p className="font-black text-slate-900 dark:text-white text-sm">{formatCurrency(portfolioData.totalInvested)}</p>
-                        </div>
-                    </div>
-                    <div className="bg-white dark:bg-slate-800 rounded-xl px-5 py-4 border border-slate-100 dark:border-slate-700 flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${portfolioData.totalPnL >= 0 ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
-                            <TrendingUp className={`w-5 h-5 ${portfolioData.totalPnL >= 0 ? 'text-green-600' : 'text-red-500'}`} />
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Overall Return</p>
-                            <p className={`font-black text-sm ${portfolioData.totalPnL >= 0 ? 'text-green-600' : 'text-red-500'}`}>{portfolioData.totalPnL >= 0 ? '+' : ''}{formatPercentage(portfolioData.totalPnLPercent)}</p>
-                        </div>
-                    </div>
-                    <div className="bg-white dark:bg-slate-800 rounded-xl px-5 py-4 border border-slate-100 dark:border-slate-700 flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                            <Activity className="w-5 h-5 text-blue-600" />
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Transactions</p>
-                            <p className="font-black text-slate-900 dark:text-white text-sm">{recentTransactions.length} recent</p>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Top Gainers & Losers */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700 shadow-sm">
-                    <div className="flex justify-between items-center mb-5">
-                        <h4 className="font-black text-base flex items-center gap-2 text-slate-900 dark:text-white">
-                            <span className="w-7 h-7 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center"><TrendingUp className="w-4 h-4 text-green-600" /></span>
-                            Top Gainers
-                        </h4>
-                        <span className="text-[10px] font-black text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-full uppercase">NSE</span>
-                    </div>
-                    <div className="space-y-1">
-                        {loading ? [1,2,3].map(i => <div key={i} className="h-12 bg-slate-100 dark:bg-slate-700 rounded-lg animate-pulse" />) :
-                        topMovers.gainers?.length > 0 ? topMovers.gainers.slice(0, 5).map((stock, i) => (
-                            <div key={i} className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                                <div className="flex items-center gap-3">
-                                    <span className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-700 text-[10px] font-black text-slate-400 flex items-center justify-center">{i+1}</span>
-                                    <div>
-                                        <span className="font-black text-sm text-slate-900 dark:text-white block">{stock.symbol}</span>
-                                        <span className="text-[10px] text-slate-400 truncate max-w-[110px] block">{stock.name}</span>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <div className="text-sm font-bold text-slate-900 dark:text-white">₹{stock.price?.toLocaleString()}</div>
-                                    <div className="text-xs font-black text-green-600 bg-green-50 dark:bg-green-900/20 px-1.5 py-0.5 rounded">+{stock.change?.toFixed(2)}%</div>
-                                </div>
-                            </div>
-                        )) : <p className="text-sm text-slate-400 text-center py-4">No data available</p>}
-                    </div>
-                </div>
-
-                <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700 shadow-sm">
-                    <div className="flex justify-between items-center mb-5">
-                        <h4 className="font-black text-base flex items-center gap-2 text-slate-900 dark:text-white">
-                            <span className="w-7 h-7 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center"><TrendingDown className="w-4 h-4 text-red-500" /></span>
-                            Top Losers
-                        </h4>
-                        <span className="text-[10px] font-black text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-full uppercase">NSE</span>
-                    </div>
-                    <div className="space-y-1">
-                        {loading ? [1,2,3].map(i => <div key={i} className="h-12 bg-slate-100 dark:bg-slate-700 rounded-lg animate-pulse" />) :
-                        topMovers.losers?.length > 0 ? topMovers.losers.slice(0, 5).map((stock, i) => (
-                            <div key={i} className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                                <div className="flex items-center gap-3">
-                                    <span className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-700 text-[10px] font-black text-slate-400 flex items-center justify-center">{i+1}</span>
-                                    <div>
-                                        <span className="font-black text-sm text-slate-900 dark:text-white block">{stock.symbol}</span>
-                                        <span className="text-[10px] text-slate-400 truncate max-w-[110px] block">{stock.name}</span>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <div className="text-sm font-bold text-slate-900 dark:text-white">₹{stock.price?.toLocaleString()}</div>
-                                    <div className="text-xs font-black text-red-500 bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded">{stock.change?.toFixed(2)}%</div>
-                                </div>
-                            </div>
-                        )) : <p className="text-sm text-slate-400 text-center py-4">No data available</p>}
-                    </div>
-                </div>
-            </div>
-
-            {/* Market Overview */}
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden relative">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-violet-100 via-transparent to-transparent dark:from-violet-900/20 pointer-events-none" />
-                <div className="relative z-10 mb-6 flex items-end justify-between">
-                    <div>
-                        <h2 className="text-2xl font-black text-slate-900 dark:text-white">Market Overview</h2>
-                        <p className="text-sm text-slate-500 mt-1">Markets are currently <span className={`font-bold ${marketStatus.isOpen ? 'text-green-600' : 'text-red-500'}`}>{marketStatus.isOpen ? 'open' : 'closed'}</span>.</p>
-                    </div>
-                    <button className="bg-[#630ed4] text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#4d0aab] transition-colors shadow-sm">Explore Index</button>
-                </div>
-                <div className="relative z-10"><MarketTable /></div>
-            </div>
-
-            {/* Recent Trading Activity */}
-            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
-                <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-700 flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-[#630ed4]" />
-                    <h3 className="font-black text-slate-900 dark:text-white">Recent Trading Activity</h3>
-                </div>
-                {loading ? (
-                    <div className="p-6 space-y-3">{[1,2,3].map(i => <div key={i} className="h-14 bg-slate-100 dark:bg-slate-700 rounded-xl animate-pulse" />)}</div>
-                ) : recentTransactions.length > 0 ? (
-                    <div className="divide-y divide-slate-50 dark:divide-slate-700/50">
-                        {recentTransactions.map((transaction, index) => (
-                            <div key={index} className="flex items-center justify-between px-6 py-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                                <div className="flex items-center gap-4">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black ${transaction.type === 'BUY' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
-                                        {transaction.type}
-                                    </div>
-                                    <div>
-                                        <p className="font-black text-slate-900 dark:text-white text-sm">{transaction.symbol}</p>
-                                        <p className="text-xs text-slate-400">{transaction.quantity} shares · {formatCurrency(transaction.price)}</p>
-                                    </div>
-                                </div>
-                                <p className="text-xs font-bold text-slate-400">{(() => {
-                                    const raw = transaction.date || transaction.timestamp || transaction.createdAt;
-                                    if (!raw) return 'Just now';
-                                    const d = new Date(raw);
-                                    return isNaN(d.getTime()) ? 'Just now' : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-                                })()}</p>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-                        <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-4">
-                            <Activity className="h-8 w-8 text-slate-300 dark:text-slate-500" />
-                        </div>
-                        <h4 className="font-black text-slate-700 dark:text-white mb-1">No Trading Activity Yet</h4>
-                        <p className="text-sm text-slate-400 mb-5">Start trading with your ₹1,00,000 virtual balance</p>
-                        <a href="/virtual-trading" className="bg-[#630ed4] text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-[#4d0aab] transition-colors">Start Trading</a>
-                    </div>
-                )}
-            </div>
-        </section>
+        </Panel>
     )
 }
 
-export default Home;
+export default function Home() {
+    const navigate = useNavigate()
+    const { data: market } = usePolling<MarketStatus>(fetchMarketStatus, 60000)
+    const live = Boolean(market?.isOpen)
+    const { data: account } = usePolling<AccountSummary>(fetchAccount, 30000)
+    const { data: positions } = usePolling<Position[]>(fetchPositions, 30000)
+    const { data: indices } = usePolling<Quote[]>(() => fetchQuotes(INDICES.map(i => i.symbol)), live ? 20000 : 120000, [live])
+    const { data: movers } = usePolling<{ gainers: Mover[]; losers: Mover[] }>(
+        async () => (await api.get('/market/top-movers')).data.data, live ? 60000 : 300000, [live])
+    const [moverTab, setMoverTab] = useState<'gainers' | 'losers'>('gainers')
+    const [news, setNews] = useState<NewsItem[] | null>(null)
+    const [ipos, setIpos] = useState<Ipo[] | null>(null)
+
+    useEffect(() => {
+        api.get('/news/trending', { timeout: 20000 }).then(res => setNews(res.data?.data ?? [])).catch(() => setNews([]))
+        api.get('/ipo', { timeout: 30000 }).then(res => setIpos(res.data?.data?.ipos ?? [])).catch(() => setIpos([]))
+    }, [])
+
+    const cashShare = account && account.totalValue > 0 ? (account.availableBalance / account.totalValue) * 100 : 100
+    const today = new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'long', day: 'numeric', month: 'long' })
+    const activeIpos = (ipos ?? []).filter(i => i.status !== 'closed').slice(0, 4)
+    const moverRows = (movers?.[moverTab] ?? []).slice(0, 5)
+
+    return (
+        <Page>
+            <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
+                <div>
+                    <h1 className="text-xl font-semibold tracking-tight">{greeting()}{firstName() ? `, ${firstName()}` : ''}</h1>
+                    <p className="text-sm text-zinc-500 mt-1">
+                        {today} · <span className={live ? 'text-emerald-600 dark:text-emerald-400' : ''}>{market?.status ?? 'Checking market…'}</span>
+                    </p>
+                </div>
+                <Button variant="primary" onClick={() => navigate('/virtual-trading')}>
+                    <CandlestickChart className="w-4 h-4" /> Open trading
+                </Button>
+            </div>
+
+            {/* Account + indices */}
+            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,2fr)] gap-4 mb-4">
+                <Panel className="p-5">
+                    <p className="text-xs font-medium text-zinc-500">Account value</p>
+                    <p className="mt-1 text-3xl font-semibold tabular-nums tracking-tight">{account ? rupees(account.totalValue) : <Skeleton className="h-9 w-48" />}</p>
+                    <div className="mt-4 grid grid-cols-2 gap-4">
+                        <div>
+                            <p className="text-xs text-zinc-500">Today's P&amp;L</p>
+                            <p className="mt-0.5 text-sm font-semibold"><Delta value={account?.dayPnL} kind="rupees" /> <Delta value={account?.dayPnLPercent} className="text-xs font-normal" /></p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-zinc-500">Total P&amp;L</p>
+                            <p className="mt-0.5 text-sm font-semibold"><Delta value={account?.totalPnL} kind="rupees" /> <Delta value={account?.totalPnLPercent} className="text-xs font-normal" /></p>
+                        </div>
+                    </div>
+                    <div className="mt-5">
+                        <div className="flex h-2 rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800">
+                            <div className="bg-brand-500" style={{ width: `${100 - cashShare}%` }} />
+                        </div>
+                        <div className="mt-2 flex justify-between text-xs tabular-nums">
+                            <span className="flex items-center gap-1.5 text-zinc-500"><span className="w-2 h-2 rounded-full bg-brand-500" />Invested {rupees(account?.currentValue)}</span>
+                            <span className="flex items-center gap-1.5 text-zinc-500"><span className="w-2 h-2 rounded-full bg-zinc-300 dark:bg-zinc-600" />Cash {rupees(account?.availableBalance)}</span>
+                        </div>
+                    </div>
+                </Panel>
+                <div className="grid grid-cols-2 gap-4">
+                    {INDICES.map(i => <IndexCard key={i.symbol} {...i} quote={indices?.find(q => q.symbol === i.symbol)} />)}
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-4">
+                <div className="space-y-4 min-w-0">
+                    <Panel>
+                        <PanelHeader
+                            title="Holdings"
+                            subtitle={positions ? `${positions.length} ${positions.length === 1 ? 'stock' : 'stocks'}` : undefined}
+                            action={<Link to="/portfolio" className="text-xs font-medium text-brand-600 dark:text-brand-300 hover:underline">View portfolio</Link>}
+                        />
+                        {positions && positions.length > 0 ? (
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead><tr className="border-y border-zinc-100 dark:border-zinc-800">
+                                        <th className={tableHead}>Stock</th><th className={tableHead}>Qty</th><th className={tableHead}>LTP</th>
+                                        <th className={tableHead}>Value</th><th className={tableHead}>P&amp;L</th><th className={tableHead}>Day</th>
+                                    </tr></thead>
+                                    <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                                        {positions.slice(0, 6).map(p => (
+                                            <tr key={p.symbol} onClick={() => navigate(`/stock/${p.symbol}`)} className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                                                <td className={tableCell}>
+                                                    <span className="font-medium">{ticker(p.symbol)}</span>
+                                                    <span className="block text-xs text-zinc-500 truncate max-w-[180px]">{p.name}</span>
+                                                </td>
+                                                <td className={tableCell}>{p.quantity}</td>
+                                                <td className={tableCell}>{price(p.currentPrice)}</td>
+                                                <td className={tableCell}>{rupees(p.currentValue)}</td>
+                                                <td className={tableCell}><Delta value={p.pnl} kind="rupees" /><span className="block text-xs"><Delta value={p.pnlPercent} /></span></td>
+                                                <td className={tableCell}><Delta value={p.dayPnL} kind="rupees" /></td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : positions ? (
+                            <EmptyState
+                                icon={<CandlestickChart className="w-6 h-6" />}
+                                title="No holdings yet"
+                                description="You have ₹1,00,000 of virtual cash. Buy your first stock to start building a portfolio."
+                                action={<Button variant="primary" onClick={() => navigate('/virtual-trading')}>Start trading</Button>}
+                            />
+                        ) : <div className="p-4 space-y-2">{[0, 1, 2].map(i => <Skeleton key={i} className="h-10" />)}</div>}
+                    </Panel>
+
+                    <Panel>
+                        <PanelHeader
+                            title="Top movers"
+                            subtitle="Large-cap NSE stocks, last session"
+                            action={<Segmented value={moverTab} onChange={setMoverTab} options={[{ value: 'gainers', label: 'Gainers' }, { value: 'losers', label: 'Losers' }]} />}
+                        />
+                        <ul className="divide-y divide-zinc-100 dark:divide-zinc-800 border-t border-zinc-100 dark:border-zinc-800">
+                            {!movers && [0, 1, 2, 3, 4].map(i => <li key={i} className="px-4 py-3"><Skeleton className="h-6" /></li>)}
+                            {movers && moverRows.length === 0 && <li className="px-4 py-6 text-sm text-center text-zinc-500">Market movers are unavailable right now.</li>}
+                            {moverRows.map(m => (
+                                <li key={m.symbol}>
+                                    <Link to={`/stock/${m.symbol}.NS`} className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                                        <span className="min-w-0">
+                                            <span className="block text-sm font-medium">{m.symbol}</span>
+                                            <span className="block text-xs text-zinc-500 truncate">{m.name}</span>
+                                        </span>
+                                        <span className="flex items-center gap-3 text-sm tabular-nums">
+                                            <span>{price(m.price)}</span>
+                                            <DeltaPill value={m.change} className="min-w-[64px] justify-center" />
+                                        </span>
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </Panel>
+                </div>
+
+                <div className="space-y-4 min-w-0">
+                    <Panel>
+                        <PanelHeader title="Market news" action={<Link to="/news" className="text-xs font-medium text-brand-600 dark:text-brand-300 hover:underline">All news</Link>} />
+                        <ul className="pb-2">
+                            {!news && [0, 1, 2, 3].map(i => <li key={i} className="px-4 py-2"><Skeleton className="h-10" /></li>)}
+                            {news?.length === 0 && <li className="px-4 pb-4 text-sm text-zinc-500">News feeds are unavailable right now.</li>}
+                            {news?.slice(0, 6).map(n => (
+                                <li key={n.id}>
+                                    <a href={n.link} target="_blank" rel="noreferrer" className="block px-4 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                                        <p className="text-sm leading-snug line-clamp-2">{n.title}</p>
+                                        <p className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
+                                            <span className={`w-1.5 h-1.5 rounded-full ${n.sentiment === 'positive' ? 'bg-emerald-500' : n.sentiment === 'negative' ? 'bg-rose-500' : 'bg-zinc-400'}`} />
+                                            {n.source} · {timeAgo(n.publishedAt)}
+                                            {n.symbols[0] && <Badge className="ml-1">{ticker(n.symbols[0])}</Badge>}
+                                        </p>
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    </Panel>
+
+                    <Panel>
+                        <PanelHeader title="IPO calendar" subtitle="Open and upcoming on NSE" action={<Link to="/ipos" className="text-xs font-medium text-brand-600 dark:text-brand-300 hover:underline">All IPOs</Link>} />
+                        <ul className="pb-2">
+                            {!ipos && [0, 1].map(i => <li key={i} className="px-4 py-2"><Skeleton className="h-10" /></li>)}
+                            {ipos && activeIpos.length === 0 && (
+                                <li className="px-4 pb-4 text-sm text-zinc-500 flex items-center gap-2"><Rocket className="w-4 h-4" /> No IPOs open or scheduled right now.</li>
+                            )}
+                            {activeIpos.map(i => (
+                                <li key={i.symbol}>
+                                    <Link to="/ipos" className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                                        <span className="min-w-0">
+                                            <span className="block text-sm font-medium truncate">{i.name}</span>
+                                            <span className="block text-xs text-zinc-500 tabular-nums">
+                                                {shortDate(i.openDate)} – {shortDate(i.closeDate)}{i.priceBand ? ` · ₹${i.priceBand.min}–${i.priceBand.max}` : ''}
+                                            </span>
+                                        </span>
+                                        <Badge tone={i.status === 'open' ? 'up' : 'brand'}>{i.status === 'open' ? 'Open' : 'Upcoming'}</Badge>
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                        <Link to="/ipos" className="flex items-center justify-center gap-1 border-t border-zinc-100 dark:border-zinc-800 py-2.5 text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100">
+                            Recently listed & closed IPOs <ArrowRight className="w-3.5 h-3.5" />
+                        </Link>
+                    </Panel>
+                </div>
+            </div>
+        </Page>
+    )
+}

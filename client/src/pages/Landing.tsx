@@ -1,541 +1,226 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { TrendingUp, Menu, X, Bot, MessageCircle, BarChart3, BookOpen } from 'lucide-react';
-import { MarketTable } from "@/components/MarketTable";
-import { authService } from '../lib/auth';
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import {
+    TrendingUp, CandlestickChart, LineChart, Newspaper, Rocket, Sparkles, Wallet, ArrowRight, Moon, Sun, ChevronDown
+} from 'lucide-react'
+import { api } from '@/lib/api'
+import { fetchMarketStatus, fetchQuotes, price, signedPct, ticker, trendClass, usePolling } from '@/lib/market'
+import type { MarketStatus, Quote } from '@/lib/market'
+import { useTheme } from '@/lib/theme'
+import { Sparkline } from '@/components/ds'
 
-// Google OAuth configuration
-declare global {
-    interface Window {
-        google: any;
-    }
-}
+const PREVIEW_STOCKS = ['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS']
 
-interface LandingProps {
-    onLogin: () => void;
-}
+const FEATURES = [
+    { icon: Wallet, title: 'Paper trading with ₹1,00,000', body: 'Buy and sell any NSE stock at real prices with virtual cash. Track fills, charges, realised and day P&L like a real broker account.' },
+    { icon: CandlestickChart, title: 'A real trading screen', body: 'Candlestick charts with volume, a live watchlist and an order ticket that shows charges before you place the trade.' },
+    { icon: LineChart, title: 'Research any of 2,600+ stocks', body: 'Valuation, profitability, ownership, analyst targets and returns for every NSE-listed company, side by side in Compare.' },
+    { icon: Newspaper, title: 'News with measured impact', body: 'Headlines tagged for sentiment and event type, with how similar news has actually moved prices in the past.' },
+    { icon: Rocket, title: 'IPO tracker from NSE', body: 'Open, upcoming and recently listed IPOs with lot size, subscription by investor category and listing-day returns.' },
+    { icon: Sparkles, title: 'AI advisor in Hinglish', body: 'Ask about a stock, an IPO or a concept and get a plain-language answer. Educational, never a tip.' }
+]
 
-const Landing: React.FC<LandingProps> = ({ onLogin }) => {
-    const navigate = useNavigate();
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
+const STEPS = [
+    { title: 'Create a free account', body: 'Sign up with email or Google. You start with ₹1,00,000 of virtual cash.' },
+    { title: 'Research and place trades', body: 'Look up a company, read the news, then buy or sell at the live NSE price.' },
+    { title: 'Learn from the results', body: 'Watch your P&L, review your orders and work through the lessons as you go.' }
+]
 
+const FAQ = [
+    { q: 'Is any real money involved?', a: 'No. SmartStock is a paper-trading platform. All cash and trades are virtual; nothing is ever sent to an exchange or a broker.' },
+    { q: 'Where does the market data come from?', a: 'Prices, charts and fundamentals come from NSE via Yahoo Finance; IPO data comes from NSE\'s public APIs; news comes from Indian business publications. Quotes may be slightly delayed.' },
+    { q: 'Can I trade when the market is closed?', a: 'Yes. Outside NSE hours (9:15 AM – 3:30 PM IST, weekdays) orders fill at the last traded price, so you can practise any time.' },
+    { q: 'Is the AI advisor giving investment advice?', a: 'No. Its answers are educational. Always do your own research and consult a SEBI-registered adviser before investing real money.' }
+]
 
+interface Accuracy { accuracy: number | null; baseline: number | null; evaluated: number }
 
+export default function Landing({ onLogin: _onLogin }: { onLogin: () => void }) {
+    const { isDark, toggle } = useTheme()
+    const { data: market } = usePolling<MarketStatus>(fetchMarketStatus, 120000)
+    const { data: quotes } = usePolling<Quote[]>(() => fetchQuotes(['^NSEI', ...PREVIEW_STOCKS]), 60000)
+    const [nifty, setNifty] = useState<number[]>([])
+    const [model, setModel] = useState<{ sampleSize: number; sameSession: Accuracy } | null>(null)
 
+    useEffect(() => {
+        api.get('/trading/chart/%5ENSEI', { params: { timeframe: '1D' } })
+            .then(res => setNifty((res.data?.data?.candles ?? []).map((c: { close: number }) => c.close)))
+            .catch(() => {})
+        api.get('/news/analytics')
+            .then(res => {
+                const d = res.data?.data
+                if (d?.model?.sameSession) setModel({ sampleSize: d.sampleSize, sameSession: d.model.sameSession })
+            })
+            .catch(() => {})
+    }, [])
 
-
-
-
-    const showLoginRequired = () => {
-        navigate('/login');
-    };
+    const index = quotes?.find(q => q.symbol === '^NSEI')
 
     return (
-        <div className="min-h-screen bg-[#f9f9ff] text-[#141b2b]">
-            <style>
-                {`
-                .dot-pattern {
-                    background-image: radial-gradient(#7c3aed 0.5px, transparent 0.5px);
-                    background-size: 24px 24px;
-                    opacity: 0.05;
-                }
-                .material-symbols-outlined {
-                    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-                }
-                `}
-            </style>
-            {/*  Top Navigation Bar  */}
-            <header className="sticky top-0 z-50 bg-white dark:bg-slate-900 border-none">
-            <nav className="flex justify-between items-center w-full px-8 py-4 max-w-7xl mx-auto">
-            <div className="text-xl font-bold text-[#141b2b] dark:text-white font-headline tracking-tight">SmartStock</div>
-            <div className="hidden md:flex gap-8 items-center font-['Plus_Jakarta_Sans'] font-medium text-sm">
-            <a className="text-[#7c3aed] font-bold border-b-2 border-[#7c3aed] pb-1 transition-all" href="#">Home</a>
-            <button className="text-[#4a4455] dark:text-slate-400 hover:text-[#7c3aed] transition-colors duration-200" onClick={showLoginRequired}>Compare</button>
-            <button className="text-[#4a4455] dark:text-slate-400 hover:text-[#7c3aed] transition-colors duration-200" onClick={showLoginRequired}>IPOs</button>
-            <button className="text-[#4a4455] dark:text-slate-400 hover:text-[#7c3aed] transition-colors duration-200" onClick={showLoginRequired}>AI Advisor</button>
-            <button className="text-[#4a4455] dark:text-slate-400 hover:text-[#7c3aed] transition-colors duration-200" onClick={showLoginRequired}>News</button>
-            <button className="text-[#4a4455] dark:text-slate-400 hover:text-[#7c3aed] transition-colors duration-200" onClick={showLoginRequired}>Learn</button>
-            </div>
-            <div className="flex items-center gap-4">
-            <button className="text-[#4a4455] dark:text-slate-400 font-medium text-sm hover:text-[#7c3aed] transition-colors" onClick={() => navigate('/login')}>Login</button>
-            <button className="bg-[#630ed4] hover:bg-[#630ed4]-container text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all scale-95 active:opacity-80" onClick={() => navigate('/signup')}>Sign Up</button>
-            </div>
-            </nav>
-            </header>
-            <main>
-            {/*  Hero Section  */}
-            <section className="relative min-h-[870px] flex items-center overflow-hidden bg-white">
-            <div className="absolute inset-0 dot-pattern"></div>
-            <div className="max-w-7xl mx-auto px-8 w-full grid grid-cols-1 md:grid-cols-2 gap-12 relative z-10 py-12 md:py-20">
-            <div className="flex flex-col justify-center space-y-8">
-            <h1 className="text-5xl md:text-7xl font-bold font-headline leading-[1.1] text-[#141b2b]">
-                                    Learn Trading. <br/> Invest Smarter. <br/> <span className="text-[#630ed4]">Grow Wealth.</span>
-            </h1>
-            <p className="text-[#141b2b]-variant text-lg md:text-xl max-w-xl leading-relaxed">
-                                    Master the Indian stock market with real-time simulations, AI-driven insights, and a community of professional curators.
-                                </p>
-            <div className="flex flex-wrap gap-4">
-            <button className="bg-[#630ed4] text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all flex items-center gap-2 group">
-                                        Start Free Trial
-                                        <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
-            </button>
-            <button className="bg-[#e9edff]-high text-[#630ed4] px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#e9edff] transition-all">
-                                        Watch Demo
-                                    </button>
-            </div>
-            <div className="flex flex-wrap gap-3 pt-4">
-            <span className="bg-[#6ffbbe] text-[#005236] px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm">verified</span> 500k+ Active Traders
-                                    </span>
-            <span className="bg-[#eaddff] text-[#5a00c6] px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm">auto_awesome</span> AI-First Platform
-                                    </span>
-            <span className="bg-[#a20017]-fixed text-[#ffffff]-fixed-variant px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm">military_tech</span> #1 Ranked Learning
-                                    </span>
-            </div>
-            </div>
-            <div className="relative flex items-center justify-center">
-            {/*  Floating Cards Wrapper  */}
-            <div className="relative w-full max-w-md">
-            {/*  RELIANCE.NS Card  */}
-            <div className="bg-white rounded-2xl shadow-xl p-6 border border-[#ccc3d8]/10 relative z-20 transform -rotate-3 hover:rotate-0 transition-transform duration-500">
-            <div className="flex justify-between items-start mb-6">
-            <div>
-            <h3 className="font-bold text-xl font-headline">RELIANCE.NS</h3>
-            <p className="text-xs text-[#141b2b]-variant font-medium">Reliance Industries Ltd.</p>
-            </div>
-            <span className="bg-[#6cf8bb] text-[#00714d] px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1">
-            <span className="material-symbols-outlined text-sm">trending_up</span> +2.45%
-                                            </span>
-            </div>
-            <div className="flex items-end gap-4 mb-6">
-            <span className="text-4xl font-bold font-headline">₹2,945.10</span>
-            <span className="text-[#006c49] font-bold text-sm mb-1">+₹70.20 Today</span>
-            </div>
-            <div className="h-24 w-full bg-[#e9edff]-low rounded-lg overflow-hidden flex items-end">
-            <svg className="w-full h-full" viewBox="0 0 400 100">
-            <path d="M0,80 Q50,75 100,60 T200,40 T300,50 T400,20" fill="none" stroke="#006c49" strokeWidth="3"></path>
-            <path d="M0,80 Q50,75 100,60 T200,40 T300,50 T400,20 V100 H0 Z" fill="url(#grad1)" opacity="0.1"></path>
-            <defs>
-            <linearGradient id="grad1" x1="0%" x2="0%" y1="0%" y2="100%">
-            <stop offset="0%" style={{ stopColor: '#006c49', stopOpacity: 1 }}></stop>
-            <stop offset="100%" style={{ stopColor: '#006c49', stopOpacity: 0 }}></stop>
-            </linearGradient>
-            </defs>
-            </svg>
-            </div>
-            </div>
-            {/*  Portfolio Card  */}
-            <div className="absolute -bottom-10 -right-4 md:-right-10 bg-[#630ed4]-container text-white p-6 rounded-2xl shadow-2xl z-30 transform rotate-6 hover:rotate-0 transition-transform duration-500 w-64">
-            <p className="text-xs font-medium opacity-80 uppercase tracking-widest mb-1">Portfolio Balance</p>
-            <h4 className="text-2xl font-bold mb-4">₹12,45,000.00</h4>
-            <div className="flex justify-between items-center bg-white/10 rounded-xl p-3">
-            <div className="text-center">
-            <p className="text-[10px] opacity-70">Day Gain</p>
-            <p className="text-xs font-bold">+₹14.2k</p>
-            </div>
-            <div className="h-8 w-px bg-white/20"></div>
-            <div className="text-center">
-            <p className="text-[10px] opacity-70">Wins</p>
-            <p className="text-xs font-bold">12/14</p>
-            </div>
-            </div>
-            </div>
-            {/*  Decorative circle  */}
-            <div className="absolute -top-10 -left-10 w-40 h-40 bg-[#630ed4]/10 rounded-full blur-3xl -z-10"></div>
-            <div className="absolute -bottom-20 -right-20 w-60 h-60 bg-[#006c49]/10 rounded-full blur-3xl -z-10"></div>
-            </div>
-            </div>
-            </div>
-            </section>
-            {/*  Feature Cards  */}
-            <section className="py-24 max-w-7xl mx-auto px-8">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {/*  Virtual Trading  */}
-            <div className="group bg-white border border-[#ccc3d8]/10 rounded-2xl p-8 hover:shadow-xl hover:-translate-y-2 hover:border-[#630ed4]/30 transition-all duration-300">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white mb-6">
-            <span className="material-symbols-outlined" data-icon="account_balance_wallet" style={{ fontVariationSettings: "'FILL' 1" }}>account_balance_wallet</span>
-            </div>
-            <h3 className="text-xl font-bold font-headline mb-3">Virtual Trading</h3>
-            <p className="text-[#141b2b]-variant text-sm mb-6 leading-relaxed">Practice with ₹1Cr virtual cash without risking real capital.</p>
-            <button className="text-[#630ed4] font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all" onClick={showLoginRequired}>
-            Explore <span className="material-symbols-outlined text-sm">arrow_forward</span>
-            </button>
-            </div>
-            {/*  Stock Analysis  */}
-            <div className="group bg-white border border-[#ccc3d8]/10 rounded-2xl p-8 hover:shadow-xl hover:-translate-y-2 hover:border-[#630ed4]/30 transition-all duration-300">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center text-white mb-6">
-            <span className="material-symbols-outlined" data-icon="analytics" style={{ fontVariationSettings: "'FILL' 1" }}>analytics</span>
-            </div>
-            <h3 className="text-xl font-bold font-headline mb-3">Stock Analysis</h3>
-            <p className="text-[#141b2b]-variant text-sm mb-6 leading-relaxed">Deep fundamental and technical data for 5000+ NSE/BSE stocks.</p>
-            <button className="text-[#630ed4] font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all" onClick={showLoginRequired}>
-            Explore <span className="material-symbols-outlined text-sm">arrow_forward</span>
-            </button>
-            </div>
-            {/*  AI-Powered Learning  */}
-            <div className="group bg-white border border-[#ccc3d8]/10 rounded-2xl p-8 hover:shadow-xl hover:-translate-y-2 hover:border-[#630ed4]/30 transition-all duration-300">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white mb-6">
-            <span className="material-symbols-outlined" data-icon="psychology" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
-            </div>
-            <h3 className="text-xl font-bold font-headline mb-3">AI Learning</h3>
-            <p className="text-[#141b2b]-variant text-sm mb-6 leading-relaxed">Personalized paths powered by our proprietary FinSage AI engine.</p>
-            <button className="text-[#630ed4] font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all" onClick={showLoginRequired}>
-            Explore <span className="material-symbols-outlined text-sm">arrow_forward</span>
-            </button>
-            </div>
-            {/*  Educational Platform  */}
-            <div className="group bg-white border border-[#ccc3d8]/10 rounded-2xl p-8 hover:shadow-xl hover:-translate-y-2 hover:border-[#630ed4]/30 transition-all duration-300">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white mb-6">
-            <span className="material-symbols-outlined" data-icon="school" style={{ fontVariationSettings: "'FILL' 1" }}>school</span>
-            </div>
-            <h3 className="text-xl font-bold font-headline mb-3">Education</h3>
-            <p className="text-[#141b2b]-variant text-sm mb-6 leading-relaxed">Curated courses from market veterans and financial analysts.</p>
-            <button className="text-[#630ed4] font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all" onClick={showLoginRequired}>
-            Explore <span className="material-symbols-outlined text-sm">arrow_forward</span>
-            </button>
-            </div>
-            </div>
-            </section>
-            {/*  Live Market Pulse  */}
-            <section className="py-24 bg-[#e9edff]-low">
-            <div className="max-w-7xl mx-auto px-8">
-            <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold font-headline mb-4">Live Market Pulse</h2>
-            <p className="text-[#141b2b]-variant max-w-2xl mx-auto">Real-time data from Indian and Global exchanges to keep you ahead of the curve.</p>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
-            {/*  Indian Stocks  */}
-            <div className="bg-white rounded-2xl p-8 shadow-sm">
-            <div className="flex justify-between items-center mb-8">
-            <h3 className="text-xl font-bold font-headline">Trending Indian Stocks</h3>
-            <span className="text-xs font-bold text-[#630ed4] uppercase">NSE/BSE</span>
-            </div>
-            <div className="space-y-6">
-            {/*  Stock Item  */}
-            <div className="flex items-center justify-between group cursor-pointer">
-            <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-[#e9edff]-high flex items-center justify-center font-bold text-[#630ed4]">R</div>
-            <div>
-            <p className="font-bold">RELIANCE</p>
-            <p className="text-[10px] text-[#141b2b]-variant">Energy &amp; Retail</p>
-            </div>
-            </div>
-            <div className="flex-1 px-8 hidden md:block">
-            <svg className="h-8 w-32" viewBox="0 0 100 20">
-            <path d="M0,15 Q25,10 50,15 T100,5" fill="none" stroke="#006c49" strokeWidth="1.5"></path>
-            </svg>
-            </div>
-            <div className="text-right">
-            <p className="font-bold">₹2,945.10</p>
-            <p className="text-[#006c49] text-xs font-bold">+2.45%</p>
-            </div>
-            </div>
-            {/*  Stock Item  */}
-            <div className="flex items-center justify-between group cursor-pointer">
-            <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-[#e9edff]-high flex items-center justify-center font-bold text-[#630ed4]">T</div>
-            <div>
-            <p className="font-bold">TCS</p>
-            <p className="text-[10px] text-[#141b2b]-variant">IT Services</p>
-            </div>
-            </div>
-            <div className="flex-1 px-8 hidden md:block">
-            <svg className="h-8 w-32" viewBox="0 0 100 20">
-            <path d="M0,5 Q25,15 50,10 T100,18" fill="none" stroke="#a20017" strokeWidth="1.5"></path>
-            </svg>
-            </div>
-            <div className="text-right">
-            <p className="font-bold">₹3,822.40</p>
-            <p className="text-[#a20017] text-xs font-bold">-0.12%</p>
-            </div>
-            </div>
-            {/*  Stock Item  */}
-            <div className="flex items-center justify-between group cursor-pointer">
-            <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-[#e9edff]-high flex items-center justify-center font-bold text-[#630ed4]">H</div>
-            <div>
-            <p className="font-bold">HDFCBANK</p>
-            <p className="text-[10px] text-[#141b2b]-variant">Banking</p>
-            </div>
-            </div>
-            <div className="flex-1 px-8 hidden md:block">
-            <svg className="h-8 w-32" viewBox="0 0 100 20">
-            <path d="M0,18 L20,12 L40,15 L60,8 L80,10 L100,2" fill="none" stroke="#006c49" strokeWidth="1.5"></path>
-            </svg>
-            </div>
-            <div className="text-right">
-            <p className="font-bold">₹1,442.85</p>
-            <p className="text-[#006c49] text-xs font-bold">+1.88%</p>
-            </div>
-            </div>
-            </div>
-            </div>
-            {/*  Global Markets  */}
-            <div className="bg-white rounded-2xl p-8 shadow-sm">
-            <div className="flex justify-between items-center mb-8">
-            <h3 className="text-xl font-bold font-headline">Global Indices</h3>
-            <span className="text-xs font-bold text-[#141b2b]-variant uppercase">Real-time</span>
-            </div>
-            <div className="grid grid-cols-2 gap-6">
-            <div className="p-4 rounded-xl bg-[#e9edff]-low">
-            <p className="text-xs font-bold text-[#141b2b]-variant mb-1 uppercase">S&amp;P 500</p>
-            <p className="text-xl font-bold">5,248.50</p>
-            <p className="text-[#006c49] text-xs font-bold">+0.56%</p>
-            </div>
-            <div className="p-4 rounded-xl bg-[#e9edff]-low">
-            <p className="text-xs font-bold text-[#141b2b]-variant mb-1 uppercase">NASDAQ</p>
-            <p className="text-xl font-bold">16,380.20</p>
-            <p className="text-[#006c49] text-xs font-bold">+1.12%</p>
-            </div>
-            <div className="p-4 rounded-xl bg-[#e9edff]-low">
-            <p className="text-xs font-bold text-[#141b2b]-variant mb-1 uppercase">DOW JONES</p>
-            <p className="text-xl font-bold">39,280.10</p>
-            <p className="text-[#a20017] text-xs font-bold">-0.05%</p>
-            </div>
-            <div className="p-4 rounded-xl bg-[#e9edff]-low">
-            <p className="text-xs font-bold text-[#141b2b]-variant mb-1 uppercase">FTSE 100</p>
-            <p className="text-xl font-bold">7,935.00</p>
-            <p className="text-[#006c49] text-xs font-bold">+0.33%</p>
-            </div>
-            </div>
-            </div>
-            </div>
-            {/*  Performance Cards  */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-white rounded-2xl p-6 border border-[#ccc3d8]/10 flex items-center justify-between gap-6">
-            <div>
-            <p className="text-sm font-bold text-[#141b2b]-variant mb-2">NIFTY 50</p>
-            <h4 className="text-2xl font-bold font-headline mb-1">22,326.90</h4>
-            <span className="text-[#006c49] font-bold text-sm">+0.85% (Past Week)</span>
-            </div>
-            <div className="flex-1 h-16 max-w-[200px]">
-            <svg className="w-full h-full" viewBox="0 0 200 60">
-            <polyline fill="none" points="0,50 40,45 80,30 120,35 160,15 200,10" stroke="#006c49" strokeWidth="3" />
-            </svg>
-            </div>
-            </div>
-            <div className="bg-white rounded-2xl p-6 border border-[#ccc3d8]/10 flex items-center justify-between gap-6">
-            <div>
-            <p className="text-sm font-bold text-[#141b2b]-variant mb-2">S&amp;P 500</p>
-            <h4 className="text-2xl font-bold font-headline mb-1">5,248.50</h4>
-            <span className="text-[#006c49] font-bold text-sm">+1.24% (Past Week)</span>
-            </div>
-            <div className="flex-1 h-16 max-w-[200px]">
-            <svg className="w-full h-full" viewBox="0 0 200 60">
-            <polyline fill="none" points="0,40 40,42 80,25 120,28 160,10 200,5" stroke="#006c49" strokeWidth="3" />
-            </svg>
-            </div>
-            </div>
-            </div>
-            </div>
-            </section>
-            {/*  Live Market News  */}
-            <section className="py-24 max-w-7xl mx-auto px-8">
-            <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
-            <div>
-            <h2 className="text-4xl font-bold font-headline mb-2">Market Intelligence</h2>
-            <p className="text-[#141b2b]-variant">Stay updated with signals that actually move the needle.</p>
-            </div>
-            <button className="text-[#630ed4] font-bold flex items-center gap-1 hover:underline underline-offset-4">
-                                View All News <span className="material-symbols-outlined text-sm">arrow_right_alt</span>
-            </button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/*  News Column 1  */}
-            <div className="space-y-6">
-            <div className="bg-white p-6 rounded-xl border-l-4 border-[#a20017] shadow-sm hover:shadow-md transition-all">
-            <div className="flex justify-between mb-3">
-            <span className="text-[10px] font-bold text-[#a20017] uppercase tracking-tighter bg-[#a20017]/10 px-2 py-0.5 rounded">Breaking News</span>
-            <span className="text-[10px] font-medium text-[#141b2b]-variant">10 Min Ago</span>
-            </div>
-            <h4 className="text-lg font-bold mb-3 leading-tight">RBI maintains repo rate at 6.5%, signals hawkish stance on inflation.</h4>
-            <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-[8px] text-white font-bold">ET</div>
-            <span className="text-xs font-medium text-[#141b2b]-variant">Economic Times</span>
-            </div>
-            </div>
-            <div className="bg-white p-6 rounded-xl border-l-4 border-[#630ed4] shadow-sm hover:shadow-md transition-all">
-            <div className="flex justify-between mb-3">
-            <span className="text-[10px] font-bold text-[#630ed4] uppercase tracking-tighter bg-[#630ed4]/10 px-2 py-0.5 rounded">Markets</span>
-            <span className="text-[10px] font-medium text-[#141b2b]-variant">1 Hour Ago</span>
-            </div>
-            <h4 className="text-lg font-bold mb-3 leading-tight">Nifty IT index drops 2% as global tech giants forecast lower growth.</h4>
-            <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full bg-orange-600 flex items-center justify-center text-[8px] text-white font-bold">B</div>
-            <span className="text-xs font-medium text-[#141b2b]-variant">Bloomberg Quint</span>
-            </div>
-            </div>
-            </div>
-            {/*  News Column 2  */}
-            <div className="space-y-6">
-            <div className="bg-white p-6 rounded-xl border-l-4 border-[#630ed4] shadow-sm hover:shadow-md transition-all">
-            <div className="flex justify-between mb-3">
-            <span className="text-[10px] font-bold text-[#630ed4] uppercase tracking-tighter bg-[#630ed4]/10 px-2 py-0.5 rounded">Markets</span>
-            <span className="text-[10px] font-medium text-[#141b2b]-variant">3 Hours Ago</span>
-            </div>
-            <h4 className="text-lg font-bold mb-3 leading-tight">Zomato hits all-time high as analysts upgrade price target to ₹250.</h4>
-            <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full bg-blue-800 flex items-center justify-center text-[8px] text-white font-bold">MC</div>
-            <span className="text-xs font-medium text-[#141b2b]-variant">MoneyControl</span>
-            </div>
-            </div>
-            <div className="bg-white p-6 rounded-xl border-l-4 border-[#630ed4] shadow-sm hover:shadow-md transition-all">
-            <div className="flex justify-between mb-3">
-            <span className="text-[10px] font-bold text-[#630ed4] uppercase tracking-tighter bg-[#630ed4]/10 px-2 py-0.5 rounded">Analysis</span>
-            <span className="text-[10px] font-medium text-[#141b2b]-variant">5 Hours Ago</span>
-            </div>
-            <h4 className="text-lg font-bold mb-3 leading-tight">Top 5 IPOs to watch out for in Q3 2024: From Fintech to Infrastructure.</h4>
-            <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-[8px] text-white font-bold">SM</div>
-            <span className="text-xs font-medium text-[#141b2b]-variant">SmartStock Insights</span>
-            </div>
-            </div>
-            </div>
-            </div>
-            </section>
-            {/*  AI Advisor Feature Showcase  */}
-            <section className="py-24 bg-white overflow-hidden">
-            <div className="max-w-7xl mx-auto px-8 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <div className="space-y-8">
-            <div className="inline-block bg-[#630ed4]/10 text-[#630ed4] px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest">Powered by FinSage AI</div>
-            <h2 className="text-4xl md:text-5xl font-bold font-headline leading-tight">Your Personal <br/> Quantitative Analyst.</h2>
-            <p className="text-[#141b2b]-variant text-lg">FinSage scans millions of data points across global markets to provide actionable clarity in plain English.</p>
-            <ul className="space-y-4">
-            <li className="flex items-center gap-3 font-medium">
-            <span className="material-symbols-outlined text-[#006c49]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                                        Real-time technical analysis on any stock ticker.
-                                    </li>
-            <li className="flex items-center gap-3 font-medium">
-            <span className="material-symbols-outlined text-[#006c49]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                                        IPO risk assessment &amp; subscription probability.
-                                    </li>
-            <li className="flex items-center gap-3 font-medium">
-            <span className="material-symbols-outlined text-[#006c49]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                                        Portfolio rebalancing alerts based on market volatility.
-                                    </li>
-            <li className="flex items-center gap-3 font-medium">
-            <span className="material-symbols-outlined text-[#006c49]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                                        Macro-economic impact summaries in 30 seconds.
-                                    </li>
-            </ul>
-            <button className="bg-[#630ed4] text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-xl transition-all flex items-center gap-2">
-                                    Try FinSage Free <span className="material-symbols-outlined">auto_awesome</span>
-            </button>
-            </div>
-            <div className="relative">
-            {/*  AI Chat UI Preview  */}
-            <div className="bg-[#e9edff]-low rounded-3xl p-4 md:p-8 shadow-2xl relative z-10 border border-[#ccc3d8]/10">
-            <div className="flex items-center gap-4 mb-8 border-b border-[#ccc3d8]/20 pb-4">
-            <div className="w-12 h-12 rounded-full bg-[#630ed4] flex items-center justify-center text-white">
-            <span className="material-symbols-outlined">smart_toy</span>
-            </div>
-            <div>
-            <h4 className="font-bold">FinSage Advisor</h4>
-            <span className="text-[10px] text-[#006c49] font-bold flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#006c49]"></span> Online &amp; Analyzing
-                                            </span>
-            </div>
-            </div>
-            <div className="space-y-6">
-            <div className="flex gap-3 max-w-[85%]">
-            <div className="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm text-sm leading-relaxed">
-                                                "Is HDFCBANK a good buy right now for a 6-month horizon?"
-                                            </div>
-            </div>
-            <div className="flex flex-row-reverse gap-3 ml-auto max-w-[85%]">
-            <div className="bg-[#630ed4] text-white p-4 rounded-2xl rounded-tr-none shadow-sm text-sm leading-relaxed">
-                                                "HDFCBANK is currently testing a major support level at ₹1,430. Technical indicators (RSI: 42) suggest it's approaching oversold territory. Fundamentals remain strong with 18% YoY credit growth. Risk: Moderate. Recommendation: Accumulate in tranches."
-                                            </div>
-            </div>
-            <div className="flex gap-3">
-            <div className="flex gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#630ed4]/40"></span>
-            <span className="w-2 h-2 rounded-full bg-[#630ed4]/40"></span>
-            <span className="w-2 h-2 rounded-full bg-[#630ed4]/40"></span>
-            </div>
-            </div>
-            </div>
-            </div>
-            {/*  Decorative Elements  */}
-            <div className="absolute -top-10 -right-10 w-64 h-64 bg-[#630ed4]/10 rounded-full blur-3xl -z-10"></div>
-            </div>
-            </div>
-            </section>
-            {/*  CTA Banner  */}
-            <section className="py-20 max-w-7xl mx-auto px-8">
-            <div className="bg-[#630ed4] rounded-[2rem] p-12 md:p-20 text-center relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
-            <div className="relative z-10 space-y-8">
-            <h2 className="text-4xl md:text-6xl font-bold font-headline text-white max-w-4xl mx-auto leading-tight">Start Your Trading Journey Today</h2>
-            <p className="text-white/80 text-xl max-w-2xl mx-auto">Join over 500,000 Indians who are learning to grow their wealth the smart way.</p>
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <button className="bg-white text-[#630ed4] px-10 py-5 rounded-2xl font-bold text-xl hover:bg-opacity-90 transition-all shadow-lg" onClick={() => navigate('/signup')}>Get Started Now</button>
-            <button className="bg-transparent border-2 border-white/30 text-white px-10 py-5 rounded-2xl font-bold text-xl hover:bg-white/10 transition-all">Download App</button>
-            </div>
-            </div>
-            </div>
-            </section>
-            </main>
-            {/*  Footer  */}
-            <footer className="bg-[#09090f] text-white pt-20 pb-10">
-            <div className="max-w-7xl mx-auto px-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-20">
-            <div className="space-y-6">
-            <div className="text-2xl font-bold text-[#630ed4] font-headline">SmartStock</div>
-            <p className="text-white/50 text-sm leading-relaxed max-w-xs">Curating financial clarity for the next generation of Indian investors. Experience the market like never before.</p>
-            <div className="flex gap-4">
-            <a className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-[#630ed4] transition-colors" href="#">
-            <img alt="X" className="w-5 h-5" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD5yV_QoHFHSiJ5pXSl8Vy_ARuHYiZBeaFtSLeTi9Tvn3CrbfRYmYQDgdaPZXLlKdfPamOvMSU_uXIsgCIvKMpsCDqrfdv5i45A8Cw7HWiNOeaniRnMhcIoyyF6V_E1sUTHX0g1Qz6PWzXstP5pqOmNNcyTpWHByPfaYnNDbqw4NL57jLV_tnzjHR9iEXm_-EzEwUnMplzBhA-vBeGIIGencDA8iq5pj5fa86DLQm4DBxZWLKfWX2PsbZ_5LunNMksxime7Egfvu7ls"/>
-            </a>
-            <a className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-[#630ed4] transition-colors" href="#">
-            <img alt="LinkedIn" className="w-5 h-5" src="https://lh3.googleusercontent.com/aida-public/AB6AXuASEvsVMrw96mIwrLx6ypHcrD3tmIGgZz_J2fmeFJYqYeuPxy1yiGdSLLt5ovPDetHP3db5k1FxhW1b4uAaZOXvXKbDZVHs7yY2HkjKQBWIEZrG0xQcGKqonaRiuSsu7Xbiasy19F30jpuRQggpUQ0D_PuuDJBHIvX6g6-9y71eALaCZLCUzmh4mdyd4qH3oH-As9v35Y2v-QIhvTz2gdPR85mVO5x2-9uBaip3JNFV6lWiDh5H5QI4AHbaogfceg6OVEDtuHfmkvkq"/>
-            </a>
-            <a className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-[#630ed4] transition-colors" href="#">
-            <img alt="Instagram" className="w-5 h-5" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDz-fHmXfMDtijho_PEBvY94sdz2cw_ASF9QQ08j79IrEiA3nOg7a5pTwdqTVrKm7GhVyhqMXHDsO12-bjvMcng1FKgncNDHY8l4EccVhWpmO57zh1stp5g2hTNztJaKO7parfcwvp2jeCI5B3ot_0hLPguWjlcFxus6utHb5PoCqTjzi-OBsLcxB8Un95ckzOEkpdX0Lc-QrYb32rrazwFbCI5SMjm3WM5bvkziskAe2mXvEji-AOr9k2CXzat32Opo7-HtL35v0Kj"/>
-            </a>
-            </div>
-            </div>
-            <div>
-            <h5 className="font-bold mb-6 text-white uppercase text-xs tracking-widest">Platform</h5>
-            <ul className="space-y-4 text-sm text-white/50">
-            <li><a className="hover:text-[#630ed4] transition-colors" href="#">Virtual Trading</a></li>
-            <li><a className="hover:text-[#630ed4] transition-colors" href="#">Stock Screener</a></li>
-            <li><button className="hover:text-[#630ed4] transition-colors" onClick={showLoginRequired}>AI Advisor</button></li>
-            <li><a className="hover:text-[#630ed4] transition-colors" href="#">Learning Hub</a></li>
-            </ul>
-            </div>
-            <div>
-            <h5 className="font-bold mb-6 text-white uppercase text-xs tracking-widest">Resources</h5>
-            <ul className="space-y-4 text-sm text-white/50">
-            <li><a className="hover:text-[#630ed4] transition-colors" href="#">Market News</a></li>
-            <li><a className="hover:text-[#630ed4] transition-colors" href="#">IPO Watchlist</a></li>
-            <li><a className="hover:text-[#630ed4] transition-colors" href="#">Educational Guides</a></li>
-            <li><a className="hover:text-[#630ed4] transition-colors" href="#">Community Forum</a></li>
-            </ul>
-            </div>
-            <div>
-            <h5 className="font-bold mb-6 text-white uppercase text-xs tracking-widest">Legal</h5>
-            <ul className="space-y-4 text-sm text-white/50">
-            <li><a className="hover:text-[#630ed4] transition-colors" href="#">Privacy Policy</a></li>
-            <li><a className="hover:text-[#630ed4] transition-colors" href="#">Terms of Service</a></li>
-            <li><a className="hover:text-[#630ed4] transition-colors" href="#">Risk Disclosure</a></li>
-            <li><a className="hover:text-[#630ed4] transition-colors" href="#">Contact Us</a></li>
-            </ul>
-            </div>
-            </div>
-            <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-white/40 text-xs">
-            <div>© 2024 SmartStock. Curating financial clarity.</div>
-            <div className="flex items-center gap-1 font-medium">
-                                Made with <span className="material-symbols-outlined text-[#a20017] text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>favorite</span> for India
-                            </div>
-            </div>
-            </div>
-            </footer>
-
+        <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
+            <header className="sticky top-0 z-30 bg-white/90 dark:bg-zinc-950/90 backdrop-blur border-b border-zinc-200/70 dark:border-zinc-800">
+                <div className="mx-auto max-w-6xl px-5 h-14 flex items-center gap-6">
+                    <Link to="/" className="flex items-center gap-2.5">
+                        <span className="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center"><TrendingUp className="w-4 h-4" strokeWidth={2.5} /></span>
+                        <span className="font-semibold">SmartStock</span>
+                    </Link>
+                    <nav className="hidden md:flex items-center gap-6 text-sm text-zinc-600 dark:text-zinc-400">
+                        <a href="#features" className="hover:text-zinc-900 dark:hover:text-zinc-100">Features</a>
+                        <a href="#how" className="hover:text-zinc-900 dark:hover:text-zinc-100">How it works</a>
+                        <a href="#faq" className="hover:text-zinc-900 dark:hover:text-zinc-100">FAQ</a>
+                    </nav>
+                    <div className="ml-auto flex items-center gap-2">
+                        <button onClick={toggle} className="p-2 rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800" title="Toggle theme">
+                            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                        </button>
+                        <Link to="/login" className="h-9 px-3 inline-flex items-center rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800">Log in</Link>
+                        <Link to="/signup" className="h-9 px-4 inline-flex items-center rounded-lg text-sm font-medium bg-brand-600 hover:bg-brand-700 text-white">Sign up free</Link>
                     </div>
-    );
-};
+                </div>
+            </header>
 
-export default Landing;
+            <main>
+                {/* Hero */}
+                <section className="mx-auto max-w-6xl px-5 pt-16 pb-20 grid lg:grid-cols-[1.1fr_1fr] gap-12 items-center">
+                    <div>
+                        <p className="inline-flex items-center gap-2 text-xs font-medium text-brand-700 dark:text-brand-300 bg-brand-50 dark:bg-brand-500/10 px-2.5 py-1 rounded-full">
+                            <span className={`w-1.5 h-1.5 rounded-full ${market?.isOpen ? 'bg-emerald-500' : 'bg-zinc-400'}`} />
+                            {market ? (market.isOpen ? 'NSE is open now' : market.status) : 'Live NSE data'}
+                        </p>
+                        <h1 className="mt-5 text-4xl md:text-5xl font-semibold tracking-tight leading-[1.1]">
+                            Learn to invest in Indian stocks with real prices and zero risk.
+                        </h1>
+                        <p className="mt-5 text-lg text-zinc-600 dark:text-zinc-400 max-w-xl">
+                            SmartStock gives you ₹1,00,000 of virtual cash, a real trading screen and research tools for every NSE stock,
+                            so you can practise before you put real money in.
+                        </p>
+                        <div className="mt-8 flex flex-wrap items-center gap-3">
+                            <Link to="/signup" className="h-11 px-5 inline-flex items-center gap-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-medium">
+                                Create free account <ArrowRight className="w-4 h-4" />
+                            </Link>
+                            <Link to="/login" className="h-11 px-5 inline-flex items-center rounded-lg border border-zinc-300 dark:border-zinc-700 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-900">
+                                Log in
+                            </Link>
+                        </div>
+                        <p className="mt-4 text-sm text-zinc-500">No card, no broker account, no real money.</p>
+                    </div>
+
+                    {/* Live market preview: real data, not a mock-up */}
+                    <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
+                        <div className="p-5 border-b border-zinc-100 dark:border-zinc-800">
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <p className="text-xs text-zinc-500">NIFTY 50</p>
+                                    <p className="mt-1 text-2xl font-semibold tabular-nums">{price(index?.price)}</p>
+                                    <p className={`text-sm tabular-nums ${trendClass(index?.changePercent)}`}>{signedPct(index?.changePercent)} today</p>
+                                </div>
+                                <Sparkline values={nifty} width={180} height={64} />
+                            </div>
+                        </div>
+                        <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                            {PREVIEW_STOCKS.map(s => {
+                                const q = quotes?.find(x => x.symbol === s)
+                                return (
+                                    <li key={s} className="flex items-center justify-between px-5 py-3">
+                                        <span>
+                                            <span className="block text-sm font-medium">{ticker(s)}</span>
+                                            <span className="block text-xs text-zinc-500 truncate max-w-[220px]">{q?.name ?? ''}</span>
+                                        </span>
+                                        <span className="text-right tabular-nums">
+                                            <span className="block text-sm">{price(q?.price)}</span>
+                                            <span className={`block text-xs ${trendClass(q?.changePercent)}`}>{signedPct(q?.changePercent)}</span>
+                                        </span>
+                                    </li>
+                                )
+                            })}
+                        </ul>
+                        <p className="px-5 py-2.5 text-[11px] text-zinc-400 bg-zinc-50 dark:bg-zinc-950/40">Live from NSE via Yahoo Finance</p>
+                    </div>
+                </section>
+
+                {/* Features */}
+                <section id="features" className="border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40">
+                    <div className="mx-auto max-w-6xl px-5 py-20">
+                        <h2 className="text-2xl md:text-3xl font-semibold tracking-tight max-w-2xl">Everything you need to learn the market, in one place.</h2>
+                        <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-zinc-200 dark:bg-zinc-800 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800">
+                            {FEATURES.map(f => (
+                                <div key={f.title} className="bg-white dark:bg-zinc-900 p-6">
+                                    <f.icon className="w-5 h-5 text-brand-600 dark:text-brand-300" />
+                                    <h3 className="mt-4 font-semibold">{f.title}</h3>
+                                    <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{f.body}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                {/* How it works */}
+                <section id="how" className="mx-auto max-w-6xl px-5 py-20 grid lg:grid-cols-[1fr_1.4fr] gap-12">
+                    <div>
+                        <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">How it works</h2>
+                        <p className="mt-3 text-zinc-600 dark:text-zinc-400">Three steps from sign-up to your first trade.</p>
+                    </div>
+                    <ol className="space-y-6">
+                        {STEPS.map((s, i) => (
+                            <li key={s.title} className="flex gap-4">
+                                <span className="w-8 h-8 shrink-0 rounded-full border border-zinc-300 dark:border-zinc-700 flex items-center justify-center text-sm font-medium tabular-nums">{i + 1}</span>
+                                <div>
+                                    <h3 className="font-semibold">{s.title}</h3>
+                                    <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{s.body}</p>
+                                </div>
+                            </li>
+                        ))}
+                    </ol>
+                </section>
+
+                {/* Transparency: real, live numbers from the news model */}
+                {model && model.sameSession.accuracy != null && (
+                    <section className="border-y border-zinc-200 dark:border-zinc-800 bg-zinc-950 text-white">
+                        <div className="mx-auto max-w-6xl px-5 py-16 grid md:grid-cols-[1.2fr_1fr] gap-10 items-center">
+                            <div>
+                                <h2 className="text-2xl font-semibold tracking-tight">We measure our own tools, and show you the numbers.</h2>
+                                <p className="mt-3 text-zinc-400 leading-relaxed">
+                                    Every news headline is stored and its real price reaction measured afterwards. Our sentiment tags match the
+                                    direction of the same-day move {model.sameSession.accuracy}% of the time, against a {model.sameSession.baseline}% baseline,
+                                    and we tell you plainly that they don't predict the next day.
+                                </p>
+                            </div>
+                            <dl className="grid grid-cols-2 gap-6">
+                                <div><dt className="text-xs text-zinc-500">Headlines backtested</dt><dd className="mt-1 text-3xl font-semibold tabular-nums">{model.sampleSize.toLocaleString('en-IN')}</dd></div>
+                                <div><dt className="text-xs text-zinc-500">Tag accuracy (same day)</dt><dd className="mt-1 text-3xl font-semibold tabular-nums">{model.sameSession.accuracy}%</dd></div>
+                            </dl>
+                        </div>
+                    </section>
+                )}
+
+                {/* FAQ */}
+                <section id="faq" className="mx-auto max-w-3xl px-5 py-20">
+                    <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">Questions</h2>
+                    <div className="mt-8 divide-y divide-zinc-200 dark:divide-zinc-800 border-y border-zinc-200 dark:border-zinc-800">
+                        {FAQ.map(f => (
+                            <details key={f.q} className="group py-4">
+                                <summary className="flex items-center justify-between cursor-pointer list-none font-medium">
+                                    {f.q}
+                                    <ChevronDown className="w-4 h-4 text-zinc-400 transition-transform group-open:rotate-180" />
+                                </summary>
+                                <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{f.a}</p>
+                            </details>
+                        ))}
+                    </div>
+                    <div className="mt-12 text-center">
+                        <Link to="/signup" className="h-11 px-6 inline-flex items-center gap-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-medium">
+                            Start practising <ArrowRight className="w-4 h-4" />
+                        </Link>
+                    </div>
+                </section>
+            </main>
+
+            <footer className="border-t border-zinc-200 dark:border-zinc-800">
+                <div className="mx-auto max-w-6xl px-5 py-8 flex flex-wrap items-center justify-between gap-4 text-xs text-zinc-500">
+                    <span>© {new Date().getFullYear()} SmartStock · An educational paper-trading project</span>
+                    <span>Not investment advice. Market data may be delayed.</span>
+                </div>
+            </footer>
+        </div>
+    )
+}

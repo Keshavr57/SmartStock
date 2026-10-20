@@ -9,8 +9,8 @@ if (import.meta.env.DEV) {
   devIndicator.innerHTML = '🔧 DEV';
   devIndicator.style.cssText = `
     position: fixed;
-    top: 10px;
-    right: 10px;
+    bottom: 84px;
+    right: 12px;
     background: #1f2937;
     color: #10b981;
     padding: 4px 8px;

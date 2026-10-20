@@ -1,299 +1,283 @@
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { TrendingUp, RefreshCw, Calendar, DollarSign, AlertTriangle, Clock, Target, BarChart3, BookOpen, FileText, Filter } from "lucide-react"
-import { useState, useEffect } from "react"
-import { getUpcomingIPOs } from "../lib/api"
+import { useState, useEffect, useMemo } from "react"
+import { Button, Page, PageHeader } from '@/components/ds'
+import { RefreshCw, Calendar, AlertTriangle, FileText, TrendingUp, TrendingDown, Users } from "lucide-react"
+import { getIpoBoard } from "../lib/api"
 
-interface IPO {
-    company: string;
-    openDate: string;
-    closeDate: string;
-    date: string;
-    price: string;
-    status: string;
-    size: string;
-    riskLevel: string;
-    riskIcon: string;
-    riskColor: string;
-    riskScore: number;
-    riskFactors: string[];
-    lotSize: string;
-    type: string;
-    sector: string;
-    gmp: string;
-    subscription: string;
-    listingDate: string;
+interface Subscription {
+    qib: number | null
+    nii: number | null
+    retail: number | null
+    employee: number | null
+    total: number | null
+    updatedAt: string | null
 }
 
-type FilterType = 'All' | 'Open' | 'Upcoming' | 'Closed';
-type TypeFilterType = 'All Types' | 'Mainboard' | 'SME';
+interface Ipo {
+    symbol: string
+    name: string
+    type: 'Mainboard' | 'SME'
+    status: 'open' | 'upcoming' | 'closed'
+    openDate: string | null
+    closeDate: string | null
+    listingDate: string | null
+    listed: boolean
+    priceBand: { min: number; max: number } | null
+    issuePrice: number | null
+    lotSize: number | null
+    minInvestment: number | null
+    issueSizeCr: number | null
+    faceValue: string | null
+    issueType: string | null
+    leadManagers: string | null
+    registrar: string | null
+    rhpUrl: string | null
+    subscription: Subscription | null
+    demand: { level: string; tone: 'positive' | 'neutral' | 'negative' } | null
+    listing: { listingOpen: number; listingGainPercent: number; currentPrice: number; currentReturnPercent: number } | null
+}
+
+interface Board {
+    ipos: Ipo[]
+    counts: { open: number; upcoming: number; closed: number }
+    closedWindowDays: number
+    lastUpdated: string
+    stale?: boolean
+}
+
+type StatusFilter = 'all' | 'open' | 'upcoming' | 'closed'
+type TypeFilter = 'all' | 'Mainboard' | 'SME'
+
+const formatDate = (key: string | null) =>
+    key ? new Date(`${key}T00:00:00+05:30`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'TBA'
+const formatINR = (n: number | null) => (n == null ? '—' : `₹${n.toLocaleString('en-IN')}`)
+const formatTimes = (n: number | null) => (n == null ? '—' : `${n.toFixed(2)}x`)
+
+const STATUS_STYLE: Record<Ipo['status'], string> = {
+    open: 'bg-green-500/10 text-green-600',
+    upcoming: 'bg-brand-600/10 text-brand-600 dark:text-brand-300',
+    closed: 'bg-zinc-100 dark:bg-zinc-700 text-zinc-500'
+}
+const DEMAND_STYLE = { positive: 'text-green-600', neutral: 'text-amber-600', negative: 'text-red-500' }
+
+function SubscriptionBars({ sub }: { sub: Subscription }) {
+    const rows = [
+        { label: 'QIB', value: sub.qib },
+        { label: 'NII (HNI)', value: sub.nii },
+        { label: 'Retail', value: sub.retail },
+        { label: 'Employee', value: sub.employee }
+    ].filter(r => r.value != null)
+    const max = Math.max(...rows.map(r => r.value as number), 1)
+    return (
+        <div className="space-y-1.5">
+            {rows.map(r => (
+                <div key={r.label} className="flex items-center gap-3 text-xs">
+                    <span className="w-16 font-bold text-zinc-500 shrink-0">{r.label}</span>
+                    <div className="flex-1 h-2 bg-zinc-100 dark:bg-zinc-700 rounded-full overflow-hidden">
+                        {/* Log scale so 300x and 3x are both visible. */}
+                        <div className="h-full bg-brand-600 rounded-full"
+                            style={{ width: `${Math.max(4, (Math.log10((r.value as number) + 1) / Math.log10(max + 1)) * 100)}%` }} />
+                    </div>
+                    <span className="w-16 text-right font-semibold text-zinc-800 dark:text-white">{formatTimes(r.value)}</span>
+                </div>
+            ))}
+        </div>
+    )
+}
 
 export default function IPOs() {
-    const [ipos, setIpos] = useState<IPO[]>([])
-    const [filteredIpos, setFilteredIpos] = useState<IPO[]>([])
+    const [board, setBoard] = useState<Board | null>(null)
     const [loading, setLoading] = useState(true)
-    const [lastUpdated, setLastUpdated] = useState<string>('')
-    const [showRiskGuide, setShowRiskGuide] = useState(false)
-    const [activeFilter, setActiveFilter] = useState<FilterType>('All')
-    const [activeTypeFilter, setActiveTypeFilter] = useState<TypeFilterType>('All Types')
+    const [error, setError] = useState<string | null>(null)
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+    const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
 
-    const filterOptions: FilterType[] = ['All', 'Open', 'Upcoming', 'Closed']
-    const typeFilterOptions: TypeFilterType[] = ['All Types', 'Mainboard', 'SME']
-
-    const fetchIPOs = async (fastMode = false, forceRefresh = false) => {
+    const load = async (refresh = false) => {
         setLoading(true)
+        setError(null)
         try {
-            const res = await getUpcomingIPOs(fastMode, forceRefresh)
-            if (res && res.status === "success" && Array.isArray(res.data)) {
-                const mappedData: IPO[] = res.data.map((item: any) => ({
-                    company: item.name || "Unknown Company",
-                    openDate: item.openDate || "TBA",
-                    closeDate: item.closeDate || "TBA",
-                    date: item.openDate && item.closeDate ? `${item.openDate} - ${item.closeDate}` : (item.openDate || "TBA"),
-                    price: item.priceBand || "TBA",
-                    status: item.status || "Upcoming",
-                    size: item.issueSize || "TBA",
-                    riskLevel: item.riskLevel || "Medium",
-                    riskIcon: item.riskIcon || "🟡",
-                    riskColor: item.riskColor || "yellow",
-                    riskScore: item.riskScore || 2.0,
-                    riskFactors: item.riskFactors || [],
-                    lotSize: item.lotSize || "TBA",
-                    type: item.type || item.category || "Mainboard",
-                    sector: item.sector || "General",
-                    gmp: item.gmp || "N/A",
-                    subscription: item.subscription || "N/A",
-                    listingDate: item.listingDate || "TBA"
-                }))
-                
-                // Filter out any old 2024 data that might still be coming through
-                const current2025Data = mappedData.filter(ipo => {
-                    const year = new Date().getFullYear();
-                    return !ipo.date.includes('2024') || ipo.date.includes('2025') || ipo.date.includes(year.toString());
-                });
-                
-                const finalData = current2025Data.length > 0 ? current2025Data : mappedData;
-                setIpos(finalData)
-                setLastUpdated(res.lastUpdated || new Date().toLocaleString())
-                
-                console.log(`✅ IPO data loaded: ${mappedData.length} total, ${current2025Data.length} current`)
-            }
-        } catch (error) {
-            console.error('IPO loading error:', error)
-            // Don't show error to user, just log it
+            const res = await getIpoBoard(refresh)
+            if (res.status === 'success') setBoard(res.data)
+            else setError(res.message || 'IPO data unavailable')
+        } catch {
+            setError('IPO data is temporarily unavailable from NSE. Please try again shortly.')
         } finally {
             setLoading(false)
         }
     }
 
-    // Filter IPOs based on active filters
-    useEffect(() => {
-        let filtered = ipos;
-        
-        // Apply status filter
-        if (activeFilter !== 'All') {
-            filtered = filtered.filter(ipo => ipo.status === activeFilter);
-        }
-        
-        // Apply type filter
-        if (activeTypeFilter !== 'All Types') {
-            filtered = filtered.filter(ipo => {
-                if (activeTypeFilter === 'Mainboard') {
-                    return ipo.type === 'Mainboard' || ipo.type === 'Main Board';
-                } else {
-                    return ipo.type === 'SME';
-                }
-            });
-        }
-        
-        setFilteredIpos(filtered);
-    }, [ipos, activeFilter, activeTypeFilter])
+    useEffect(() => { load() }, [])
 
-    useEffect(() => {
-        // Force refresh to get current 2025 data
-        fetchIPOs(true, true) // Fast mode + force refresh
-        
-        // Full load after 2 seconds with force refresh
-        setTimeout(() => {
-            fetchIPOs(false, true) // Full load + force refresh
-        }, 2000)
-    }, [])
+    const filtered = useMemo(() => (board?.ipos || []).filter(ipo =>
+        (statusFilter === 'all' || ipo.status === statusFilter) && (typeFilter === 'all' || ipo.type === typeFilter)
+    ), [board, statusFilter, typeFilter])
 
-    const getStatusColor = (status: string) => {
-        switch (status.toLowerCase()) {
-            case 'open': return 'bg-green-100 text-green-800 border-green-200'
-            case 'upcoming': return 'bg-blue-100 text-blue-800 border-blue-200'
-            case 'closed': return 'bg-gray-100 text-gray-800 border-gray-200'
-            default: return 'bg-gray-100 text-gray-800 border-gray-200'
-        }
-    }
-
-    const getTypeColor = (type: string) => {
-        return type === 'Mainboard' || type === 'Main Board' 
-            ? 'bg-purple-100 text-purple-800 border-purple-200'
-            : 'bg-orange-100 text-orange-800 border-orange-200'
-    }
-
-    const getFilterButtonStyle = (filter: FilterType) => {
-        const isActive = activeFilter === filter
-        const baseStyle = "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
-        
-        if (isActive) {
-            switch (filter) {
-                case 'Open':
-                    return `${baseStyle} bg-green-600 text-white shadow-md`
-                case 'Upcoming':
-                    return `${baseStyle} bg-blue-600 text-white shadow-md`
-                case 'Closed':
-                    return `${baseStyle} bg-gray-600 text-white shadow-md`
-                default:
-                    return `${baseStyle} bg-purple-600 text-white shadow-md`
-            }
-        } else {
-            return `${baseStyle} bg-white text-gray-700 border border-gray-300 hover:bg-gray-50`
-        }
-    }
-
-    const getFilterCount = (filter: FilterType) => {
-        if (filter === 'All') return ipos.length
-        return ipos.filter(ipo => ipo.status === filter).length
-    }
-
-    const getTypeFilterCount = (filter: TypeFilterType) => {
-        if (filter === 'All Types') return ipos.length
-        if (filter === 'Mainboard') {
-            return ipos.filter(ipo => ipo.type === 'Mainboard' || ipo.type === 'Main Board').length
-        }
-        return ipos.filter(ipo => ipo.type === 'SME').length
-    }
-
-    const getTypeFilterButtonStyle = (filter: TypeFilterType) => {
-        const isActive = activeTypeFilter === filter
-        const baseStyle = "px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200"
-        
-        if (isActive) {
-            switch (filter) {
-                case 'Mainboard':
-                    return `${baseStyle} bg-purple-600 text-white shadow-sm`
-                case 'SME':
-                    return `${baseStyle} bg-orange-600 text-white shadow-sm`
-                default:
-                    return `${baseStyle} bg-gray-600 text-white shadow-sm`
-            }
-        } else {
-            return `${baseStyle} bg-gray-100 text-gray-700 hover:bg-gray-200`
-        }
-    }
+    const statusTabs: { key: StatusFilter; label: string; count: number }[] = [
+        { key: 'all', label: 'All IPOs', count: board?.ipos.length ?? 0 },
+        { key: 'open', label: 'Open Now', count: board?.counts.open ?? 0 },
+        { key: 'upcoming', label: 'Upcoming', count: board?.counts.upcoming ?? 0 },
+        { key: 'closed', label: `Closed (${board?.closedWindowDays ?? 30}d)`, count: board?.counts.closed ?? 0 }
+    ]
 
     return (
-        <section className="bg-slate-50 dark:bg-slate-900 min-h-[calc(100vh-64px)] p-4 md:p-8 border-t dark:border-slate-800" id="ipo-calendar">
-            <div className="max-w-7xl mx-auto space-y-8">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                        <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">IPO Calendar</h1>
-                        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Real-time tracker & Analysis</p>
-                    </div>
-                    <button 
-                        onClick={() => fetchIPOs(false, true)}
-                        disabled={loading}
-                        className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-6 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-colors border border-slate-200 dark:border-slate-700 hover:border-[#630ed4] dark:hover:border-[#a975ff] hover:text-[#630ed4] flex items-center gap-2 uppercase tracking-widest"
-                    >
-                        {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                        Sync Data
-                    </button>
-                </div>
+        <Page>
+            <PageHeader
+                title="IPOs"
+                description={<>Official NSE data{board?.lastUpdated && ` · updated ${new Date(board.lastUpdated).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`}{board?.stale && ' · showing last saved snapshot'}</>}
+                actions={<Button size="sm" onClick={() => load(true)} disabled={loading}><RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh</Button>}
+            />
+            <div className="space-y-4">
 
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    {filterOptions.map((filter) => {
-                        const count = getFilterCount(filter);
-                        const isActive = activeFilter === filter;
-                        return (
-                            <button
-                                key={filter}
-                                onClick={() => setActiveFilter(filter)}
-                                className={`text-left p-6 rounded-2xl shadow-sm border transition-all text-sm uppercase tracking-widest font-black ${isActive ? 'bg-[#630ed4] text-white border-[#630ed4] scale-100 shadow-xl shadow-primary/20' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-500 hover:border-[#630ed4]/50'}`}
-                            >
-                                <div className="text-3xl mb-2">{count}</div>
-                                {filter} IPOs
-                            </button>
-                        );
-                    })}
+                    {statusTabs.map(tab => (
+                        <button
+                            key={tab.key}
+                            onClick={() => setStatusFilter(tab.key)}
+                            className={`text-left p-6 rounded-xl shadow-sm border transition-all text-sm font-semibold ${statusFilter === tab.key ? 'bg-brand-600 text-white border-brand-600' : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:border-brand-600/50'}`}
+                        >
+                            <div className="text-3xl mb-2">{loading && !board ? '…' : tab.count}</div>
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="flex gap-2">
+                    {(['all', 'Mainboard', 'SME'] as TypeFilter[]).map(t => (
+                        <button key={t} onClick={() => setTypeFilter(t)}
+                            className={`px-4 py-1.5 rounded-lg text-xs font-semibold ${typeFilter === t ? 'bg-zinc-800 text-white dark:bg-white dark:text-zinc-900' : 'bg-white dark:bg-zinc-900 text-zinc-500 border border-zinc-200 dark:border-zinc-700'}`}>
+                            {t === 'all' ? 'All types' : t}
+                        </button>
+                    ))}
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {loading ? (
-                        Array.from({ length: 4 }).map((_, index) => (
-                            <div key={index} className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-sm border border-slate-100 dark:border-slate-700 animate-pulse">
-                                <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-1/2 mb-4"></div>
-                                <div className="h-20 bg-slate-100 dark:bg-slate-900 rounded w-full"></div>
+                    {loading && !board ? (
+                        Array.from({ length: 4 }).map((_, i) => (
+                            <div key={i} className="bg-white dark:bg-zinc-900 rounded-xl p-5 border border-zinc-200 dark:border-zinc-800 animate-pulse">
+                                <div className="h-6 bg-zinc-200 dark:bg-zinc-700 rounded w-1/2 mb-4" />
+                                <div className="h-24 bg-zinc-100 dark:bg-zinc-900 rounded" />
                             </div>
                         ))
-                    ) : filteredIpos.length === 0 ? (
-                        <div className="col-span-full py-16 bg-white dark:bg-slate-800 border border-dashed border-slate-200 dark:border-slate-700 rounded-3xl flex flex-col items-center justify-center text-center">
-                            <AlertTriangle className="h-16 w-16 text-slate-300 dark:text-slate-600 mb-4" />
-                            <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase">No IPOs Found</h3>
-                            <p className="text-slate-500 font-medium">Try checking a different filter.</p>
+                    ) : error && !board ? (
+                        <div className="col-span-full py-16 bg-white dark:bg-zinc-900 border border-dashed border-zinc-200 dark:border-zinc-700 rounded-xl flex flex-col items-center text-center">
+                            <AlertTriangle className="h-12 w-12 text-amber-400 mb-4" />
+                            <p className="text-zinc-600 dark:text-zinc-300 font-bold">{error}</p>
                         </div>
-                    ) : (
-                        filteredIpos.map((ipo, index) => (
-                            <div key={index} className="bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-sm border border-slate-100 dark:border-slate-700 hover:border-[#630ed4]/30 transition-colors group relative overflow-hidden">
-                                <div className="flex justify-between items-start mb-8 relative z-10">
-                                    <div>
-                                        <h3 className="text-2xl font-black text-slate-800 dark:text-white leading-tight mb-1">{ipo.company}</h3>
-                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{ipo.sector} • {ipo.type}</p>
-                                    </div>
-                                    <div className="flex flex-col items-end gap-2">
-                                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${ipo.status.toLowerCase() === 'open' ? 'bg-green-500/10 text-green-600' : ipo.status.toLowerCase() === 'upcoming' ? 'bg-[#e9edff]-container-low dark:bg-[#630ed4]/20 text-[#630ed4] dark:text-[#a975ff]' : 'bg-slate-100 dark:bg-slate-700 text-slate-500'}`}>
-                                            {ipo.status}
-                                        </span>
-                                        <span className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1 ${ipo.riskScore > 2.5 ? 'text-green-600' : ipo.riskScore > 1.5 ? 'text-yellow-600' : 'text-red-500'}`}>
-                                            {ipo.riskIcon} {ipo.riskLevel} Risk
-                                        </span>
-                                    </div>
+                    ) : filtered.length === 0 ? (
+                        <div className="col-span-full py-16 bg-white dark:bg-zinc-900 border border-dashed border-zinc-200 dark:border-zinc-700 rounded-xl flex flex-col items-center text-center">
+                            <Calendar className="h-12 w-12 text-zinc-300 mb-4" />
+                            <h3 className="text-lg font-semibold text-zinc-800 dark:text-white">No IPOs here right now</h3>
+                            <p className="text-zinc-500 font-medium">Try another filter.</p>
+                        </div>
+                    ) : filtered.map(ipo => (
+                        <article key={ipo.symbol} className="bg-white dark:bg-zinc-900 rounded-xl p-5 shadow-sm border border-zinc-200 dark:border-zinc-800 hover:border-brand-600/30 transition-colors">
+                            <div className="flex justify-between items-start gap-4 mb-6">
+                                <div className="min-w-0">
+                                    <h3 className="text-xl font-semibold text-zinc-800 dark:text-white leading-tight">{ipo.name}</h3>
+                                    <p className="text-xs font-bold text-zinc-400 mt-1">
+                                        {ipo.symbol} · {ipo.type}{ipo.issueType ? ` · ${ipo.issueType}` : ''}
+                                    </p>
                                 </div>
-
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8 bg-slate-50/50 dark:bg-slate-900/50 p-4 rounded-2xl relative z-10 border border-slate-100 dark:border-slate-700/50">
-                                    <div>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 whitespace-nowrap">Issue Size</p>
-                                        <p className="font-black text-slate-800 dark:text-white whitespace-nowrap">{ipo.size}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 whitespace-nowrap">Price Band</p>
-                                        <p className="font-black text-slate-800 dark:text-white whitespace-nowrap text-sm">{ipo.price}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 whitespace-nowrap">Min Lot</p>
-                                        <p className="font-black text-slate-800 dark:text-white whitespace-nowrap">{ipo.lotSize}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 whitespace-nowrap">GMP</p>
-                                        <p className={`font-black whitespace-nowrap ${ipo.gmp !== 'N/A' ? 'text-green-600' : 'text-slate-800 dark:text-white'}`}>{ipo.gmp}</p>
-                                    </div>
-                                </div>
-
-                                <div className="text-xs font-bold text-slate-500 flex justify-between items-center bg-slate-50 dark:bg-slate-900 px-4 py-3 rounded-xl relative z-10">
-                                    <span className="flex items-center gap-2"><Calendar className="w-4 h-4" /> {ipo.date}</span>
-                                    {ipo.listingDate !== 'TBA' && <span className="uppercase text-[10px] bg-white dark:bg-slate-800 px-2 py-1 rounded shadow-sm border border-slate-100 dark:border-slate-700">List: {ipo.listingDate}</span>}
+                                <div className="flex flex-col items-end gap-2 shrink-0">
+                                    <span className={`px-3 py-1 rounded-full text-[11px] font-semibold ${STATUS_STYLE[ipo.status]}`}>
+                                        {ipo.status}
+                                    </span>
+                                    {ipo.demand && (
+                                        <span className={`text-[11px] font-semibold ${DEMAND_STYLE[ipo.demand.tone]}`}>
+                                            {ipo.demand.level} demand
+                                        </span>
+                                    )}
                                 </div>
                             </div>
-                        ))
-                    )}
+
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5 bg-zinc-50/60 dark:bg-zinc-900/50 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800/50">
+                                <div>
+                                    <p className="text-[11px] font-bold text-zinc-400 mb-1">Price Band</p>
+                                    <p className="font-semibold text-zinc-800 dark:text-white text-sm">
+                                        {ipo.priceBand ? (ipo.priceBand.min === ipo.priceBand.max ? formatINR(ipo.priceBand.max) : `₹${ipo.priceBand.min}–${ipo.priceBand.max}`) : 'TBA'}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-[11px] font-bold text-zinc-400 mb-1">Lot Size</p>
+                                    <p className="font-semibold text-zinc-800 dark:text-white text-sm">{ipo.lotSize ? `${ipo.lotSize} shares` : '—'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[11px] font-bold text-zinc-400 mb-1">Min. Investment</p>
+                                    <p className="font-semibold text-zinc-800 dark:text-white text-sm">{formatINR(ipo.minInvestment)}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[11px] font-bold text-zinc-400 mb-1">Issue Size</p>
+                                    <p className="font-semibold text-zinc-800 dark:text-white text-sm">
+                                        {ipo.issueSizeCr != null ? `₹${ipo.issueSizeCr.toLocaleString('en-IN', { maximumFractionDigits: 0 })} Cr` : '—'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {ipo.subscription ? (
+                                <div className="mb-5">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200 flex items-center gap-1.5">
+                                            <Users className="w-3.5 h-3.5" /> Subscribed {formatTimes(ipo.subscription.total)} overall
+                                        </p>
+                                        {ipo.subscription.updatedAt && <span className="text-[11px] font-bold text-zinc-400">as of {ipo.subscription.updatedAt}</span>}
+                                    </div>
+                                    <SubscriptionBars sub={ipo.subscription} />
+                                </div>
+                            ) : (
+                                <p className="mb-5 text-xs font-bold text-zinc-400">
+                                    {ipo.status === 'upcoming' ? `Bidding opens ${formatDate(ipo.openDate)}` : 'Category-wise subscription not published by NSE for this issue'}
+                                </p>
+                            )}
+
+                            {ipo.listing && (
+                                <div className="grid grid-cols-2 gap-3 mb-5">
+                                    {[
+                                        { label: 'Listing gain', value: ipo.listing.listingGainPercent, sub: `Opened at ${formatINR(ipo.listing.listingOpen)}` },
+                                        { label: 'Return now', value: ipo.listing.currentReturnPercent, sub: `Trading at ${formatINR(ipo.listing.currentPrice)}` }
+                                    ].map(item => (
+                                        <div key={item.label} className={`p-3 rounded-xl ${item.value >= 0 ? 'bg-green-50 dark:bg-green-900/10' : 'bg-red-50 dark:bg-red-900/10'}`}>
+                                            <p className="text-[11px] font-bold text-zinc-500">{item.label}</p>
+                                            <p className={`font-semibold flex items-center gap-1 ${item.value >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                                {item.value >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                                                {item.value >= 0 ? '+' : ''}{item.value.toFixed(2)}%
+                                            </p>
+                                            <p className="text-[11px] font-bold text-zinc-400">{item.sub}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            <div className="text-xs font-bold text-zinc-500 flex flex-wrap justify-between items-center gap-2 bg-zinc-50 dark:bg-zinc-900 px-4 py-3 rounded-xl">
+                                <span className="flex items-center gap-2"><Calendar className="w-4 h-4" /> {formatDate(ipo.openDate)} – {formatDate(ipo.closeDate)}</span>
+                                <span className="flex items-center gap-3">
+                                    {ipo.listingDate && <span>Listing: {formatDate(ipo.listingDate)}</span>}
+                                    {ipo.rhpUrl && (
+                                        <a href={ipo.rhpUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-brand-600 hover:underline">
+                                            <FileText className="w-3.5 h-3.5" /> RHP
+                                        </a>
+                                    )}
+                                </span>
+                            </div>
+                            {(ipo.leadManagers || ipo.registrar) && (
+                                <p className="mt-3 text-[11px] text-zinc-400 font-medium truncate">
+                                    {ipo.leadManagers && <>Lead managers: {ipo.leadManagers.split(/\n|,/)[0]}{ipo.leadManagers.includes(',') ? ' & others' : ''}</>}
+                                    {ipo.registrar && <> · Registrar: {ipo.registrar}</>}
+                                </p>
+                            )}
+                        </article>
+                    ))}
                 </div>
 
-                <div className="bg-amber-500/10 border border-amber-500/20 rounded-3xl p-6 md:p-8 relative overflow-hidden">
-                    <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center relative z-10">
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-6 relative overflow-hidden">
+                    <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
                         <AlertTriangle className="w-8 h-8 text-amber-500 shrink-0" />
-                        <div>
-                            <h4 className="font-black text-amber-600 uppercase tracking-widest text-sm mb-1">Educational Platform</h4>
-                            <p className="text-amber-700/80 dark:text-amber-300/80 text-sm font-medium leading-relaxed">
-                                Our risk assessments are educational tools based on fundamental factors. GMP data is unofficial and for reference only. Always consult a SEBI-registered financial advisor before investing. Past performance doesn't guarantee future results.
-                            </p>
-                        </div>
+                        <p className="text-amber-700/80 dark:text-amber-300/80 text-sm font-medium leading-relaxed">
+                            Issue details and subscription figures are from NSE; listing performance uses NSE prices via Yahoo Finance.
+                            "Demand" is derived only from subscription multiples (QIB demand weighs most) and is not a recommendation.
+                            Read the RHP and consult a SEBI-registered advisor before applying.
+                        </p>
                     </div>
                 </div>
-
             </div>
-        </section>
+        </Page>
     )
 }

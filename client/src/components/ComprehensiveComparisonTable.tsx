@@ -10,57 +10,10 @@ interface RowConfig {
   showIcon?: boolean;
 }
 
+// One row per stock from /api/compare/comprehensive; any metric may be null when no source reports it.
 interface StockData {
   symbol: string;
-  comingSoon?: boolean;
-  lastTradedPrice: number | null;
-  oneDayChange: number | null;
-  oneDayChangePercent: number | null;
-  fiftyTwoWeekHigh: number | null;
-  fiftyTwoWeekLow: number | null;
-  marketCap: number | null;
-  peRatio: number | null;
-  bookValue: number | null;
-  pbRatio: number | null;
-  roe: number | null;
-  roce: number | null;
-  eps: number | null;
-  dividendYield: number | null;
-  oneMonthReturn: number | null;
-  threeMonthReturn: number | null;
-  oneYearReturn: number | null;
-  threeYearReturn: number | null;
-  fiveYearReturn: number | null;
-  threeMonthHigh: number | null;
-  threeMonthLow: number | null;
-  oneYearHigh: number | null;
-  oneYearLow: number | null;
-  threeYearHigh: number | null;
-  threeYearLow: number | null;
-  fiveYearHigh: number | null;
-  fiveYearLow: number | null;
-  revenue: number | null;
-  expenses: number | null;
-  ebitda: number | null;
-  profitBeforeTax: number | null;
-  netProfit: number | null;
-  totalAssets: number | null;
-  totalLiabilities: number | null;
-  operatingActivities: number | null;
-  investingActivities: number | null;
-  financingActivities: number | null;
-  netCashFlow: number | null;
-  promoters: number | null;
-  dii: number | null;
-  fii: number | null;
-  public: number | null;
-  government: number | null;
-  fiftyDMA: number | null;
-  twoHundredDMA: number | null;
-  rsi: number | null;
-  macd: number | null;
-  mtf: number | null;
-  pledgeMargin: number | null;
+  [metric: string]: string | number | null | undefined | string[];
 }
 
 interface ComprehensiveComparisonTableProps {
@@ -69,21 +22,26 @@ interface ComprehensiveComparisonTableProps {
 }
 
 export default function ComprehensiveComparisonTable({ data, loading }: ComprehensiveComparisonTableProps) {
-  const formatCurrency = (value: number | null, symbol?: string) => {
+  const formatCurrency = (value: number | null, _symbol?: string) => {
     if (value === null || value === undefined || typeof value !== 'number') return 'N/A';
     const prefix = '₹';
     return `${prefix}${value.toLocaleString()}`;
   };
 
+  // Indian convention: lakh crore / crore.
   const formatLargeCurrency = (value: number | null, symbol?: string) => {
     if (value === null || value === undefined || typeof value !== 'number') return 'N/A';
-    const prefix = '₹';
-    
-    if (value >= 1e12) return `${prefix}${(value / 1e12).toFixed(1)}T`;
-    if (value >= 1e9) return `${prefix}${(value / 1e9).toFixed(1)}B`;
-    if (value >= 1e7) return `${prefix}${(value / 1e7).toFixed(1)}Cr`;
-    if (value >= 1e6) return `${prefix}${(value / 1e6).toFixed(1)}M`;
+    const sign = value < 0 ? '-' : '';
+    const abs = Math.abs(value);
+    if (abs >= 1e12) return `${sign}₹${(abs / 1e12).toFixed(2)} L Cr`;
+    if (abs >= 1e7) return `${sign}₹${(abs / 1e7).toLocaleString('en-IN', { maximumFractionDigits: 0 })} Cr`;
+    if (abs >= 1e5) return `${sign}₹${(abs / 1e5).toFixed(2)} L`;
     return formatCurrency(value, symbol);
+  };
+
+  const formatText = (value: unknown) => {
+    if (value === null || value === undefined || value === '') return 'N/A';
+    return String(value).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   };
 
   const formatPercentage = (value: number | null) => {
@@ -143,74 +101,96 @@ export default function ComprehensiveComparisonTable({ data, loading }: Comprehe
     );
   }
 
-  // Filter out stocks marked as "coming soon" (not in database)
-  const availableStocks = data.filter(stock => !stock.comingSoon);
-  const comingSoonStocks = data.filter(stock => stock.comingSoon);
-
-  if (availableStocks.length === 0) {
-    return (
-      <Card className="border-muted/50 bg-card/50 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle>Comprehensive Comparison</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <p className="text-amber-600 font-medium mb-3">📅 Coming Soon</p>
-            <p className="text-muted-foreground">
-              Detailed fundamentals for {comingSoonStocks.map(s => s.symbol).join(', ')} will be available soon.
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">Currently we have detailed data for 48+ Indian stocks</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const availableStocks = data;
 
   const sections: { title: string; rows: RowConfig[] }[] = [
     {
-      title: 'Price Information',
+      title: 'Price & Returns',
       rows: [
         { label: 'Last Traded Price', key: 'lastTradedPrice', format: formatCurrency },
-        { label: '1 Day Change', key: 'oneDayChange', format: formatCurrency, showIcon: true },
         { label: '1 Day Change %', key: 'oneDayChangePercent', format: formatPercentage, showIcon: true },
+        { label: '1 Month Return', key: 'oneMonthReturn', format: formatPercentage, showIcon: true },
+        { label: '3 Month Return', key: 'threeMonthReturn', format: formatPercentage, showIcon: true },
+        { label: '6 Month Return', key: 'sixMonthReturn', format: formatPercentage, showIcon: true },
+        { label: '1 Year Return', key: 'oneYearReturn', format: formatPercentage, showIcon: true },
+        { label: '3 Year Return', key: 'threeYearReturn', format: formatPercentage, showIcon: true },
+        { label: '5 Year Return', key: 'fiveYearReturn', format: formatPercentage, showIcon: true },
         { label: '52 Week High', key: 'fiftyTwoWeekHigh', format: formatCurrency },
         { label: '52 Week Low', key: 'fiftyTwoWeekLow', format: formatCurrency },
       ]
     },
     {
-      title: 'Key Metrics',
+      title: 'Valuation',
       rows: [
-        { label: 'PE Ratio', key: 'peRatio', format: formatNumber },
-        { label: 'EPS', key: 'eps', format: formatNumber },
-        { label: 'Volume', key: 'volume', format: (v: number | null) => v ? v.toLocaleString() : 'N/A' },
+        { label: 'Market Cap', key: 'marketCap', format: formatLargeCurrency },
+        { label: 'P/E (TTM)', key: 'peRatio', format: formatNumber },
+        { label: 'Forward P/E', key: 'forwardPE', format: formatNumber },
+        { label: 'P/B', key: 'pbRatio', format: formatNumber },
+        { label: 'PEG Ratio', key: 'pegRatio', format: formatNumber },
+        { label: 'EV / EBITDA', key: 'evToEbitda', format: formatNumber },
+        { label: 'Price / Sales', key: 'priceToSales', format: formatNumber },
+        { label: 'EPS (TTM)', key: 'eps', format: formatCurrency },
+        { label: 'Book Value / Share', key: 'bookValue', format: formatCurrency },
+        { label: 'Dividend Yield', key: 'dividendYield', format: formatPercentage },
       ]
     },
     {
-      title: 'Financial Data (When Available)',
+      title: 'Profitability & Growth',
       rows: [
-        { label: 'Revenue', key: 'revenue', format: formatLargeCurrency },
+        { label: 'ROE', key: 'roe', format: formatPercentage },
+        { label: 'ROA', key: 'roa', format: formatPercentage },
+        { label: 'ROCE', key: 'roce', format: formatPercentage },
+        { label: 'Net Profit Margin', key: 'profitMargin', format: formatPercentage },
+        { label: 'Operating Margin', key: 'operatingMargin', format: formatPercentage },
+        { label: 'Gross Margin', key: 'grossMargin', format: formatPercentage },
+        { label: 'Revenue Growth (YoY)', key: 'revenueGrowth', format: formatPercentage, showIcon: true },
+        { label: 'Earnings Growth (YoY)', key: 'earningsGrowth', format: formatPercentage, showIcon: true },
+      ]
+    },
+    {
+      title: 'Financials',
+      rows: [
+        { label: 'Revenue (TTM)', key: 'revenue', format: formatLargeCurrency },
+        { label: 'EBITDA', key: 'ebitda', format: formatLargeCurrency },
         { label: 'Net Income', key: 'netIncome', format: formatLargeCurrency },
         { label: 'Total Assets', key: 'totalAssets', format: formatLargeCurrency },
-        { label: 'ROE', key: 'roe', format: formatPercentage },
+        { label: 'Total Liabilities', key: 'totalLiabilities', format: formatLargeCurrency },
+        { label: 'Total Debt', key: 'totalDebt', format: formatLargeCurrency },
+        { label: 'Cash', key: 'totalCash', format: formatLargeCurrency },
+        { label: 'Free Cash Flow', key: 'freeCashFlow', format: formatLargeCurrency },
+        { label: 'Debt / Equity', key: 'debtToEquity', format: formatNumber },
+        { label: 'Current Ratio', key: 'currentRatio', format: formatNumber },
+      ]
+    },
+    {
+      title: 'Ownership',
+      rows: [
+        { label: 'Promoter / Insider Holding', key: 'promoterHolding', format: formatPercentage },
+        { label: 'Institutional Holding', key: 'institutionalHolding', format: formatPercentage },
+        { label: 'FII Holding', key: 'fiiHolding', format: formatPercentage },
+      ]
+    },
+    {
+      title: 'Technicals & Analyst View',
+      rows: [
+        { label: 'RSI (14)', key: 'rsi', format: formatNumber },
+        { label: '50 Day Moving Avg', key: 'fiftyDMA', format: formatCurrency },
+        { label: '200 Day Moving Avg', key: 'twoHundredDMA', format: formatCurrency },
+        { label: 'Beta', key: 'beta', format: formatNumber },
+        { label: 'Analyst Consensus', key: 'recommendation', format: (v) => formatText(v) },
+        { label: 'Analyst Target Price', key: 'targetMeanPrice', format: formatCurrency },
+        { label: 'No. of Analysts', key: 'analystCount', format: (v) => formatNumber(v, undefined, 0) },
+        { label: 'Sector', key: 'sector', format: (v) => formatText(v) },
       ]
     }
   ];
 
   return (
     <div className="space-y-6">
-      {/* Data Availability Notice */}
-      <Card className="border-muted/50 bg-card/50 backdrop-blur-sm">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <div className="w-2 h-2 rounded-full bg-green-500"></div>
-            <span>Real-time price data available</span>
-            <div className="w-2 h-2 rounded-full bg-yellow-500 ml-4"></div>
-            <span>Financial data available when possible</span>
-            <div className="w-2 h-2 rounded-full bg-gray-400 ml-4"></div>
-            <span>Some advanced metrics may show N/A</span>
-          </div>
-        </CardContent>
-      </Card>
+      <p className="text-xs text-muted-foreground">
+        Live price from Yahoo Finance (NSE); fundamentals from Yahoo Finance, with ROCE and promoter/FII holding from SmartStock's
+        dataset where available. N/A means no source reports that metric for this company (e.g. EBITDA for banks).
+      </p>
 
       {sections.map((section) => (
         <Card key={section.title} className="border-muted/50 bg-card/50 backdrop-blur-sm">
@@ -245,7 +225,7 @@ export default function ComprehensiveComparisonTable({ data, loading }: Comprehe
                         {row.label}
                       </TableCell>
                       {availableStocks.map((stock) => {
-                        const value = stock[row.key as keyof StockData] as number | null;
+                        const value = stock[row.key] as number | null;
                         const formattedValue = row.format(value, stock.symbol);
                         
                         return (

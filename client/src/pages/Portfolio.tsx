@@ -1,391 +1,206 @@
-import React, { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Wallet, PieChart, Activity, RefreshCw, BarChart3, User, Mail, Calendar, Settings } from 'lucide-react';
-import RealTimePnL from '../components/trading/RealTimePnL';
-import { ENDPOINTS } from '../lib/config';
-import { api } from '../lib/api';
+import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Briefcase, RotateCcw } from 'lucide-react'
+import { api } from '@/lib/api'
+import { fetchAccount, fetchOrders, fetchPositions, price, rupees, ticker, usePolling } from '@/lib/market'
+import type { AccountSummary, Order, Position } from '@/lib/market'
+import { Button, Delta, EmptyState, Page, PageHeader, Panel, PanelHeader, Segmented, Skeleton, Stat, Tabs, tableCell, tableHead } from '@/components/ds'
 
-interface PortfolioSummary {
-    totalValue: number;
-    totalInvested: number;
-    totalPnL: number;
-    totalPnLPercent: number;
-    availableBalance: number;
-    holdingsCount: number;
-    dayPnL: number;
-    dayPnLPercent: number;
+type SectorPosition = Position & { sector?: string }
+
+const PALETTE = ['#630ed4', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#f97316', '#64748b']
+
+// SVG donut: one arc per slice, cash shown last in neutral grey.
+function Donut({ slices, size = 168 }: { slices: { label: string; value: number; color: string }[]; size?: number }) {
+    const total = slices.reduce((a, s) => a + s.value, 0) || 1
+    const r = size / 2 - 12
+    const c = 2 * Math.PI * r
+    // Each arc starts where the previous ones end.
+    const arcs = slices.map((s, i) => ({
+        ...s,
+        len: (s.value / total) * c,
+        start: slices.slice(0, i).reduce((a, p) => a + (p.value / total) * c, 0)
+    }))
+    return (
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90" aria-hidden="true">
+            <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth="18" className="stroke-zinc-100 dark:stroke-zinc-800" />
+            {arcs.map(a => (
+                <circle key={a.label} cx={size / 2} cy={size / 2} r={r} fill="none" stroke={a.color} strokeWidth="18"
+                    strokeDasharray={`${Math.max(a.len - 1.5, 0)} ${c}`} strokeDashoffset={-a.start} />
+            ))}
+        </svg>
+    )
 }
 
-interface Holding {
-    symbol: string;
-    name: string;
-    quantity: number;
-    avgPrice: number;
-    currentPrice: number;
-    marketValue: number;
-    pnl: number;
-    pnlPercent: number;
-    sector: string;
-}
+export default function Portfolio() {
+    const navigate = useNavigate()
+    const { data: account, refresh: refreshAccount } = usePolling<AccountSummary>(fetchAccount, 30000)
+    const { data: positions, refresh: refreshPositions } = usePolling<SectorPosition[]>(fetchPositions as () => Promise<SectorPosition[]>, 30000)
+    const { data: orders, refresh: refreshOrders } = usePolling<Order[]>(fetchOrders, 60000)
+    const [tab, setTab] = useState<'holdings' | 'orders'>('holdings')
+    const [allocBy, setAllocBy] = useState<'stock' | 'sector'>('sector')
+    const [orderFilter, setOrderFilter] = useState<'all' | 'BUY' | 'SELL'>('all')
+    const [resetting, setResetting] = useState(false)
 
-const Portfolio: React.FC = () => {
-    const [portfolioSummary, setPortfolioSummary] = useState<PortfolioSummary | null>(null);
-    const [holdings, setHoldings] = useState<Holding[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('overview');
-    const [user, setUser] = useState<any>(null);
-    
-    useEffect(() => {
-        // Get user from localStorage
-        const userData = localStorage.getItem('user');
-        if (userData) {
-            setUser(JSON.parse(userData));
+    const realized = (orders ?? []).reduce((a, o) => a + (o.realizedPnL ?? 0), 0)
+    const holdingsValue = (positions ?? []).reduce((a, p) => a + (p.currentValue ?? p.invested), 0)
+
+    const slices = useMemo(() => {
+        const groups = new Map<string, number>()
+        for (const p of positions ?? []) {
+            const key = allocBy === 'stock' ? ticker(p.symbol) : (p.sector || 'Other')
+            groups.set(key, (groups.get(key) ?? 0) + (p.currentValue ?? p.invested))
         }
-        
-        fetchPortfolioData();
-        const interval = setInterval(fetchPortfolioData, 30000); // Update every 30 seconds
-        return () => {
-            clearInterval(interval);
-        };
-    }, []);
+        const sorted = [...groups.entries()].sort((a, b) => b[1] - a[1])
+        const top = sorted.slice(0, 7)
+        const rest = sorted.slice(7).reduce((a, [, v]) => a + v, 0)
+        const list = top.map(([label, value], i) => ({ label, value, color: PALETTE[i] }))
+        if (rest > 0) list.push({ label: 'Others', value: rest, color: PALETTE[7] })
+        if (account?.availableBalance) list.push({ label: 'Cash', value: account.availableBalance, color: '#d4d4d8' })
+        return list
+    }, [positions, allocBy, account?.availableBalance])
+    const sliceTotal = slices.reduce((a, s) => a + s.value, 0) || 1
 
-    const fetchPortfolioData = async () => {
+    const resetAccount = async () => {
+        if (!window.confirm('Reset your paper-trading account? All holdings and order history will be cleared and cash reset to ₹1,00,000.')) return
+        setResetting(true)
         try {
-            setLoading(true);
-            
-            // Get user from localStorage
-            const userData = localStorage.getItem('user');
-            if (!userData) {
-
-                return;
-            }
-            
-            const currentUser = JSON.parse(userData);
-            const userId = currentUser.id;
-            
-            // Fetch portfolio summary
-            const summaryResponse = await api.get(`/trading/portfolio/${userId}`);
-            const summaryData = summaryResponse.data;
-            
-            // Fetch holdings
-            const holdingsResponse = await api.get(`/trading/holdings/${userId}`);
-            const holdingsData = holdingsResponse.data;
-            
-            if (summaryData.status === 'success') {
-                setPortfolioSummary(summaryData.data);
-            } else {
-                // Set default values if API fails
-                setPortfolioSummary({
-                    totalValue: 100000,
-                    totalInvested: 0,
-                    totalPnL: 0,
-                    totalPnLPercent: 0,
-                    availableBalance: 100000,
-                    holdingsCount: 0,
-                    dayPnL: 0,
-                    dayPnLPercent: 0
-                });
-            }
-            
-            if (holdingsData.status === 'success') {
-                // Use server-calculated values directly to avoid NaN issues
-                const transformedHoldings = holdingsData.data.map((holding: any) => {
-                    // Validate all numeric values from server
-                    const avgPrice = parseFloat(holding.avgPrice) || 0;
-                    const currentPrice = parseFloat(holding.currentPrice) || avgPrice;
-                    const quantity = parseFloat(holding.quantity) || 0;
-                    const invested = parseFloat(holding.invested) || 0;
-                    const currentValue = parseFloat(holding.currentValue) || 0;
-                    const pnl = parseFloat(holding.pnl) || 0;
-                    const pnlPercent = parseFloat(holding.pnlPercent) || 0;
-                    
-                    return {
-                        symbol: holding.symbol || '',
-                        name: holding.name || holding.symbol || '',
-                        quantity: quantity,
-                        avgPrice: avgPrice,
-                        currentPrice: currentPrice,
-                        marketValue: currentValue,
-                        invested: invested,
-                        pnl: pnl,
-                        pnlPercent: pnlPercent,
-                        sector: holding.sector || 'Unknown',
-                        purchaseDate: holding.purchaseDate
-                    };
-                });
-                
-                setHoldings(transformedHoldings);
-            }
-        } catch (error) {
-
-            // Set default values to prevent blank screen
-            setPortfolioSummary({
-                totalValue: 0,
-                totalInvested: 0,
-                totalPnL: 0,
-                totalPnLPercent: 0,
-                availableBalance: 100000, // Default starting balance
-                holdingsCount: 0,
-                dayPnL: 0,
-                dayPnLPercent: 0
-            });
+            await api.post('/trading/reset-portfolio')
+            refreshAccount(); refreshPositions(); refreshOrders()
         } finally {
-            setLoading(false);
+            setResetting(false)
         }
-    };
-
-    const formatCurrency = (amount: number) => {
-        // Handle NaN, null, undefined values
-        if (isNaN(amount) || amount === null || amount === undefined) {
-            return '₹0';
-        }
-        
-        // Format with Indian locale and explicitly add ₹ symbol
-        const formatted = Math.abs(amount).toLocaleString('en-IN', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        });
-        
-        return `₹${formatted}`;
-    };
-
-    const tabs = [
-        { id: 'overview', label: 'Overview', icon: PieChart },
-        { id: 'holdings', label: 'Holdings', icon: BarChart3 },
-        { id: 'pnl', label: 'Real-Time P&L', icon: Activity },
-        { id: 'profile', label: 'Profile', icon: User }
-    ];
-
-    if (loading && !portfolioSummary) {
-        return (
-            <div className="min-h-screen bg-[#f9f9ff] dark:bg-slate-900 flex items-center justify-center">
-                <div className="flex flex-col items-center space-y-4">
-                    <RefreshCw className="h-10 w-10 animate-spin text-[#630ed4]" />
-                    <span className="text-gray-600 dark:text-gray-400 font-bold uppercase tracking-widest text-sm">Loading Portfolio</span>
-                </div>
-            </div>
-        );
     }
 
+    const filteredOrders = (orders ?? []).filter(o => orderFilter === 'all' || o.type === orderFilter)
+
     return (
-        <section className="p-4 md:p-8 space-y-8 bg-[#f9f9ff] dark:bg-slate-900 min-h-screen border-t dark:border-slate-800" id="portfolio">
-            <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-black text-on-surface dark:text-white">Portfolio Dashboard</h1>
-                <button
-                    onClick={fetchPortfolioData}
-                    disabled={loading}
-                    className="flex items-center space-x-2 px-6 py-2 bg-[#630ed4] text-white rounded-lg hover:scale-105 transition-transform disabled:opacity-50 font-bold text-sm shadow-md"
-                >
-                    <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                    <span>Sync Data</span>
-                </button>
-            </div>
+        <Page>
+            <PageHeader
+                title="Portfolio"
+                description="Your paper-trading holdings, allocation and order history."
+                actions={<Button variant="ghost" size="sm" onClick={resetAccount} disabled={resetting}><RotateCcw className="w-3.5 h-3.5" /> Reset account</Button>}
+            />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden hover:shadow-md transition-shadow">
-                    <div className="absolute inset-0 bg-gradient-to-br from-violet-50 to-transparent dark:from-violet-900/10 pointer-events-none" />
-                    <div className="flex items-center justify-between mb-3">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Value</p>
-                        <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
-                            <Wallet className="w-4 h-4 text-violet-600" />
-                        </div>
-                    </div>
-                    <h3 className="text-2xl font-black text-on-surface dark:text-white">
-                        {portfolioSummary ? formatCurrency(portfolioSummary.totalValue) : '₹0'}
-                    </h3>
+            <Panel className="p-5 mb-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-5">
+                    <Stat label="Account value" value={account ? rupees(account.totalValue) : <Skeleton className="h-6 w-28" />} />
+                    <Stat label="Holdings value" value={rupees(holdingsValue)} sub={`Invested ${rupees(account?.totalInvested)}`} />
+                    <Stat label="Unrealised P&L" value={<Delta value={account?.totalPnL} kind="rupees" />} sub={<Delta value={account?.totalPnLPercent} />} />
+                    <Stat label="Realised P&L" value={<Delta value={orders ? realized : null} kind="rupees" />} sub="From closed trades" />
+                    <Stat label="Today's P&L" value={<Delta value={account?.dayPnL} kind="rupees" />} sub={<Delta value={account?.dayPnLPercent} />} />
+                    <Stat label="Cash" value={rupees(account?.availableBalance)} sub="Available to invest" />
                 </div>
-                <div className={`relative p-6 rounded-2xl shadow-sm border overflow-hidden hover:shadow-md transition-shadow ${(portfolioSummary?.totalPnL || 0) >= 0 ? 'bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-800/30' : 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-800/30'}`}>
-                    <div className="flex items-center justify-between mb-3">
-                        <p className={`text-xs font-bold uppercase tracking-widest ${(portfolioSummary?.totalPnL || 0) >= 0 ? 'text-green-600' : 'text-red-500'}`}>Total P&L</p>
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${(portfolioSummary?.totalPnL || 0) >= 0 ? 'bg-green-100 dark:bg-green-900/40' : 'bg-red-100 dark:bg-red-900/40'}`}>
-                            {(portfolioSummary?.totalPnL || 0) >= 0 ? <TrendingUp className="w-4 h-4 text-green-600" /> : <TrendingDown className="w-4 h-4 text-red-500" />}
-                        </div>
-                    </div>
-                    <h3 className={`text-2xl font-black ${(portfolioSummary?.totalPnL || 0) >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {(portfolioSummary?.totalPnL || 0) >= 0 ? '+' : ''}{portfolioSummary ? formatCurrency(portfolioSummary.totalPnL) : '₹0'}
-                    </h3>
-                    <p className={`text-xs font-bold mt-1 ${(portfolioSummary?.totalPnL || 0) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                        {portfolioSummary ? (portfolioSummary.totalPnL >= 0 ? '+' : '') + portfolioSummary.totalPnLPercent.toFixed(2) + '%' : '0.00%'}
-                    </p>
-                </div>
-                <div className="relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden hover:shadow-md transition-shadow">
-                    <div className="absolute inset-0 bg-gradient-to-br from-amber-50 to-transparent dark:from-amber-900/10 pointer-events-none" />
-                    <div className="flex items-center justify-between mb-3">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Available Balance</p>
-                        <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                            <Wallet className="w-4 h-4 text-amber-600" />
-                        </div>
-                    </div>
-                    <h3 className="text-2xl font-black text-on-surface dark:text-white">
-                        {portfolioSummary ? formatCurrency(portfolioSummary.availableBalance) : '₹1,00,000'}
-                    </h3>
-                </div>
-                <div className="relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden hover:shadow-md transition-shadow">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent dark:from-blue-900/10 pointer-events-none" />
-                    <div className="flex items-center justify-between mb-3">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Active Holdings</p>
-                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                            <BarChart3 className="w-4 h-4 text-blue-600" />
-                        </div>
-                    </div>
-                    <h3 className="text-2xl font-black text-on-surface dark:text-white">
-                        {portfolioSummary ? portfolioSummary.holdingsCount : 0}
-                    </h3>
-                </div>
-            </div>
+            </Panel>
 
-            <div className="flex gap-8 border-b border-outline-variant/30 dark:border-slate-800">
-                {tabs.map((tab) => {
-                    const isActive = activeTab === tab.id;
-                    return (
-                        <button 
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`pb-4 font-black flex items-center gap-2 text-sm tracking-widest transition-all uppercase ${isActive ? 'border-b-2 border-[#630ed4] text-[#630ed4]' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
-                        >
-                            {tab.label}
-                        </button>
-                    );
-                })}
-            </div>
-
-            <div className="mt-8">
-                {/* Profile Tab */}
-                {activeTab === 'profile' && (
-                    <div className="bg-[#e9edff]-container-low dark:bg-[#630ed4]/10 rounded-3xl p-6 lg:p-10 flex flex-col md:flex-row items-center justify-between overflow-hidden relative shadow-sm border border-outline-variant/10 dark:border-slate-800">
-                        <div className="flex flex-col sm:flex-row items-center gap-8 relative z-10 w-full mb-6 md:mb-0">
-                            {user?.avatar ? (
-                                <img src={user.avatar} alt="Profile" className="w-24 h-24 rounded-full border-4 border-white dark:border-slate-800 shadow-xl" />
-                            ) : (
-                                <div className="w-24 h-24 rounded-full border-4 border-white dark:border-slate-800 shadow-xl bg-[#630ed4] flex items-center justify-center text-white">
-                                    <User className="w-12 h-12" />
-                                </div>
-                            )}
-                            <div className="space-y-1 text-center sm:text-left">
-                                <h3 className="text-2xl font-black text-on-surface dark:text-white">{user?.name || 'Guest'}</h3>
-                                <p className="text-sm font-medium text-on-surface-variant dark:text-slate-400">{user?.email}</p>
-                                <div className="flex flex-wrap justify-center sm:justify-start gap-2 pt-2">
-                                    <span className="px-3 py-1 bg-[#630ed4]/10 text-[#630ed4] dark:bg-[#630ed4]/20 dark:text-[#a975ff] text-[10px] font-black rounded-lg">VERIFIED</span>
-                                    <span className="px-3 py-1 bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400 text-[10px] font-black rounded-lg">ACTIVE INVESTOR</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="relative z-10 flex gap-4 w-full md:w-auto">
-                            <button className="flex-1 md:flex-none bg-[#630ed4] text-white px-8 py-3 rounded-xl font-black text-sm shadow-lg shadow-primary/20 hover:scale-105 transition-transform text-center">Settings</button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Overview Tab */}
-                {activeTab === 'overview' && (
-                    <div className="space-y-6">
-                        {holdings.length > 0 ? (
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                {holdings.slice(0, 6).map((holding, i) => (
-                                    <div key={i} className="bg-white dark:bg-slate-800 rounded-2xl p-8 border border-outline-variant/10 dark:border-slate-700 shadow-sm relative overflow-hidden group hover:border-[#630ed4]/30 transition-colors">
-                                        <div className="flex justify-between items-start mb-8 relative z-10">
-                                            <div>
-                                                <h4 className="text-2xl font-black text-on-surface dark:text-white uppercase">{holding.symbol}</h4>
-                                                <p className="text-xs font-bold text-slate-400 uppercase">{holding.quantity} Shares</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-2xl font-black text-on-surface dark:text-white">{formatCurrency(holding.marketValue)}</p>
-                                                <p className={`text-sm font-bold ${holding.pnl >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                                                    {holding.pnl >= 0 ? '+' : ''}{formatCurrency(holding.pnl)} ({holding.pnlPercent.toFixed(2)}%)
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-4 relative z-10">
-                                            <div>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Avg Price</p>
-                                                <p className="font-bold text-sm dark:text-slate-200">{formatCurrency(holding.avgPrice)}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Current Price</p>
-                                                <p className="font-bold text-sm dark:text-slate-200">{formatCurrency(holding.currentPrice)}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Invested Value</p>
-                                                <p className="font-bold text-sm dark:text-slate-200">{formatCurrency(holding.invested || (holding.avgPrice * holding.quantity))}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-4">
+                <Panel className="min-w-0">
+                    <Tabs
+                        className="px-2"
+                        value={tab}
+                        onChange={setTab}
+                        tabs={[
+                            { value: 'holdings', label: `Holdings${positions ? ` (${positions.length})` : ''}` },
+                            { value: 'orders', label: `Orders${orders ? ` (${orders.length})` : ''}` }
+                        ]}
+                    />
+                    {tab === 'holdings' && (
+                        positions == null ? <div className="p-4 space-y-2">{[0, 1, 2].map(i => <Skeleton key={i} className="h-10" />)}</div>
+                        : positions.length === 0 ? (
+                            <EmptyState icon={<Briefcase className="w-6 h-6" />} title="No holdings yet"
+                                description="Buy stocks from the Trade screen and they'll appear here with live P&L."
+                                action={<Button variant="primary" onClick={() => navigate('/virtual-trading')}>Go to Trade</Button>} />
                         ) : (
-                            <div className="flex flex-col items-center justify-center py-20 px-6 text-center bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
-                                <div className="w-20 h-20 rounded-2xl bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center mb-5">
-                                    <Activity className="h-10 w-10 text-violet-300 dark:text-violet-600" />
-                                </div>
-                                <h3 className="text-xl font-black text-slate-800 dark:text-white mb-2">No Holdings Yet</h3>
-                                <p className="text-sm text-slate-400 mb-6 max-w-xs">Start with ₹1,00,000 virtual money and build your portfolio risk-free.</p>
-                                <a href="/virtual-trading" className="bg-[#630ed4] text-white px-7 py-3 rounded-xl font-black text-sm hover:bg-[#4d0aab] transition-colors shadow-md shadow-violet-200 dark:shadow-none">
-                                    Start Trading →
-                                </a>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* Holdings Tab */}
-                {activeTab === 'holdings' && (
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-outline-variant/10 dark:border-slate-700 shadow-sm overflow-hidden">
-                        {holdings.length > 0 ? (
                             <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse">
-                                    <thead className="bg-[#f9f9ff] dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
-                                        <tr>
-                                            <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">Symbol</th>
-                                            <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-right">Quantity</th>
-                                            <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-right">Avg Price</th>
-                                            <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-right">Current Price</th>
-                                            <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-right">Market Value</th>
-                                            <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-right">P&L</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
-                                        {holdings.map((holding) => (
-                                            <tr key={holding.symbol} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                                <td className="px-6 py-4">
-                                                    <div className="font-bold text-gray-900 dark:text-white uppercase">{holding.symbol}</div>
-                                                    <div className="text-xs text-gray-500">{holding.name}</div>
+                                <table className="w-full">
+                                    <thead><tr className="border-b border-zinc-100 dark:border-zinc-800">
+                                        <th className={tableHead}>Stock</th><th className={tableHead}>Qty</th><th className={tableHead}>Avg. cost</th>
+                                        <th className={tableHead}>LTP</th><th className={tableHead}>Current value</th><th className={tableHead}>P&amp;L</th>
+                                        <th className={tableHead}>Day</th><th className={tableHead}>Weight</th>
+                                    </tr></thead>
+                                    <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                                        {positions.map(p => (
+                                            <tr key={p.symbol} onClick={() => navigate(`/stock/${p.symbol}`)} className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                                                <td className={tableCell}>
+                                                    <span className="font-medium">{ticker(p.symbol)}</span>
+                                                    <span className="block text-xs text-zinc-500">{p.sector}</span>
                                                 </td>
-                                                <td className="px-6 py-4 text-right font-medium dark:text-slate-300">{holding.quantity}</td>
-                                                <td className="px-6 py-4 text-right font-medium dark:text-slate-300">{formatCurrency(holding.avgPrice)}</td>
-                                                <td className="px-6 py-4 text-right font-medium dark:text-slate-300">{formatCurrency(holding.currentPrice)}</td>
-                                                <td className="px-6 py-4 text-right font-bold dark:text-white">{formatCurrency(holding.marketValue)}</td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <div className={`font-bold ${holding.pnl >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                                                        {holding.pnl >= 0 ? '+' : ''}{formatCurrency(holding.pnl)}
-                                                    </div>
-                                                    <div className={`text-xs font-bold ${holding.pnl >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                                                        {holding.pnl >= 0 ? '+' : ''}{holding.pnlPercent.toFixed(2)}%
-                                                    </div>
-                                                </td>
+                                                <td className={tableCell}>{p.quantity}</td>
+                                                <td className={tableCell}>{price(p.avgPrice)}</td>
+                                                <td className={tableCell}>{price(p.currentPrice)}</td>
+                                                <td className={tableCell}>{rupees(p.currentValue)}</td>
+                                                <td className={tableCell}><Delta value={p.pnl} kind="rupees" /><span className="block text-xs"><Delta value={p.pnlPercent} /></span></td>
+                                                <td className={tableCell}><Delta value={p.dayPnL} kind="rupees" /></td>
+                                                <td className={tableCell}>{holdingsValue ? `${(((p.currentValue ?? p.invested) / holdingsValue) * 100).toFixed(1)}%` : '—'}</td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
-                        ) : (
-                            <div className="flex flex-col items-center justify-center py-20 text-center">
-                                <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-4">
-                                    <Activity className="h-8 w-8 text-slate-300 dark:text-slate-500" />
-                                </div>
-                                <p className="font-black text-slate-700 dark:text-white mb-1">No Holdings Yet</p>
-                                <p className="text-sm text-slate-400 mb-5">Go to Virtual Trading to buy your first stock</p>
-                                <a href="/virtual-trading" className="bg-[#630ed4] text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-[#4d0aab] transition-colors">Start Trading</a>
+                        )
+                    )}
+                    {tab === 'orders' && (
+                        <>
+                            <div className="px-4 pt-3">
+                                <Segmented value={orderFilter} onChange={setOrderFilter} options={[{ value: 'all', label: 'All' }, { value: 'BUY', label: 'Buys' }, { value: 'SELL', label: 'Sells' }]} />
                             </div>
-                        )}
+                            {filteredOrders.length === 0 ? <EmptyState title="No orders" description="Orders you place on the Trade screen are listed here." /> : (
+                                <div className="overflow-x-auto mt-2">
+                                    <table className="w-full">
+                                        <thead><tr className="border-b border-zinc-100 dark:border-zinc-800">
+                                            <th className={tableHead}>Date</th><th className={tableHead}>Stock</th><th className={tableHead}>Side</th>
+                                            <th className={tableHead}>Qty</th><th className={tableHead}>Price</th><th className={tableHead}>Value</th>
+                                            <th className={tableHead}>Charges</th><th className={tableHead}>Realised P&amp;L</th>
+                                        </tr></thead>
+                                        <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                                            {filteredOrders.map(o => (
+                                                <tr key={o.orderId} onClick={() => navigate(`/stock/${o.symbol}`)} className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                                                    <td className={`${tableCell} text-zinc-500`}>{new Date(o.timestamp).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}</td>
+                                                    <td className={`${tableCell} font-medium`}>{ticker(o.symbol)}</td>
+                                                    <td className={tableCell}>
+                                                        <span className={o.type === 'BUY' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}>{o.type === 'BUY' ? 'Buy' : 'Sell'}</span>
+                                                    </td>
+                                                    <td className={tableCell}>{o.quantity}</td>
+                                                    <td className={tableCell}>{price(o.price)}</td>
+                                                    <td className={tableCell}>{rupees(o.totalAmount)}</td>
+                                                    <td className={`${tableCell} text-zinc-500`}>{rupees(o.fees)}</td>
+                                                    <td className={tableCell}>{o.realizedPnL == null ? <span className="text-zinc-400">—</span> : <Delta value={o.realizedPnL} kind="rupees" />}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </>
+                    )}
+                </Panel>
+
+                <Panel>
+                    <PanelHeader title="Allocation" subtitle="Share of account value"
+                        action={<Segmented value={allocBy} onChange={setAllocBy} options={[{ value: 'sector', label: 'Sector' }, { value: 'stock', label: 'Stock' }]} />} />
+                    <div className="px-4 pb-4">
+                        <div className="relative flex justify-center py-2">
+                            <Donut slices={slices} />
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                <span className="text-xs text-zinc-500">Invested</span>
+                                <span className="text-lg font-semibold tabular-nums">
+                                    {account?.totalValue ? `${((holdingsValue / account.totalValue) * 100).toFixed(1)}%` : '—'}
+                                </span>
+                            </div>
+                        </div>
+                        <ul className="mt-3 space-y-2">
+                            {slices.map(s => (
+                                <li key={s.label} className="flex items-center gap-2 text-sm">
+                                    <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: s.color }} />
+                                    <span className="flex-1 truncate text-zinc-700 dark:text-zinc-300">{s.label}</span>
+                                    <span className="tabular-nums text-zinc-500">{rupees(s.value, true)}</span>
+                                    <span className="w-12 text-right tabular-nums font-medium">{((s.value / sliceTotal) * 100).toFixed(1)}%</span>
+                                </li>
+                            ))}
+                        </ul>
                     </div>
-                )}
-
-                {/* Real-Time PnL Tab */}
-                {activeTab === 'pnl' && (
-                    <RealTimePnL />
-                )}
+                </Panel>
             </div>
-        </section>
-    );
-};
-
-export default Portfolio;
+        </Page>
+    )
+}

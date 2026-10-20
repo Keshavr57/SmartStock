@@ -70,31 +70,6 @@ class AuthService {
     this.isInitialized = true;
   }
 
-  private async verifyToken(): Promise<boolean> {
-    if (!this.token) return false;
-
-    try {
-      const response = await fetch(AUTH_ENDPOINTS.VERIFY, {
-        headers: {
-          'Authorization': `Bearer ${this.token}`,
-        },
-        timeout: 5000 // 5 second timeout for quick verification
-      } as RequestInit);
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.user) {
-          this.user = data.user;
-          localStorage.setItem('user', JSON.stringify(data.user));
-          return true;
-        }
-      }
-      return false;
-    } catch (error) {
-      return false;
-    }
-  }
-
   private setupTokenRefresh() {
     // Clear existing timer
     if (this.refreshTimer) {

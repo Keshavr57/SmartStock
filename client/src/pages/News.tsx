@@ -1,246 +1,308 @@
-import { useState, useEffect } from "react"
-import { getTrendingNews, getNewsBySentiment, getNewsByImpact } from "../lib/api"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { ExternalLink, Clock, Newspaper, RefreshCw, Search } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { useState, useEffect, useMemo } from "react"
+import { Page, PageHeader } from '@/components/ds'
+import { getTrendingNews, getNewsAnalytics } from "../lib/api"
+import { ExternalLink, Clock, Newspaper, RefreshCw, Search, FlaskConical, ChevronDown, ChevronUp } from "lucide-react"
 
-type NewsItem = {
-    title: string;
-    link: string;
-    date: Date;
-    source: string;
-    type: string;
-    sentiment: 'positive' | 'negative' | 'neutral';
-    sentimentIcon: string;
-    sentimentScore: number;
-    marketImpact: 'high' | 'medium' | 'low';
-    impactLevel: number;
-    impactBadge: string;
-    isTrusted: boolean;
-    priority: number;
-};
+interface HistoryStats {
+    basis: 'event' | 'sentiment'
+    n: number
+    meanAr1: number
+    meanArNext: number | null
+    meanCar3: number
+    meanAbsAr1: number
+    tStat: number | null
+    hitRate: number | null
+    upShare: number
+}
+
+interface NewsItem {
+    id: string
+    title: string
+    summary: string
+    link: string
+    source: string
+    publishedAt: string
+    symbols: string[]
+    scope: 'company' | 'market'
+    sentiment: 'positive' | 'negative' | 'neutral'
+    sentimentScore: number
+    confidence: number
+    event: { type: string; label: string; direction: number; macro: boolean } | null
+    evidence: { term: string; weight: number }[]
+    impact: { level: 'high' | 'medium' | 'low'; expectedMovePercent: number; history: HistoryStats | null }
+    reaction: { ar1: number; car3: number; reactionDate: string } | null
+}
+
+interface Accuracy { evaluated: number; accuracy: number | null; baseline: number | null }
+interface Analytics {
+    sampleSize: number
+    model: { sameSession: Accuracy; nextSession: Accuracy } | null
+    events: ({ type: string; label: string; n: number; meanAr1: number; meanArNext: number | null; meanCar3: number; tStat: number | null; hitRate: number | null })[]
+    methodology: string
+}
+
+const SENTIMENT_STYLE = {
+    positive: 'bg-green-500 text-white',
+    negative: 'bg-red-500 text-white',
+    neutral: 'bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300'
+}
+const IMPACT_STYLE = {
+    high: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+    medium: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+    low: 'bg-zinc-100 text-zinc-500 dark:bg-zinc-700 dark:text-zinc-400'
+}
+const signed = (n: number | null | undefined, digits = 2) => (n == null ? '—' : `${n >= 0 ? '+' : ''}${n.toFixed(digits)}%`)
+const tone = (n: number | null | undefined) => (n == null ? '' : n >= 0 ? 'text-green-600' : 'text-red-500')
+
+const timeAgo = (iso: string) => {
+    const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000)
+    if (mins < 60) return `${Math.max(mins, 1)}m ago`
+    if (mins < 24 * 60) return `${Math.round(mins / 60)}h ago`
+    return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+}
+
+function HistoryLine({ history, event }: { history: HistoryStats | null; event: NewsItem['event'] }) {
+    if (!history) {
+        return <p className="text-[11px] font-bold text-zinc-400">Not enough similar past news yet to measure an effect.</p>
+    }
+    const what = history.basis === 'event' && event ? `"${event.label}" news` : 'news with this tone'
+    const significant = history.tStat != null && Math.abs(history.tStat) >= 2
+    return (
+        <div className="text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+            <span className="font-semibold text-zinc-700 dark:text-zinc-200">Past effect of {what}</span> (n={history.n}
+            {significant ? ', statistically significant' : ', not significant'}):{' '}
+            same day <span className={`font-semibold ${tone(history.meanAr1)}`}>{signed(history.meanAr1)}</span> vs NIFTY
+            {history.meanArNext != null && <>, next day <span className={`font-semibold ${tone(history.meanArNext)}`}>{signed(history.meanArNext)}</span></>}
+            {history.hitRate != null && <> · moved in the tagged direction {history.hitRate.toFixed(0)}% of the time</>}
+        </div>
+    )
+}
+
+function ModelPanel({ analytics }: { analytics: Analytics }) {
+    const [open, setOpen] = useState(false)
+    const same = analytics.model?.sameSession
+    const next = analytics.model?.nextSession
+    return (
+        <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 p-6">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div className="flex items-start gap-3">
+                    <FlaskConical className="w-6 h-6 text-brand-600 shrink-0 mt-1" />
+                    <div>
+                        <h2 className="font-semibold text-zinc-800 dark:text-white">How accurate are these tags?</h2>
+                        <p className="text-xs font-medium text-zinc-500 max-w-xl mt-1">
+                            Every headline is stored and its real price reaction measured afterwards (stock return minus NIFTY 50 return).
+                            Backtested on {analytics.sampleSize.toLocaleString('en-IN')} headlines.
+                        </p>
+                    </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 shrink-0">
+                    <div className="bg-green-50 dark:bg-green-900/10 rounded-xl px-4 py-3">
+                        <p className="text-[11px] font-semibold text-zinc-500">Tag vs same-day move</p>
+                        <p className="text-2xl font-semibold text-green-600">{same?.accuracy != null ? `${same.accuracy}%` : '—'}</p>
+                        <p className="text-[11px] font-bold text-zinc-400">baseline {same?.baseline ?? '—'}% · n={same?.evaluated ?? 0}</p>
+                    </div>
+                    <div className="bg-zinc-50 dark:bg-zinc-900/40 rounded-xl px-4 py-3">
+                        <p className="text-[11px] font-semibold text-zinc-500">Predicts next day</p>
+                        <p className="text-2xl font-semibold text-zinc-700 dark:text-zinc-200">{next?.accuracy != null ? `${next.accuracy}%` : '—'}</p>
+                        <p className="text-[11px] font-bold text-zinc-400">baseline {next?.baseline ?? '—'}% · n={next?.evaluated ?? 0}</p>
+                    </div>
+                </div>
+            </div>
+            <p className="text-[11px] font-medium text-zinc-500 mt-4">
+                Reading this honestly: the tags describe how the market reacts to a headline well, but they do not give an edge
+                for the following day; news is largely priced in within the same session, consistent with efficient markets.
+            </p>
+            <button onClick={() => setOpen(!open)} className="mt-3 text-xs font-semibold text-brand-600 flex items-center gap-1">
+                {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />} Event-type study
+            </button>
+            {open && (
+                <div className="mt-4 overflow-x-auto">
+                    <table className="w-full text-xs">
+                        <thead>
+                            <tr className="text-left text-[11px] text-zinc-400">
+                                <th className="py-2 pr-4">Event type</th><th className="py-2 pr-4 text-right">Headlines</th>
+                                <th className="py-2 pr-4 text-right">Same day</th><th className="py-2 pr-4 text-right">Next day</th>
+                                <th className="py-2 pr-4 text-right">3 days</th><th className="py-2 pr-4 text-right">t-stat</th>
+                                <th className="py-2 text-right">Hit rate</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-100 dark:divide-zinc-700">
+                            {analytics.events.filter(e => e.n >= 5).map(e => (
+                                <tr key={e.type} className="font-bold text-zinc-700 dark:text-zinc-200">
+                                    <td className="py-2 pr-4">{e.label}</td>
+                                    <td className="py-2 pr-4 text-right">{e.n}</td>
+                                    <td className={`py-2 pr-4 text-right ${tone(e.meanAr1)}`}>{signed(e.meanAr1)}</td>
+                                    <td className={`py-2 pr-4 text-right ${tone(e.meanArNext)}`}>{signed(e.meanArNext)}</td>
+                                    <td className={`py-2 pr-4 text-right ${tone(e.meanCar3)}`}>{signed(e.meanCar3)}</td>
+                                    <td className={`py-2 pr-4 text-right ${e.tStat != null && Math.abs(e.tStat) >= 2 ? 'text-brand-600' : 'text-zinc-400'}`}>{e.tStat?.toFixed(2) ?? '—'}</td>
+                                    <td className="py-2 text-right">{e.hitRate != null ? `${e.hitRate.toFixed(0)}%` : '—'}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    <p className="text-[11px] text-zinc-400 mt-3">{analytics.methodology} |t| ≥ 2 (highlighted) means the average move is unlikely to be chance.</p>
+                </div>
+            )}
+        </div>
+    )
+}
 
 export default function News() {
     const [news, setNews] = useState<NewsItem[]>([])
+    const [analytics, setAnalytics] = useState<Analytics | null>(null)
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
-    const [activeFilter, setActiveFilter] = useState<string>('all')
+    const [error, setError] = useState<string | null>(null)
+    const [sentimentFilter, setSentimentFilter] = useState<'all' | NewsItem['sentiment']>('all')
+    const [impactFilter, setImpactFilter] = useState<'all' | NewsItem['impact']['level']>('all')
     const [searchQuery, setSearchQuery] = useState('')
 
-    const fetchNews = async (filter: string = 'all', fastMode = false) => {
-        setLoading(true)
+    const load = async () => {
+        setError(null)
         try {
-            let res;
-            switch (filter) {
-                case 'positive':
-                case 'negative':
-                case 'neutral':
-                    res = await getNewsBySentiment(filter as 'positive' | 'negative' | 'neutral');
-                    break;
-                case 'high':
-                case 'medium':
-                case 'low':
-                    res = await getNewsByImpact(filter as 'high' | 'medium' | 'low');
-                    break;
-                default:
-                    res = await getTrendingNews(fastMode);
-            }
-            
-            if (res.status === "success") {
-                setNews(res.data)
-            }
-        } catch (error) {
-            console.error('News loading error:', error)
-            // Don't show error to user, just log it
+            const [newsRes, analyticsRes] = await Promise.allSettled([getTrendingNews(), getNewsAnalytics()])
+            if (newsRes.status === 'fulfilled' && newsRes.value.status === 'success') setNews(newsRes.value.data)
+            else setError('News feeds are temporarily unavailable.')
+            if (analyticsRes.status === 'fulfilled' && analyticsRes.value.status === 'success') setAnalytics(analyticsRes.value.data)
         } finally {
             setLoading(false)
         }
     }
 
+    useEffect(() => { load() }, [])
+
     const handleRefresh = async () => {
         setRefreshing(true)
-        await fetchNews(activeFilter, false) // Full refresh
+        await load()
         setRefreshing(false)
     }
 
-    useEffect(() => {
-        // Fast initial load, then full load in background
-        fetchNews('all', true)
-        
-        // Full load after 2 seconds
-        setTimeout(() => {
-            fetchNews('all', false)
-        }, 2000)
-    }, [])
+    const filtered = useMemo(() => {
+        const q = searchQuery.trim().toLowerCase()
+        return news.filter(item =>
+            (sentimentFilter === 'all' || item.sentiment === sentimentFilter) &&
+            (impactFilter === 'all' || item.impact.level === impactFilter) &&
+            (!q || item.title.toLowerCase().includes(q) || item.source.toLowerCase().includes(q) ||
+                item.symbols.some(s => s.toLowerCase().includes(q)))
+        )
+    }, [news, sentimentFilter, impactFilter, searchQuery])
 
-    const handleFilterChange = (filter: string) => {
-        setActiveFilter(filter)
-        fetchNews(filter, false) // Full load for filters
-    }
-
-    const getSentimentColor = (sentiment: string) => {
-        switch (sentiment) {
-            case 'positive': return 'bg-green-100 text-green-800';
-            case 'negative': return 'bg-red-100 text-red-800';
-            default: return 'bg-yellow-100 text-yellow-800';
-        }
-    }
-
-    const getImpactColor = (impact: string) => {
-        switch (impact) {
-            case 'high': return 'bg-purple-100 text-purple-800';
-            case 'medium': return 'bg-blue-100 text-blue-800';
-            default: return 'bg-gray-100 text-gray-800';
-        }
-    }
-
-    const filteredNews = news.filter(item =>
-        searchQuery === '' || 
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.source.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-
-    const filters = [
-        { id: 'all', label: 'All News' },
-        { id: 'positive', label: 'Positive' },
-        { id: 'negative', label: 'Negative' },
-        { id: 'neutral', label: 'Neutral' },
-        { id: 'high', label: 'High Impact' },
-        { id: 'medium', label: 'Medium Impact' },
-        { id: 'low', label: 'Low Impact' }
-    ]
+    const chip = (active: boolean) =>
+        `px-4 py-2 rounded-xl text-[11px] font-semibold transition-all ${active ? 'bg-brand-600 text-white' : 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-brand-600/50'}`
 
     return (
-        <section className="bg-slate-50 dark:bg-slate-900 min-h-[calc(100vh-64px)] p-4 md:p-8 border-t dark:border-slate-800" id="discover">
-            <div className="max-w-7xl mx-auto space-y-8">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                        <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">Market News</h1>
-                        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Stay updated with developments</p>
-                    </div>
-                </div>
+        <Page>
+            <PageHeader title="News" description="Indian market headlines tagged for sentiment and event type, with how similar news has moved prices before." />
+            <div className="space-y-4">
 
-                <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 flex flex-col md:flex-row gap-4 items-center justify-between">
+                {analytics && analytics.sampleSize > 0 && <ModelPanel analytics={analytics} />}
+
+                <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 p-4 flex flex-col md:flex-row gap-4 items-center justify-between">
                     <div className="relative flex-1 w-full max-w-md">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400" />
                         <input
                             type="text"
-                            placeholder="Search news..."
+                            placeholder="Search headline, source or ticker…"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white pl-12 pr-4 py-3 rounded-xl focus:outline-none focus:border-[#630ed4] dark:focus:border-[#a975ff] shadow-inner font-medium"
+                            className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-white pl-12 pr-4 py-3 rounded-xl focus:outline-none focus:border-brand-600 font-medium"
                         />
                     </div>
-                    
-                    <button 
-                        onClick={handleRefresh} 
-                        disabled={refreshing}
-                        className="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-6 py-3 rounded-xl font-bold text-sm shadow-sm transition-colors border border-slate-200 dark:border-slate-600 hover:border-[#630ed4] dark:hover:border-[#a975ff] hover:text-[#630ed4] flex items-center gap-2 uppercase tracking-widest w-full md:w-auto justify-center"
-                    >
-                        <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-                        Sync News
+                    <button onClick={handleRefresh} disabled={refreshing}
+                        className="bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 px-6 py-3 rounded-xl font-bold text-sm border border-zinc-200 dark:border-zinc-600 hover:border-brand-600 hover:text-brand-600 flex items-center gap-2 w-full md:w-auto justify-center disabled:opacity-50">
+                        <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
                     </button>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                    {filters.map((filter) => (
-                        <button
-                            key={filter.id}
-                            onClick={() => handleFilterChange(filter.id)}
-                            className={`px-5 py-2 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all ${
-                                activeFilter === filter.id
-                                    ? 'bg-[#630ed4] text-white shadow-md'
-                                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 hover:border-[#630ed4]/50'
-                            }`}
-                        >
-                            {filter.label}
-                        </button>
+                    {(['all', 'positive', 'negative', 'neutral'] as const).map(s => (
+                        <button key={s} onClick={() => setSentimentFilter(s)} className={chip(sentimentFilter === s)}>{s === 'all' ? 'All tones' : s}</button>
+                    ))}
+                    <span className="w-px bg-zinc-200 dark:bg-zinc-700 mx-1" />
+                    {(['all', 'high', 'medium', 'low'] as const).map(i => (
+                        <button key={i} onClick={() => setImpactFilter(i)} className={chip(impactFilter === i)}>{i === 'all' ? 'Any impact' : `${i} impact`}</button>
                     ))}
                 </div>
 
                 {loading ? (
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {[1, 2, 3, 4, 5, 6].map((i) => (
-                            <div key={i} className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 animate-pulse">
-                                <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/3 mb-4"></div>
-                                <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded mb-4 w-full"></div>
-                                <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded mb-4 w-5/6"></div>
-                                <div className="h-10 bg-slate-100 dark:bg-slate-900 rounded w-full mt-6"></div>
+                        {[1, 2, 3, 4, 5, 6].map(i => (
+                            <div key={i} className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-zinc-200 dark:border-zinc-800 animate-pulse">
+                                <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-1/3 mb-4" />
+                                <div className="h-6 bg-zinc-200 dark:bg-zinc-700 rounded mb-3" />
+                                <div className="h-16 bg-zinc-100 dark:bg-zinc-900 rounded mt-6" />
                             </div>
                         ))}
                     </div>
-                ) : filteredNews.length === 0 ? (
-                    <div className="py-16 bg-white dark:bg-slate-800 border border-dashed border-slate-200 dark:border-slate-700 rounded-3xl flex flex-col items-center justify-center text-center">
-                        <Newspaper className="h-16 w-16 text-slate-300 dark:text-slate-600 mb-4" />
-                        <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase">No News Found</h3>
-                        <p className="text-slate-500 font-medium">Try adjusting your search or filter.</p>
+                ) : filtered.length === 0 ? (
+                    <div className="py-16 bg-white dark:bg-zinc-900 border border-dashed border-zinc-200 dark:border-zinc-700 rounded-xl flex flex-col items-center text-center">
+                        <Newspaper className="h-14 w-14 text-zinc-300 mb-4" />
+                        <h3 className="text-lg font-semibold text-zinc-800 dark:text-white">{error || 'No news matches these filters'}</h3>
                     </div>
                 ) : (
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {filteredNews.map((item, index) => (
-                            <div key={index} className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col h-full group">
-                                <div className="flex items-center justify-between mb-4">
-                                    <span className="text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1 rounded-full">
-                                        {item.source}
-                                    </span>
-                                    <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-                                        <Clock className="w-3 h-3" /> {(() => {
-                                            const raw = item.date || item.publishDate;
-                                            if (!raw) return 'Just now';
-                                            const d = new Date(raw);
-                                            return isNaN(d.getTime()) ? 'Just now' : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-                                        })()}
-                                    </span>
+                        {filtered.map(item => (
+                            <article key={item.id} className="bg-white dark:bg-zinc-900 rounded-xl p-6 shadow-sm border border-zinc-200 dark:border-zinc-800 hover: transition-all flex flex-col">
+                                <div className="flex items-center justify-between mb-3">
+                                    <span className="text-[11px] font-semibold bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 px-3 py-1 rounded-full truncate max-w-[60%]">{item.source}</span>
+                                    <span className="text-[11px] font-bold text-zinc-400 flex items-center gap-1"><Clock className="w-3 h-3" /> {timeAgo(item.publishedAt)}</span>
                                 </div>
 
-                                <div className="flex gap-2 mb-4 flex-wrap">
-                                    <span className={`px-2.5 py-1 rounded-lg text-[10px] uppercase font-black flex items-center gap-1 border ${
-                                        item.sentiment === 'positive'
-                                            ? 'bg-green-500 text-white border-green-500'
-                                            : item.sentiment === 'negative'
-                                            ? 'bg-red-500 text-white border-red-500'
-                                            : 'bg-slate-200 text-slate-600 border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600'
-                                    }`}>
-                                        {item.sentimentIcon} {item.sentiment}
+                                <div className="flex gap-2 mb-3 flex-wrap items-center">
+                                    <span className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold ${SENTIMENT_STYLE[item.sentiment]}`}>
+                                        {item.sentiment} {item.sentimentScore >= 0 ? '+' : ''}{item.sentimentScore.toFixed(2)}
                                     </span>
-                                    <span className={`px-2.5 py-1 rounded-lg text-[10px] uppercase font-black border ${
-                                        item.marketImpact === 'high'
-                                            ? 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800'
-                                            : item.marketImpact === 'medium'
-                                            ? 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
-                                            : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-700 dark:text-slate-400 dark:border-slate-600'
-                                    }`}>
-                                        Impact: {item.impactBadge}
+                                    <span className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold ${IMPACT_STYLE[item.impact.level]}`}>
+                                        {item.impact.level} impact · ~{item.impact.expectedMovePercent.toFixed(1)}%
                                     </span>
+                                    {item.event && (
+                                        <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
+                                            {item.event.label}
+                                        </span>
+                                    )}
                                 </div>
 
-                                <h3 className="text-base font-black text-slate-800 dark:text-white mb-4 leading-snug group-hover:text-[#630ed4] transition-colors">{item.title}</h3>
+                                <h3 className="text-base font-semibold text-zinc-800 dark:text-white mb-3 leading-snug">{item.title}</h3>
 
-                                <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-700">
-                                    <a href={item.link} target="_blank" rel="noopener noreferrer"
-                                        className="flex items-center justify-between text-xs font-black uppercase tracking-widest text-[#630ed4] dark:text-[#a975ff] hover:text-[#4d0aab] transition-colors">
-                                        Read Full Article <ExternalLink className="w-4 h-4" />
-                                    </a>
+                                <div className="flex flex-wrap gap-1.5 mb-3">
+                                    {item.symbols.length > 0
+                                        ? item.symbols.map(s => <span key={s} className="text-[11px] font-semibold px-2 py-0.5 rounded bg-brand-600/10 text-brand-600 dark:text-brand-300">{s.replace('.NS', '')}</span>)
+                                        : <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-700 text-zinc-500">Market-wide</span>}
+                                    <span className="text-[11px] font-bold text-zinc-400 ml-auto">confidence {(item.confidence * 100).toFixed(0)}%</span>
                                 </div>
-                            </div>
+
+                                {item.evidence.length > 0 && (
+                                    <p className="text-[11px] text-zinc-400 mb-3">
+                                        Signals: {item.evidence.slice(0, 5).map((e, i) => (
+                                            <span key={i} className={e.weight >= 0 ? 'text-green-600' : 'text-red-500'}>{i > 0 && ', '}{e.term}</span>
+                                        ))}
+                                    </p>
+                                )}
+
+                                <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-xl p-3 mb-4">
+                                    <HistoryLine history={item.impact.history} event={item.event} />
+                                    {item.reaction && (
+                                        <p className="text-[11px] font-bold mt-1.5 text-zinc-600 dark:text-zinc-300">
+                                            Actual reaction ({item.reaction.reactionDate}): <span className={tone(item.reaction.ar1)}>{signed(item.reaction.ar1)}</span> that day,{' '}
+                                            <span className={tone(item.reaction.car3)}>{signed(item.reaction.car3)}</span> over 3 days vs NIFTY
+                                        </p>
+                                    )}
+                                </div>
+
+                                <a href={item.link} target="_blank" rel="noopener noreferrer"
+                                    className="mt-auto pt-3 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-xs font-semibold text-brand-600 dark:text-brand-300">
+                                    Read article <ExternalLink className="w-4 h-4" />
+                                </a>
+                            </article>
                         ))}
                     </div>
                 )}
 
-                <div className="bg-amber-500/10 border border-amber-500/20 rounded-3xl p-6 md:p-8 relative overflow-hidden">
-                    <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center relative z-10">
-                        <Newspaper className="w-8 h-8 text-amber-500 shrink-0" />
-                        <div>
-                            <h4 className="font-black text-amber-600 uppercase tracking-widest text-sm mb-1">Educational Platform</h4>
-                            <p className="text-amber-700/80 dark:text-amber-300/80 text-sm font-medium leading-relaxed">
-                                News analysis is for educational purposes only. Always verify information from original sources and consult financial advisors for investment decisions.
-                            </p>
-                        </div>
-                    </div>
-                </div>
+                <p className="text-xs text-zinc-400 font-medium">
+                    Headlines from Economic Times, Mint, Business Standard, Bloomberg and Google News. Tags are produced by SmartStock's
+                    finance-lexicon + event model; past effects are measured, not predicted. Educational use only.
+                </p>
             </div>
-        </section>
+        </Page>
     )
 }

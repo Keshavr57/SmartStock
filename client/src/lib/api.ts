@@ -59,7 +59,7 @@ export const getTopMovers = async () => {
 // Market status
 export const getMarketStatus = async () => {
     const response = await api.get('/market/status');
-    return response.data;
+    return response.data.data;
 };
 
 // Compare stocks
@@ -74,27 +74,17 @@ export const getComprehensiveComparison = async (symbols: string[]) => {
     return response.data;
 };
 
-// IPOs - REAL data only with fast loading
-export const getUpcomingIPOs = async (fastMode = false, forceRefresh = false) => {
-    const timeout = fastMode ? 5000 : 15000; // Fast mode for initial load
-    const refreshParam = forceRefresh ? '&refresh=true&clear=true' : '';
-    const fastParam = fastMode ? 'fast=true' : '';
-    const params = `?${fastParam}${refreshParam}&t=${Date.now()}`;
-    
-    const response = await api.get(`/ipo/upcoming${params}`, { timeout });
+// IPOs from NSE: open, upcoming and closed in the last 30 days.
+// The first load builds the board server-side (several NSE calls), so allow a longer timeout.
+export const getIpoBoard = async (refresh = false) => {
+    const response = await api.get('/ipo', { params: refresh ? { refresh: 1 } : {}, timeout: 30000 });
     return response.data;
 };
 
-// News - REAL data only with fast loading
-export const getTrendingNews = async (fastMode = false) => {
-    const timeout = fastMode ? 5000 : 15000; // Fast mode for initial load
-    const response = await api.get(`/news/trending?t=${Date.now()}`, { timeout });
+// News with sentiment/event tags and measured historical impact.
+export const getTrendingNews = async () => {
+    const response = await api.get('/news/trending', { timeout: 20000 });
     return response.data;
-};
-
-// Fast news loading for initial page load
-export const getFastNews = async () => {
-    return getTrendingNews(true);
 };
 
 // Learning
@@ -105,12 +95,6 @@ export const getLearningList = async () => {
 
 export const getLessonContent = async (id: string) => {
     const response = await api.get(`/learning/lesson/${id}`);
-    return response.data;
-};
-
-// AI Advisor (Chat) - Direct connection to AI service
-export const processAiQuery = async (message: string, userId: string = 'client_user') => {
-    const response = await api.post('/chat/ai-chat', { message, userId });
     return response.data;
 };
 
@@ -134,67 +118,5 @@ export const getAssetsHistory = async (symbols: string[], period: string = '1mo'
     const response = await api.get('/market/history', {
         params: { symbols: symbols.join(','), period }
     });
-    return response.data;
-};
-
-// Trading API functions
-export const getUserPortfolio = async (userId: string) => {
-    const response = await api.get(`/trading/portfolio/${userId}`);
-    return response.data;
-};
-
-export const executeBuyOrder = async (orderData: {
-    userId: string;
-    symbol: string;
-    name: string;
-    type: 'stock' | 'crypto';
-    quantity: number;
-}) => {
-    const response = await api.post('/trading/buy', orderData);
-    return response.data;
-};
-
-export const executeSellOrder = async (orderData: {
-    userId: string;
-    symbol: string;
-    name: string;
-    type: 'stock' | 'crypto';
-    quantity: number;
-}) => {
-    const response = await api.post('/trading/sell', orderData);
-    return response.data;
-};
-
-export const getTransactionHistory = async (userId: string, limit?: number) => {
-    const params = limit ? { limit } : {};
-    const response = await api.get(`/trading/transactions/${userId}`, { params });
-    return response.data;
-};
-
-export const getTradingMarketData = async () => {
-    const response = await api.get('/trading/market-data');
-    return response.data;
-};
-
-export const getCurrentPrice = async (symbol: string, type: 'stock' | 'crypto') => {
-    const response = await api.get(`/trading/price/${type}/${symbol}`);
-    return response.data;
-};
-
-// Chart data functions
-export const getChartData = async (symbol: string, type: 'stock' | 'crypto', period: string = '1d', interval: string = '5m') => {
-    const response = await api.get(`/trading/chart/${type}/${symbol}`, {
-        params: { period, interval }
-    });
-    return response.data;
-};
-
-export const getWatchlist = async (userId: string) => {
-    const response = await api.get(`/trading/watchlist/${userId}`);
-    return response.data;
-};
-
-export const getPortfolioAnalytics = async (userId: string) => {
-    const response = await api.get(`/trading/portfolio/${userId}/analytics`);
     return response.data;
 };

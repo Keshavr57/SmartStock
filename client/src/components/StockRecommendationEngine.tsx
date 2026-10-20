@@ -14,7 +14,6 @@ import {
   Shield,
   Zap,
   BookOpen,
-  Eye,
   ChevronDown,
   ChevronUp
 } from 'lucide-react'
@@ -484,7 +483,6 @@ export default function StockRecommendationEngine({ data }: StockRecommendationE
     // Price target calculation (simplified)
     let priceTarget: { low: number; high: number; rationale: string } | null = null;
     if (stock.lastTradedPrice && stock.peRatio && stock.eps) {
-      const currentPrice = stock.lastTradedPrice;
       const fairPE = 18; // Assumed fair P/E for calculation
       const fairValue = stock.eps * fairPE;
       

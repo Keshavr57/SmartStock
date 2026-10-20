@@ -16,7 +16,14 @@ module.exports = {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+      },
       colors: {
+        brand: {
+          50: '#f5f0ff', 100: '#ece2ff', 200: '#d9c5ff', 300: '#bc98ff', 400: '#9a5cff',
+          500: '#7c2df5', 600: '#630ed4', 700: '#540bb3', 800: '#450c90', 900: '#3a0e73',
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
