@@ -10,9 +10,9 @@ class KeepAliveService {
         this.isEnabled = process.env.NODE_ENV === 'production';
     }
 
-    async pingService(url, name) {
+    async pingService(url, name, path = '/health') {
         try {
-            const response = await axios.get(`${url}/health`, {
+            const response = await axios.get(`${url}${path}`, {
                 timeout: 10000
             });
             console.log(`✅ ${name} ping successful: ${response.status}`);
@@ -37,7 +37,7 @@ class KeepAliveService {
             console.log('⏰ Keep-alive ping cycle started...');
             
             // Ping backend
-            await this.pingService(RENDER_URL, 'Backend');
+            await this.pingService(RENDER_URL, 'Backend', '/api/health');
             
             // Ping AI service (IMPORTANT!)
             await this.pingService(AI_SERVICE_URL, 'AI Service');
@@ -48,7 +48,7 @@ class KeepAliveService {
         // Initial ping after 5 seconds
         setTimeout(async () => {
             console.log('🚀 Initial keep-alive ping...');
-            await this.pingService(RENDER_URL, 'Backend');
+            await this.pingService(RENDER_URL, 'Backend', '/api/health');
             await this.pingService(AI_SERVICE_URL, 'AI Service');
         }, 5000);
 
