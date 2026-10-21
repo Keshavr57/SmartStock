@@ -1,10 +1,15 @@
-"""Local sentence embeddings (BGE-small via ONNX/fastembed): no external API, ~130 MB RAM."""
+"""Local sentence embeddings (BGE-small via ONNX/fastembed): no external API.
+
+Sized for a 512 MB host: one ONNX thread and small batches, since activation memory grows with batch size.
+"""
 import asyncio
 import threading
 
 import numpy as np
 
 from ..config import get_settings
+
+BATCH_SIZE = 8
 
 # BGE models expect this instruction on queries (not on passages) for retrieval.
 QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
@@ -19,7 +24,7 @@ def _get_model():
         if _model is None:
             from fastembed import TextEmbedding
             settings = get_settings()
-            _model = TextEmbedding(settings.embedding_model, cache_dir=f"{settings.cache_dir}/models")
+            _model = TextEmbedding(settings.embedding_model, cache_dir=f"{settings.cache_dir}/models", threads=1)
     return _model
 
 
@@ -31,7 +36,7 @@ def _normalize(matrix: np.ndarray) -> np.ndarray:
 def embed_passages_sync(texts: list[str]) -> np.ndarray:
     if not texts:
         return np.zeros((0, 384), dtype=np.float32)
-    return _normalize(np.array(list(_get_model().embed(texts)), dtype=np.float32))
+    return _normalize(np.array(list(_get_model().embed(texts, batch_size=BATCH_SIZE)), dtype=np.float32))
 
 
 def embed_query_sync(text: str) -> np.ndarray:

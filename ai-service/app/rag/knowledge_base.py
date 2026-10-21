@@ -105,13 +105,18 @@ class KnowledgeBase:
             chunks.extend(chunk_markdown(path.read_text(encoding="utf-8"), str(path.relative_to(root))))
         texts = [f"{c.doc} — {c.section}\n{c.text}" for c in chunks]
         digest = hashlib.sha1("\n\x00".join(texts).encode()).hexdigest()[:16]
-        cache = Path(settings.cache_dir) / f"kb-{digest}.npy"
-        if cache.exists():
-            vectors = np.load(cache)
+        # The index lives next to the documents and is committed, so deploys skip re-embedding the corpus.
+        # Run scripts/build_index.py (or just start the service) after editing the knowledge base.
+        index_dir = root / ".index"
+        index = index_dir / f"kb-{digest}.npy"
+        if index.exists():
+            vectors = np.load(index)
         else:
             vectors = embed_passages_sync(texts)
-            cache.parent.mkdir(parents=True, exist_ok=True)
-            np.save(cache, vectors)
+            index_dir.mkdir(parents=True, exist_ok=True)
+            for stale in index_dir.glob("kb-*.npy"):
+                stale.unlink()
+            np.save(index, vectors)
         return cls(chunks, vectors)
 
     async def search(self, query: str, k: int = 4, min_score: float = 0.35) -> list[SearchHit]:
